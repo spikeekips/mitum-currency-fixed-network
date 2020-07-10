@@ -73,7 +73,6 @@ func main() {
 	ctx.FatalIfErrorf(setupLogging(flags))
 
 	log.Info().Str("version", version.String()).Msg("mitum-currency")
-
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
 	contestlib.ConnectSignal()

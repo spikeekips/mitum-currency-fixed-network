@@ -40,7 +40,7 @@ func NewAddressFromKeys(keys []Key) (Address, error) {
 		for i := range keys {
 			k := keys[i]
 			if err := k.IsValid(nil); err != nil {
-				return EmptyAddress, err
+				return EmptyAddress, xerrors.Errorf("invalid key found: %w", err)
 			} else if _, ok := k.Key().(key.Publickey); !ok {
 				return EmptyAddress, xerrors.Errorf("key should be key.Publickey; %T found", k)
 			}
@@ -48,12 +48,12 @@ func NewAddressFromKeys(keys []Key) (Address, error) {
 	}
 
 	if len(keys) == 1 {
-		return NewAddress(keys[0].Key().String())
+		return NewAddress(keys[0].Key().Raw())
 	}
 
 	skeys := make([]string, len(keys))
 	for i := range keys {
-		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().String(), keys[i].Weight())
+		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().Raw(), keys[i].Weight())
 	}
 
 	sort.Strings(skeys)

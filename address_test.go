@@ -21,7 +21,7 @@ func (t *testAddress) TestSingleKey() {
 	a, err := NewAddressFromKeys([]Key{k})
 	t.NoError(err)
 
-	t.Equal(k.Key().String(), a.String())
+	t.Equal(k.Key().Raw(), a.String())
 }
 
 func (t *testAddress) TestWrongKey() {

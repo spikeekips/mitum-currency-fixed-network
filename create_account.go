@@ -18,8 +18,6 @@ var (
 	CreateAccountHint     = hint.MustHint(CreateAccountType, "0.0.1")
 )
 
-// TODO check minimum amount for create account and it should be managed by Policy
-
 type CreateAccountFact struct {
 	h      valuehash.Hash
 	token  []byte
@@ -70,6 +68,8 @@ func (caf CreateAccountFact) IsValid([]byte) error {
 	}, nil, false); err != nil {
 		return err
 	}
+
+	// TODO check minimum amount for create account and it should be managed by Policy
 
 	return nil
 }
