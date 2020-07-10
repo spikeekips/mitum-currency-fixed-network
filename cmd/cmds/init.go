@@ -43,6 +43,16 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 
+	if err := nr.AttachStorage(); err != nil {
+		return xerrors.Errorf("failed to attach storage: %w", err)
+	}
+
+	if cmd.Force {
+		if err := nr.Storage().Clean(); err != nil {
+			return xerrors.Errorf("failed to clean storage: %w", err)
+		}
+	}
+
 	if err := nr.Initialize(); err != nil {
 		return xerrors.Errorf("failed to generate node from design: %w", err)
 	}
@@ -85,13 +95,6 @@ func (cmd *InitCommand) checkExisting(nr *mc.Launcher, log logging.Logger) error
 	} else {
 		log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
-		if !cmd.Force {
-			return xerrors.Errorf("environment already exists: block=%d", manifest.Height())
-		}
-
-		if err := nr.Storage().Clean(); err != nil {
-			return err
-		}
 		log.Debug().Msg("existing environment cleaned")
 	}
 

@@ -61,7 +61,7 @@ func (nr *Launcher) Initialize() error {
 	return nil
 }
 
-func (nr *Launcher) attachStorage() error {
+func (nr *Launcher) AttachStorage() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "storage")
 	})
@@ -76,6 +76,14 @@ func (nr *Launcher) attachStorage() error {
 	l.Debug().Msg("attached")
 
 	return nil
+}
+
+func (nr *Launcher) attachStorage() error {
+	if nr.Storage() != nil {
+		return nil
+	}
+
+	return nr.AttachStorage()
 }
 
 func (nr *Launcher) attachNetwork() error {

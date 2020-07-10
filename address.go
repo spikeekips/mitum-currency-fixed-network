@@ -5,14 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -87,40 +83,6 @@ func (ca Address) Equal(a base.Address) bool {
 
 func (ca Address) Bytes() []byte {
 	return []byte(ca)
-}
-
-func (ca Address) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(ca.String())
-}
-
-func (ca *Address) UnmarshalJSON(b []byte) error {
-	var a string
-	if err := util.JSON.Unmarshal(b, &a); err != nil {
-		return err
-	}
-
-	*ca = Address(a)
-
-	return nil
-}
-
-func (ca Address) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.String, bsoncore.AppendString(nil, ca.String()), nil
-}
-
-func (ca *Address) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
-	if t != bsontype.String {
-		return xerrors.Errorf("invalid marshaled type for Address, %v", t)
-	}
-
-	s, _, ok := bsoncore.ReadString(b)
-	if !ok {
-		return xerrors.Errorf("can not read string")
-	}
-
-	*ca = Address(s)
-
-	return nil
 }
 
 func (ca Address) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
