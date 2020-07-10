@@ -105,48 +105,55 @@ func (tf Transfer) ProcessOperation(
 ) error {
 	fact := tf.Fact().(TransferFact)
 
-	var sstate, rstate state.StateUpdater
-	if st, err := loadState(stateKeyBalance(fact.sender), getState); err != nil {
-		return xerrors.Errorf("sender account does not exist: %w", err)
-	} else {
-		sstate = st
+	if _, err := loadState(StateKeyKeys(fact.sender), getState); err != nil {
+		return xerrors.Errorf("keys of sender account does not exist: %w", err)
 	}
-	if st, err := loadState(stateKeyBalance(fact.receiver), getState); err != nil {
-		return xerrors.Errorf("receiver account does not exist: %w", err)
+	if _, err := loadState(StateKeyKeys(fact.receiver), getState); err != nil {
+		return xerrors.Errorf("keys of receiver account does not exist: %w", err)
+	}
+
+	var sstateBalance, rstateBalance state.StateUpdater
+	if st, err := loadState(StateKeyBalance(fact.sender), getState); err != nil {
+		return xerrors.Errorf("balance of sender account does not exist: %w", err)
 	} else {
-		rstate = st
+		sstateBalance = st
+	}
+	if st, err := loadState(StateKeyBalance(fact.receiver), getState); err != nil {
+		return xerrors.Errorf("balance of receiver account does not exist: %w", err)
+	} else {
+		rstateBalance = st
 	}
 
 	if err := checkFactSignsByState(fact.sender, tf.Signs(), getState); err != nil {
-		return state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
+		return xerrors.Errorf("invalid signing: %w", err)
 	}
 
-	if b, err := stateAmountValue(sstate); err != nil {
+	if b, err := StateAmountValue(sstateBalance); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		n := b.Sub(fact.amount)
 		if err := n.IsValid(nil); err != nil {
 			return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
-		} else if err := setStateAmountValue(sstate, n); err != nil {
+		} else if err := SetStateAmountValue(sstateBalance, n); err != nil {
 			return state.IgnoreOperationProcessingError.Wrap(err)
 		}
 	}
 
-	if b, err := stateAmountValue(rstate); err != nil {
+	if b, err := StateAmountValue(rstateBalance); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		n := b.Add(fact.amount)
 		if err := n.IsValid(nil); err != nil {
 			return state.IgnoreOperationProcessingError.Errorf("failed to add amount from balance: %w", err)
-		} else if err := setStateAmountValue(rstate, n); err != nil {
+		} else if err := SetStateAmountValue(rstateBalance, n); err != nil {
 			return state.IgnoreOperationProcessingError.Wrap(err)
 		}
 	}
 
-	if err := setState(sstate); err != nil {
+	if err := setState(sstateBalance); err != nil {
 		return err
 	}
-	if err := setState(rstate); err != nil {
+	if err := setState(rstateBalance); err != nil {
 		return err
 	}
 

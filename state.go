@@ -9,15 +9,15 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 )
 
-func stateKeyKeys(a Address) string {
+func StateKeyKeys(a Address) string {
 	return fmt.Sprintf("%s:keys", a.String())
 }
 
-func stateKeyBalance(a Address) string {
+func StateKeyBalance(a Address) string {
 	return fmt.Sprintf("%s:balance", a.String())
 }
 
-func stateAmountValue(st state.State) (Amount, error) {
+func StateAmountValue(st state.State) (Amount, error) {
 	if s, ok := st.Value().Interface().(string); !ok {
 		return NilAmount, xerrors.Errorf("invalid balance value found, %T", st.Value().Interface())
 	} else if a, err := NewAmountFromString(s); err != nil {
@@ -27,7 +27,7 @@ func stateAmountValue(st state.State) (Amount, error) {
 	}
 }
 
-func stateKeysValue(st state.State) (Keys, error) {
+func StateKeysValue(st state.State) (Keys, error) {
 	if s, ok := st.Value().Interface().(Keys); !ok {
 		return Keys{}, xerrors.Errorf("invalid Keys value found, %T", st.Value().Interface())
 	} else {
@@ -35,7 +35,17 @@ func stateKeysValue(st state.State) (Keys, error) {
 	}
 }
 
-func setStateAmountValue(st state.StateUpdater, v Amount) error {
+func SetStateKeysValue(st state.StateUpdater, v Keys) error {
+	if uv, err := state.NewHintedValue(v); err != nil {
+		return err
+	} else if err := st.SetValue(uv); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SetStateAmountValue(st state.StateUpdater, v Amount) error {
 	if uv, err := state.NewStringValue(v); err != nil {
 		return err
 	} else if err := st.SetValue(uv); err != nil {
@@ -51,13 +61,13 @@ func checkFactSignsByState(
 	getState func(key string) (state.StateUpdater, bool, error),
 ) error {
 	var keys Keys
-	switch st, found, err := getState(stateKeyKeys(address)); {
+	switch st, found, err := getState(StateKeyKeys(address)); {
 	case err != nil:
 		return err
 	case !found:
 		return state.IgnoreOperationProcessingError.Errorf("keys for address not found")
 	default:
-		if ks, err := stateKeysValue(st); err != nil {
+		if ks, err := StateKeysValue(st); err != nil {
 			return state.IgnoreOperationProcessingError.Wrap(err)
 		} else {
 			keys = ks

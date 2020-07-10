@@ -34,15 +34,6 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		nr = n
 	}
 
-	var ops []operation.Operation
-	if op, err := cmd.loadPolicyOperation(nr.Design()); err != nil {
-		return err
-	} else {
-		ops = append(ops, op)
-	}
-
-	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
-
 	if err := nr.AttachStorage(); err != nil {
 		return xerrors.Errorf("failed to attach storage: %w", err)
 	}
@@ -64,6 +55,21 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 	}
 
 	log.Debug().Msg("trying to create genesis block")
+	var ops []operation.Operation
+	if op, err := cmd.loadPolicyOperation(nr.Design()); err != nil {
+		return err
+	} else {
+		ops = append(ops, op)
+	}
+
+	if o, err := cmd.loadInitOperations(nr); err != nil {
+		return err
+	} else {
+		ops = append(ops, o...)
+	}
+
+	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
+
 	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
@@ -123,4 +129,21 @@ func (cmd *InitCommand) loadPolicyOperation(design *mc.NodeDesign) (
 	} else {
 		return op, nil
 	}
+}
+
+func (cmd *InitCommand) loadInitOperations(nr *mc.Launcher) ([]operation.Operation, error) {
+	/*
+		var nodeAddress mc.Address
+		if a, err := mc.NewAddressFromKeys([]mc.Key{mc.NewKey(nr.Design().Privatekey().Publickey(), 100)}); err != nil {
+			return nil, err
+		} else {
+			nodeAddress = a
+		}
+
+		key := mc.StateKeyBalance(nodeAddress)
+		amount, _ := mc.NewAmountFromString("9999999999999999")
+		value, _ := state.NewStringValue(amount)
+	*/
+
+	return nil, nil
 }

@@ -24,10 +24,10 @@ func (t *testTransferOperation) SetupSuite() {
 
 	t.Encs.AddHinter(key.BTCPublickey{})
 	t.Encs.AddHinter(operation.BaseFactSign{})
-	t.Encs.AddHinter(Transfer{})
-	t.Encs.AddHinter(Address(""))
 	t.Encs.AddHinter(Key{})
 	t.Encs.AddHinter(Keys{})
+	t.Encs.AddHinter(Address(""))
+	t.Encs.AddHinter(Transfer{})
 }
 
 func (t *testTransferOperation) newTransfer(sender, receiver Address, amount Amount, keys []key.Privatekey) Transfer {
@@ -51,7 +51,7 @@ func (t *testTransferOperation) newTransfer(sender, receiver Address, amount Amo
 }
 
 func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *isaac.StatePool) state.StateUpdater {
-	key := stateKeyBalance(a)
+	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
@@ -67,7 +67,7 @@ func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *is
 }
 
 func (t *testTransferOperation) newStateKeys(a Address, keys Keys, sp *isaac.StatePool) state.StateUpdater {
-	key := stateKeyKeys(a)
+	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
@@ -103,7 +103,7 @@ func (t *testTransferOperation) TestSenderNotExist() {
 		sp.Set,
 	)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "sender account does not exist")
+	t.Contains(err.Error(), "keys of sender account does not exist")
 }
 
 func (t *testTransferOperation) TestReceiverNotExist() {
@@ -115,6 +115,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 
 	skey := NewKey(spk.Publickey(), 100)
 	rkey := NewKey(rpk.Publickey(), 100)
+	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 	sender, _ := NewAddressFromKeys([]Key{skey})
@@ -122,6 +123,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 
 	// set sender state
 	_ = t.newStateAccount(sender, NewAmount(10), sp)
+	_ = t.newStateKeys(sender, skeys, sp)
 
 	tf := t.newTransfer(sender, receiver, NewAmount(3), pks)
 
@@ -130,7 +132,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 		sp.Set,
 	)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "receiver account does not exist")
+	t.Contains(err.Error(), "keys of receiver account does not exist")
 }
 
 func (t *testTransferOperation) TestInsufficientBalance() {
@@ -155,6 +157,7 @@ func (t *testTransferOperation) TestInsufficientBalance() {
 	_ = t.newStateAccount(sender, senderBalance, sp)
 	_ = t.newStateKeys(sender, skeys, sp)
 	_ = t.newStateAccount(receiver, NewAmount(3), sp)
+	_ = t.newStateKeys(receiver, skeys, sp)
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
@@ -175,6 +178,7 @@ func (t *testTransferOperation) TestSufficientBalance() {
 
 	skey := NewKey(spk.Publickey(), 50)
 	rkey := NewKey(rpk.Publickey(), 50)
+	rkeys, _ := NewKeys([]Key{skey, rkey}, 100)
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
@@ -188,6 +192,7 @@ func (t *testTransferOperation) TestSufficientBalance() {
 	_ = t.newStateAccount(sender, senderBalance, sp)
 	_ = t.newStateKeys(sender, skeys, sp)
 	_ = t.newStateAccount(receiver, NewAmount(3), sp)
+	_ = t.newStateKeys(receiver, rkeys, sp)
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
@@ -198,12 +203,12 @@ func (t *testTransferOperation) TestSufficientBalance() {
 	t.NoError(err)
 
 	// checking value
-	sstate, found, err := sp.Get(stateKeyBalance(sender))
+	sstate, found, err := sp.Get(StateKeyBalance(sender))
 	t.NoError(err)
 	t.True(found)
 	t.NotNil(sstate)
 
-	rstate, found, err := sp.Get(stateKeyBalance(receiver))
+	rstate, found, err := sp.Get(StateKeyBalance(receiver))
 	t.NoError(err)
 	t.True(found)
 	t.NotNil(rstate)
@@ -234,6 +239,7 @@ func (t *testTransferOperation) TestUnderThreshold() {
 	_ = t.newStateAccount(sender, senderBalance, sp)
 	_ = t.newStateKeys(sender, skeys, sp)
 	_ = t.newStateAccount(receiver, NewAmount(3), sp)
+	_ = t.newStateKeys(receiver, skeys, sp)
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
@@ -266,6 +272,7 @@ func (t *testTransferOperation) TestUnknownKey() {
 	_ = t.newStateAccount(sender, senderBalance, sp)
 	_ = t.newStateKeys(sender, skeys, sp)
 	_ = t.newStateAccount(receiver, NewAmount(3), sp)
+	_ = t.newStateKeys(receiver, skeys, sp)
 
 	tf := t.newTransfer(sender, receiver, amount, []key.Privatekey{spk, key.MustNewBTCPrivatekey()})
 
