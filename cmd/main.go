@@ -9,14 +9,12 @@ import (
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/cmd/cmds"
 )
 
 var (
 	Version string = "v0.0.1"
-	log     logging.Logger
 )
 
 var mainHelpOptions = kong.HelpOptions{
@@ -38,15 +36,8 @@ var mainDefaultVars = kong.Vars{
 	"cpu_prof_file":     "/tmp/mitum-currency-cpu.prof",
 }
 
-type mainFlags struct {
-	Init    cmds.InitCommand `cmd:"" help:"initialize"`
-	Run     cmds.RunCommand  `cmd:"" help:"run node"`
-	Version struct{}         `cmd:"" help:"print version"`
-	*contestlib.LogFlags
-}
-
 func main() {
-	flags := &mainFlags{
+	flags := &cmds.MainFlags{
 		LogFlags: &contestlib.LogFlags{},
 		Run:      cmds.RunCommand{PprofFlags: &launcher.PprofFlags{}},
 	}
@@ -70,25 +61,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctx.FatalIfErrorf(setupLogging(flags))
-
-	log.Info().Str("version", version.String()).Msg("mitum-currency")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
-
 	contestlib.ConnectSignal()
 
-	ctx.FatalIfErrorf(run(ctx, version))
+	ctx.FatalIfErrorf(run(flags, ctx, version))
 
 	os.Exit(0)
 }
 
-func run(ctx *kong.Context, version util.Version) error {
-	defer log.Info().Msg("mitum-currency finished")
+func run(flags *cmds.MainFlags, ctx *kong.Context, version util.Version) error {
 	defer contestlib.ExitHooks.Run()
 
-	return ctx.Run(log, version)
+	return ctx.Run(flags, version)
 }
 
+/*
 func setupLogging(flags *mainFlags) error {
 	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor); err != nil {
 		return err
@@ -100,3 +86,4 @@ func setupLogging(flags *mainFlags) error {
 
 	return nil
 }
+*/

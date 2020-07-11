@@ -18,7 +18,18 @@ type InitCommand struct {
 	version util.Version
 }
 
-func (cmd *InitCommand) Run(log logging.Logger, version util.Version) error {
+func (cmd *InitCommand) Run(flags *MainFlags, version util.Version) error {
+	var log logging.Logger
+	if l, err := setupLogging(flags.LogFlags); err != nil {
+		return err
+	} else {
+		log = l
+	}
+
+	log.Info().Str("version", version.String()).Msg("mitum-currency")
+	log.Debug().Interface("flags", flags).Msg("flags parsed")
+	defer log.Info().Msg("mitum-currency finished")
+
 	log.Info().Msg("trying to initialize")
 
 	cmd.version = version

@@ -1,0 +1,40 @@
+package cmds
+
+import (
+	"fmt"
+	"net/url"
+	"os"
+
+	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util/encoder"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+)
+
+type NodeInfoCommand struct {
+	URL *url.URL `arg:"" name:"node url" help:"remote mitum url" required:""`
+}
+
+func (cmd *NodeInfoCommand) Run() error {
+	var encs *encoder.Encoders
+	if e, err := loadEncoders(); err != nil {
+		return err
+	} else {
+		encs = e
+	}
+
+	var channel network.NetworkChannel
+	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
+		return err
+	} else {
+		channel = ch
+	}
+
+	if n, err := channel.NodeInfo(); err != nil {
+		return err
+	} else {
+		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(n))
+	}
+
+	return nil
+}
