@@ -164,7 +164,7 @@ func (t *testCreateAccountOperation) TestSenderKeysNotExist() {
 	)
 
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "keys of sender account does not exist")
+	t.Contains(err.Error(), "keys of sender does not exist")
 }
 
 func (t *testCreateAccountOperation) TestSenderBalanceNotExist() {
@@ -193,7 +193,7 @@ func (t *testCreateAccountOperation) TestSenderBalanceNotExist() {
 	)
 
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "balance of sender account does not exist")
+	t.Contains(err.Error(), "balance of sender does not exist")
 }
 
 func (t *testCreateAccountOperation) TestReceiverExists() {
@@ -228,7 +228,7 @@ func (t *testCreateAccountOperation) TestReceiverExists() {
 		sp.Get,
 		sp.Set,
 	)
-	t.Contains(err.Error(), "keys of target account already exists")
+	t.Contains(err.Error(), "keys of target already exists")
 }
 
 func (t *testCreateAccountOperation) TestInsufficientBalance() {

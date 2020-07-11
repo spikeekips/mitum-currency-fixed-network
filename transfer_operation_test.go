@@ -103,7 +103,7 @@ func (t *testTransferOperation) TestSenderNotExist() {
 		sp.Set,
 	)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "keys of sender account does not exist")
+	t.Contains(err.Error(), "keys of sender does not exist")
 }
 
 func (t *testTransferOperation) TestReceiverNotExist() {
@@ -132,7 +132,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 		sp.Set,
 	)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
-	t.Contains(err.Error(), "keys of receiver account does not exist")
+	t.Contains(err.Error(), "keys of receiver does not exist")
 }
 
 func (t *testTransferOperation) TestInsufficientBalance() {

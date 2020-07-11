@@ -148,7 +148,7 @@ func (t *testGenesisAccountOperation) TestTargetAccountExists() {
 		sp.Get,
 		sp.Set,
 	)
-	t.Contains(err.Error(), "genesis account already exists")
+	t.Contains(err.Error(), "balance of genesis already exists")
 }
 
 func TestGenesisAccountOperation(t *testing.T) {

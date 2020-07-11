@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testCreateAcount struct {
@@ -55,91 +54,56 @@ func TestCreateAcount(t *testing.T) {
 	suite.Run(t, new(testCreateAcount))
 }
 
-type testCreateAccountEncode struct {
-	suite.Suite
+func testCreateAccountEncode(enc encoder.Encoder) suite.TestingSuite {
+	t := new(baseTestOperationEncode)
 
-	enc encoder.Encoder
-}
+	t.enc = enc
+	t.newOperation = func() operation.Operation {
+		spk := key.MustNewBTCPrivatekey()
+		rpk := key.MustNewBTCPrivatekey()
 
-func (t *testCreateAccountEncode) SetupSuite() {
-	encs := encoder.NewEncoders()
-	encs.AddEncoder(t.enc)
+		skey := NewKey(spk.Publickey(), 50)
+		skeys, _ := NewKeys([]Key{skey, NewKey(rpk.Publickey(), 50)}, 100)
 
-	encs.AddHinter(key.BTCPublickey{})
-	encs.AddHinter(Address(""))
-	encs.AddHinter(operation.BaseFactSign{})
+		pks := []key.Privatekey{spk, rpk}
+		sender, _ := NewAddressFromKeys([]Key{skey})
 
-	encs.AddHinter(Key{})
-	encs.AddHinter(Keys{})
-	encs.AddHinter(CreateAccountFact{})
-	encs.AddHinter(CreateAccount{})
-}
+		fact := NewCreateAccountFact(util.UUID().Bytes(), sender, skeys, NewAmount(10))
 
-func (t *testCreateAccountEncode) TestEncode() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+		var fs []operation.FactSign
 
-	skey := NewKey(spk.Publickey(), 50)
-	skeys, _ := NewKeys([]Key{skey, NewKey(rpk.Publickey(), 50)}, 100)
+		for _, pk := range pks {
+			sig, err := operation.NewFactSignature(pk, fact, nil)
+			t.NoError(err)
 
-	pks := []key.Privatekey{spk, rpk}
-	sender, _ := NewAddressFromKeys([]Key{skey})
+			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		}
 
-	fact := NewCreateAccountFact(util.UUID().Bytes(), sender, skeys, NewAmount(10))
-
-	var fs []operation.FactSign
-
-	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		ca, err := NewCreateAccount(fact, fs)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		return ca
 	}
 
-	ca, err := NewCreateAccount(fact, fs)
-	t.NoError(err)
+	t.compare = func(a, b operation.Operation) {
+		fact := a.Fact().(CreateAccountFact)
+		ufact := b.Fact().(CreateAccountFact)
 
-	b, err := t.enc.Marshal(ca)
-	t.NoError(err)
+		t.True(fact.sender.Equal(ufact.sender))
+		t.Equal(fact.amount, ufact.amount)
 
-	hinter, err := t.enc.DecodeByHint(b)
-	t.NoError(err)
-
-	uca, ok := hinter.(CreateAccount)
-	t.True(ok)
-
-	ufact := uca.Fact().(CreateAccountFact)
-	t.True(fact.h.Equal(ufact.h))
-	t.Equal(fact.token, ufact.token)
-	t.True(fact.sender.Equal(ufact.sender))
-	t.Equal(fact.amount, ufact.amount)
-
-	t.True(ca.Hash().Equal(uca.Hash()))
-
-	t.True(fact.keys.Hash().Equal(ufact.keys.Hash()))
-	t.Equal(fact.keys.Keys(), ufact.keys.Keys())
-	t.Equal(fact.keys.Threshold(), ufact.keys.Threshold())
-
-	for i := range ca.Signs() {
-		a := ca.Signs()[i]
-		b := uca.Signs()[i]
-
-		t.True(a.Signer().Equal(b.Signer()))
-		t.Equal(a.Signature(), b.Signature())
-		t.Equal(localtime.RFC3339(a.SignedAt()), localtime.RFC3339(b.SignedAt()))
+		t.True(fact.keys.Hash().Equal(ufact.keys.Hash()))
+		t.Equal(fact.keys.Keys(), ufact.keys.Keys())
+		t.Equal(fact.keys.Threshold(), ufact.keys.Threshold())
 	}
+
+	return t
 }
 
 func TestCreateAccountEncodeJSON(t *testing.T) {
-	b := new(testCreateAccountEncode)
-	b.enc = jsonenc.NewEncoder()
-
-	suite.Run(t, b)
+	suite.Run(t, testCreateAccountEncode(jsonenc.NewEncoder()))
 }
 
-func testCreateAccountEncodeBSON(t *testing.T) {
-	b := new(testCreateAccountEncode)
-	b.enc = bsonenc.NewEncoder()
-
-	suite.Run(t, b)
+func TestCreateAccountEncodeBSON(t *testing.T) {
+	suite.Run(t, testCreateAccountEncode(bsonenc.NewEncoder()))
 }

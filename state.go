@@ -61,12 +61,9 @@ func checkFactSignsByState(
 	getState func(key string) (state.StateUpdater, bool, error),
 ) error {
 	var keys Keys
-	switch st, found, err := getState(StateKeyKeys(address)); {
-	case err != nil:
+	if st, err := existsAccountState(StateKeyKeys(address), "keys of account", getState); err != nil {
 		return err
-	case !found:
-		return state.IgnoreOperationProcessingError.Errorf("keys for address not found")
-	default:
+	} else {
 		if ks, err := StateKeysValue(st); err != nil {
 			return state.IgnoreOperationProcessingError.Wrap(err)
 		} else {
@@ -81,15 +78,31 @@ func checkFactSignsByState(
 	return nil
 }
 
-func loadState(
-	key string,
+func existsAccountState(
+	k,
+	name string,
 	getState func(key string) (state.StateUpdater, bool, error),
 ) (state.StateUpdater, error) {
-	switch st, found, err := getState(key); {
+	switch st, found, err := getState(k); {
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, state.IgnoreOperationProcessingError
+		return nil, state.IgnoreOperationProcessingError.Errorf("%s does not exist", name)
+	default:
+		return st, nil
+	}
+}
+
+func notExistsAccountState(
+	k,
+	name string,
+	getState func(key string) (state.StateUpdater, bool, error),
+) (state.StateUpdater, error) {
+	switch st, found, err := getState(k); {
+	case err != nil:
+		return nil, err
+	case found:
+		return nil, state.IgnoreOperationProcessingError.Errorf("%s already exists", name)
 	default:
 		return st, nil
 	}

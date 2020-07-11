@@ -112,15 +112,12 @@ func (ca CreateAccount) IsValid(networkID []byte) error {
 
 func (ca CreateAccount) ProcessOperation(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(state.StateUpdater) error,
+	setState func(...state.StateUpdater) error,
 ) error {
 	fact := ca.Fact().(CreateAccountFact)
 
-	switch _, found, err := getState(StateKeyKeys(fact.sender)); {
-	case err != nil:
+	if _, err := existsAccountState(StateKeyKeys(fact.sender), "keys of sender", getState); err != nil {
 		return err
-	case !found:
-		return state.IgnoreOperationProcessingError.Errorf("keys of sender account does not exist")
 	}
 
 	var newAddress Address
@@ -130,45 +127,34 @@ func (ca CreateAccount) ProcessOperation(
 		newAddress = a
 	}
 
-	var sstateBalance, nstate, nstateBalance state.StateUpdater
-	switch st, found, err := getState(StateKeyKeys(newAddress)); {
-	case err != nil:
-		return err
-	case found:
-		return state.IgnoreOperationProcessingError.Errorf("keys of target account already exists")
-	default:
-		nstate = st
-	}
+	var err error
+	var sBalance, nstate, nBalance state.StateUpdater
+	{
+		if nstate, err = notExistsAccountState(StateKeyKeys(newAddress), "keys of target", getState); err != nil {
+			return err
+		}
 
-	switch st, found, err := getState(StateKeyBalance(fact.sender)); {
-	case err != nil:
-		return err
-	case !found:
-		return state.IgnoreOperationProcessingError.Errorf("balance of sender account does not exist")
-	default:
-		sstateBalance = st
-	}
+		if sBalance, err = existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
+			return err
+		}
 
-	switch st, found, err := getState(StateKeyBalance(newAddress)); {
-	case err != nil:
-		return err
-	case found:
-		return state.IgnoreOperationProcessingError.Errorf("balance target account already exists")
-	default:
-		nstateBalance = st
+		if nBalance, err = notExistsAccountState(
+			StateKeyBalance(newAddress), "balance of target", getState); err != nil {
+			return err
+		}
 	}
 
 	if err := checkFactSignsByState(fact.sender, ca.Signs(), getState); err != nil {
 		return state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
 	}
 
-	if b, err := StateAmountValue(sstateBalance); err != nil {
+	if b, err := StateAmountValue(sBalance); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		n := b.Sub(fact.amount)
 		if err := n.IsValid(nil); err != nil {
 			return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
-		} else if err := SetStateAmountValue(sstateBalance, n); err != nil {
+		} else if err := SetStateAmountValue(sBalance, n); err != nil {
 			return state.IgnoreOperationProcessingError.Wrap(err)
 		}
 	}
@@ -177,19 +163,9 @@ func (ca CreateAccount) ProcessOperation(
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	if err := SetStateAmountValue(nstateBalance, fact.amount); err != nil {
+	if err := SetStateAmountValue(nBalance, fact.amount); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	if err := setState(sstateBalance); err != nil {
-		return err
-	}
-	if err := setState(nstate); err != nil {
-		return err
-	}
-	if err := setState(nstateBalance); err != nil {
-		return err
-	}
-
-	return nil
+	return setState(sBalance, nstate, nBalance)
 }

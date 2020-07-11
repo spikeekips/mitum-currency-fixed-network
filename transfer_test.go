@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testTransfer struct {
@@ -52,84 +51,52 @@ func TestTransfer(t *testing.T) {
 	suite.Run(t, new(testTransfer))
 }
 
-type testTransferEncode struct {
-	suite.Suite
+func testTransferEncode(enc encoder.Encoder) suite.TestingSuite {
+	t := new(baseTestOperationEncode)
 
-	enc encoder.Encoder
-}
+	t.enc = enc
+	t.newOperation = func() operation.Operation {
+		s := MustAddress(util.UUID().String())
+		r := MustAddress(util.UUID().String())
 
-func (t *testTransferEncode) SetupSuite() {
-	encs := encoder.NewEncoders()
-	encs.AddEncoder(t.enc)
+		token := util.UUID().Bytes()
+		fact := NewTransferFact(token, s, r, NewAmount(10))
 
-	encs.AddHinter(TransferFact{})
-	encs.AddHinter(Transfer{})
-	encs.AddHinter(key.BTCPublickey{})
-	encs.AddHinter(Address(""))
-	encs.AddHinter(operation.BaseFactSign{})
-}
+		var fs []operation.FactSign
 
-func (t *testTransferEncode) TestEncode() {
-	s := MustAddress(util.UUID().String())
-	r := MustAddress(util.UUID().String())
+		for _, pk := range []key.Privatekey{
+			key.MustNewBTCPrivatekey(),
+			key.MustNewBTCPrivatekey(),
+			key.MustNewBTCPrivatekey(),
+		} {
+			sig, err := operation.NewFactSignature(pk, fact, nil)
+			t.NoError(err)
 
-	token := util.UUID().Bytes()
-	fact := NewTransferFact(token, s, r, NewAmount(10))
+			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		}
 
-	var fs []operation.FactSign
-
-	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		tf, err := NewTransfer(fact, fs)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		return tf
 	}
 
-	tf, err := NewTransfer(fact, fs)
-	t.NoError(err)
+	t.compare = func(a, b operation.Operation) {
+		fact := a.Fact().(TransferFact)
+		ufact := b.Fact().(TransferFact)
 
-	b, err := t.enc.Marshal(tf)
-	t.NoError(err)
-
-	hinter, err := t.enc.DecodeByHint(b)
-	t.NoError(err)
-
-	utf, ok := hinter.(Transfer)
-	t.True(ok)
-
-	ufact := utf.Fact().(TransferFact)
-	t.True(fact.h.Equal(ufact.h))
-	t.Equal(fact.token, ufact.token)
-	t.True(fact.sender.Equal(ufact.sender))
-	t.True(fact.receiver.Equal(ufact.receiver))
-	t.Equal(fact.amount, ufact.amount)
-
-	t.True(tf.Hash().Equal(utf.Hash()))
-
-	for i := range tf.Signs() {
-		a := tf.Signs()[i]
-		b := utf.Signs()[i]
-
-		t.True(a.Signer().Equal(b.Signer()))
-		t.Equal(a.Signature(), b.Signature())
-		t.Equal(localtime.RFC3339(a.SignedAt()), localtime.RFC3339(b.SignedAt()))
+		t.True(fact.sender.Equal(ufact.sender))
+		t.True(fact.receiver.Equal(ufact.receiver))
+		t.Equal(fact.amount, ufact.amount)
 	}
+
+	return t
 }
 
 func TestTransferEncodeJSON(t *testing.T) {
-	b := new(testTransferEncode)
-	b.enc = jsonenc.NewEncoder()
-
-	suite.Run(t, b)
+	suite.Run(t, testTransferEncode(jsonenc.NewEncoder()))
 }
 
 func TestTransferEncodeBSON(t *testing.T) {
-	b := new(testTransferEncode)
-	b.enc = bsonenc.NewEncoder()
-
-	suite.Run(t, b)
+	suite.Run(t, testTransferEncode(bsonenc.NewEncoder()))
 }
