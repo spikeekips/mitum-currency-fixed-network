@@ -1,6 +1,7 @@
 package mc
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -38,13 +39,41 @@ func (t *testTransfer) TestNew() {
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	tf, err := NewTransfer(fact, fs)
+	tf, err := NewTransfer(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(tf.IsValid(nil))
 
 	t.Implements((*base.Fact)(nil), tf.Fact())
 	t.Implements((*operation.Operation)(nil), tf)
+}
+
+func (t *testTransfer) TestOverSizeMemo() {
+	s := MustAddress(util.UUID().String())
+	r := MustAddress(util.UUID().String())
+
+	token := util.UUID().Bytes()
+	fact := NewTransferFact(token, s, r, NewAmount(10))
+
+	var fs []operation.FactSign
+
+	for _, pk := range []key.Privatekey{
+		key.MustNewBTCPrivatekey(),
+		key.MustNewBTCPrivatekey(),
+		key.MustNewBTCPrivatekey(),
+	} {
+		sig, err := operation.NewFactSignature(pk, fact, nil)
+		t.NoError(err)
+
+		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+	}
+
+	memo := strings.Repeat("a", MaxMemoSize) + "a"
+	tf, err := NewTransfer(fact, fs, memo)
+	t.NoError(err)
+
+	err = tf.IsValid(nil)
+	t.Contains(err.Error(), "memo over max size")
 }
 
 func TestTransfer(t *testing.T) {
@@ -75,13 +104,18 @@ func testTransferEncode(enc encoder.Encoder) suite.TestingSuite {
 			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
-		tf, err := NewTransfer(fact, fs)
+		tf, err := NewTransfer(fact, fs, util.UUID().String())
 		t.NoError(err)
 
 		return tf
 	}
 
 	t.compare = func(a, b operation.Operation) {
+		ta := a.(Transfer)
+		tb := b.(Transfer)
+
+		t.Equal(ta.Memo, tb.Memo)
+
 		fact := a.Fact().(TransferFact)
 		ufact := b.Fact().(TransferFact)
 

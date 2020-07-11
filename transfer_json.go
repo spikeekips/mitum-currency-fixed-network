@@ -59,7 +59,10 @@ type TransferJSONPacker struct {
 }
 
 func (tf Transfer) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(tf.BaseOperation)
+	m := tf.BaseOperation.JSONM()
+	m["memo"] = tf.Memo
+
+	return util.JSON.Marshal(m)
 }
 
 func (tf *Transfer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -69,6 +72,13 @@ func (tf *Transfer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	}
 
 	*tf = Transfer{BaseOperation: ubo}
+
+	var um MemoJSONUnpacker
+	if err := enc.Unmarshal(b, &um); err != nil {
+		return err
+	} else {
+		tf.Memo = um.Memo
+	}
 
 	return nil
 }

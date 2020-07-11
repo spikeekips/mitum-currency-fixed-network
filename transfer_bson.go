@@ -44,7 +44,11 @@ func (tff *TransferFact) UnmarshalBSON(b []byte) error {
 }
 
 func (tf Transfer) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(tf.BaseOperation)
+	return bsonenc.Marshal(
+		bsonenc.MergeBSONM(
+			tf.BaseOperation.BSONM(),
+			bson.M{"memo": tf.Memo},
+		))
 }
 
 func (tf *Transfer) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -54,6 +58,13 @@ func (tf *Transfer) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	}
 
 	*tf = Transfer{BaseOperation: ubo}
+
+	var um MemoBSONUnpacker
+	if err := enc.Unmarshal(b, &um); err != nil {
+		return err
+	} else {
+		tf.Memo = um.Memo
+	}
 
 	return nil
 }

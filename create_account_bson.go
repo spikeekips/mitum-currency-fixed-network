@@ -38,7 +38,11 @@ func (caf *CreateAccountFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 }
 
 func (ca CreateAccount) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(ca.BaseOperation)
+	return bsonenc.Marshal(
+		bsonenc.MergeBSONM(
+			ca.BaseOperation.BSONM(),
+			bson.M{"memo": ca.Memo},
+		))
 }
 
 func (ca *CreateAccount) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -48,6 +52,13 @@ func (ca *CreateAccount) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	}
 
 	*ca = CreateAccount{BaseOperation: ubo}
+
+	var um MemoBSONUnpacker
+	if err := enc.Unmarshal(b, &um); err != nil {
+		return err
+	} else {
+		ca.Memo = um.Memo
+	}
 
 	return nil
 }

@@ -42,7 +42,7 @@ func (t *testCreateAccountOperation) newOperation(sender Address, amount Amount,
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	ca, err := NewCreateAccount(fact, fs)
+	ca, err := NewCreateAccount(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(ca.IsValid(nil))

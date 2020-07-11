@@ -42,7 +42,7 @@ func (t *testTransferOperation) newTransfer(sender, receiver Address, amount Amo
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	tf, err := NewTransfer(fact, fs)
+	tf, err := NewTransfer(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(tf.IsValid(nil))

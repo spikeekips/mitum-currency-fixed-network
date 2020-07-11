@@ -113,7 +113,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Seal, error) {
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 	}
 
-	if op, err := mc.NewCreateAccount(fact, fs); err != nil {
+	if op, err := mc.NewCreateAccount(fact, fs, ""); err != nil {
 		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
 	} else if sl, err := operation.NewBaseSeal(
 		cmd.Privatekey,

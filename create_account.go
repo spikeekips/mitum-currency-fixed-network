@@ -92,13 +92,14 @@ func (caf CreateAccountFact) Amount() Amount {
 
 type CreateAccount struct {
 	operation.BaseOperation
+	Memo string
 }
 
-func NewCreateAccount(fact CreateAccountFact, fs []operation.FactSign) (CreateAccount, error) {
+func NewCreateAccount(fact CreateAccountFact, fs []operation.FactSign, memo string) (CreateAccount, error) {
 	if bo, err := operation.NewBaseOperationFromFact(CreateAccountHint, fact, fs); err != nil {
 		return CreateAccount{}, err
 	} else {
-		return CreateAccount{BaseOperation: bo}, nil
+		return CreateAccount{BaseOperation: bo, Memo: memo}, nil
 	}
 }
 
@@ -107,6 +108,10 @@ func (ca CreateAccount) Hint() hint.Hint {
 }
 
 func (ca CreateAccount) IsValid(networkID []byte) error {
+	if err := IsValidMemo(ca.Memo); err != nil {
+		return err
+	}
+
 	return operation.IsValidOperation(ca, networkID)
 }
 

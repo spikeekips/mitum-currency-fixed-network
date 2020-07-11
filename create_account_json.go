@@ -47,7 +47,10 @@ func (caf *CreateAccountFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 }
 
 func (ca CreateAccount) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(ca.BaseOperation)
+	m := ca.BaseOperation.JSONM()
+	m["memo"] = ca.Memo
+
+	return util.JSON.Marshal(m)
 }
 
 func (ca *CreateAccount) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -57,6 +60,13 @@ func (ca *CreateAccount) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	}
 
 	*ca = CreateAccount{BaseOperation: ubo}
+
+	var um MemoJSONUnpacker
+	if err := enc.Unmarshal(b, &um); err != nil {
+		return err
+	} else {
+		ca.Memo = um.Memo
+	}
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package mc
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -41,13 +42,44 @@ func (t *testCreateAcount) TestNew() {
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	ca, err := NewCreateAccount(fact, fs)
+	ca, err := NewCreateAccount(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(ca.IsValid(nil))
 
 	t.Implements((*base.Fact)(nil), ca.Fact())
 	t.Implements((*operation.Operation)(nil), ca)
+}
+
+func (t *testCreateAcount) TestOverSizeMemo() {
+	spk := key.MustNewBTCPrivatekey()
+	rpk := key.MustNewBTCPrivatekey()
+
+	skey := NewKey(spk.Publickey(), 50)
+	rkey := NewKey(rpk.Publickey(), 50)
+	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+
+	pks := []key.Privatekey{spk, rpk}
+	sender, _ := NewAddressFromKeys([]Key{skey})
+
+	token := util.UUID().Bytes()
+	fact := NewCreateAccountFact(token, sender, skeys, NewAmount(10))
+
+	var fs []operation.FactSign
+
+	for _, pk := range pks {
+		sig, err := operation.NewFactSignature(pk, fact, nil)
+		t.NoError(err)
+
+		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+	}
+
+	memo := strings.Repeat("a", MaxMemoSize) + "a"
+	ca, err := NewCreateAccount(fact, fs, memo)
+	t.NoError(err)
+
+	err = ca.IsValid(nil)
+	t.Contains(err.Error(), "memo over max size")
 }
 
 func TestCreateAcount(t *testing.T) {
@@ -79,13 +111,18 @@ func testCreateAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
-		ca, err := NewCreateAccount(fact, fs)
+		ca, err := NewCreateAccount(fact, fs, util.UUID().String())
 		t.NoError(err)
 
 		return ca
 	}
 
 	t.compare = func(a, b operation.Operation) {
+		ca := a.(CreateAccount)
+		cb := b.(CreateAccount)
+
+		t.Equal(ca.Memo, cb.Memo)
+
 		fact := a.Fact().(CreateAccountFact)
 		ufact := b.Fact().(CreateAccountFact)
 

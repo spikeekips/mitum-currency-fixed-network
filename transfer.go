@@ -78,16 +78,18 @@ func (tff TransferFact) IsValid([]byte) error {
 
 type Transfer struct {
 	operation.BaseOperation
+	Memo string
 }
 
 func NewTransfer(
 	fact TransferFact,
 	fs []operation.FactSign,
+	memo string,
 ) (Transfer, error) {
 	if bo, err := operation.NewBaseOperationFromFact(TransferHint, fact, fs); err != nil {
 		return Transfer{}, err
 	} else {
-		return Transfer{BaseOperation: bo}, nil
+		return Transfer{BaseOperation: bo, Memo: memo}, nil
 	}
 }
 
@@ -96,6 +98,10 @@ func (tf Transfer) Hint() hint.Hint {
 }
 
 func (tf Transfer) IsValid(networkID []byte) error {
+	if err := IsValidMemo(tf.Memo); err != nil {
+		return err
+	}
+
 	return operation.IsValidOperation(tf, networkID)
 }
 
