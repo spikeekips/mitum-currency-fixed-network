@@ -14,7 +14,11 @@ import (
 	mc "github.com/spikeekips/mitum-currency"
 )
 
-var hinters []hint.Hinter
+var (
+	hinters        []hint.Hinter
+	encs           *encoder.Encoders
+	defaultJSONEnc *jsonenc.Encoder
+)
 
 func init() {
 	hinters = append(hinters, contestlib.Hinters...)
@@ -29,14 +33,24 @@ func init() {
 		mc.Transfer{},
 		mc.TransferFact{},
 	)
+
+	if es, err := loadEncoders(); err != nil {
+		panic(err)
+	} else if e, err := es.Encoder(jsonenc.JSONType, ""); err != nil {
+		panic(err)
+	} else {
+		encs = es
+		defaultJSONEnc = e.(*jsonenc.Encoder)
+	}
 }
 
 type MainFlags struct {
-	Version struct{} `cmd:"" help:"print version"`
+	Version struct{} `cmd:"" help:"print version"` // TODO set ldflags
 	*contestlib.LogFlags
 	Init InitCommand `cmd:"" help:"initialize"`
 	Run  RunCommand  `cmd:"" help:"run node"`
-	Node NodeCommand `cmd:""`
+	Node NodeCommand `cmd:"" name:"node" help:"various node commands"`
+	Send SendCommand `cmd:"" name:"send" help:"send seal to remote mitum node"`
 }
 
 func setupLogging(flags *contestlib.LogFlags) (logging.Logger, error) {

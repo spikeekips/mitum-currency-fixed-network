@@ -21,19 +21,21 @@ var mainHelpOptions = kong.HelpOptions{
 	NoAppSummary: false,
 	Compact:      false,
 	Summary:      true,
-	Tree:         true,
+	Tree:         false,
 }
 
 var mainDefaultVars = kong.Vars{
-	"log":               "",
-	"log_level":         "info",
-	"log_format":        "terminal",
-	"log_color":         "false",
-	"verbose":           "false",
-	"enable_pprofiling": "false",
-	"mem_prof_file":     "/tmp/mitum-currency-mem.prof",
-	"trace_prof_file":   "/tmp/mitum-currency-trace.prof",
-	"cpu_prof_file":     "/tmp/mitum-currency-cpu.prof",
+	"log":                      "",
+	"log_level":                "info",
+	"log_format":               "terminal",
+	"log_color":                "false",
+	"verbose":                  "false",
+	"enable_pprofiling":        "false",
+	"mem_prof_file":            "/tmp/mitum-currency-mem.prof",
+	"trace_prof_file":          "/tmp/mitum-currency-trace.prof",
+	"cpu_prof_file":            "/tmp/mitum-currency-cpu.prof",
+	"node_url":                 "quic://localhost:54321",
+	"create_account_threshold": "100",
 }
 
 func main() {

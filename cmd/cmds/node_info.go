@@ -12,7 +12,7 @@ import (
 )
 
 type NodeInfoCommand struct {
-	URL *url.URL `arg:"" name:"node url" help:"remote mitum url" required:""`
+	URL *url.URL `arg:"" name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"`
 }
 
 func (cmd *NodeInfoCommand) Run() error {

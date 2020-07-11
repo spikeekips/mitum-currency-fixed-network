@@ -106,7 +106,7 @@ func (cmd *InitCommand) checkExisting(nr *mc.Launcher, log logging.Logger) error
 	} else {
 		log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
-		log.Debug().Msg("existing environment cleaned")
+		return xerrors.Errorf("already blocks exist, clean first")
 	}
 
 	return nil
