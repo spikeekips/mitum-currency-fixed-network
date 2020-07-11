@@ -56,16 +56,10 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	log.Debug().Msg("trying to create genesis block")
 	var ops []operation.Operation
-	if op, err := cmd.loadPolicyOperation(nr.Design()); err != nil {
-		return err
-	} else {
-		ops = append(ops, op)
-	}
-
 	if o, err := cmd.loadInitOperations(nr); err != nil {
 		return err
 	} else {
-		ops = append(ops, o...)
+		ops = o
 	}
 
 	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
@@ -107,43 +101,19 @@ func (cmd *InitCommand) checkExisting(nr *mc.Launcher, log logging.Logger) error
 	return nil
 }
 
-func (cmd *InitCommand) loadPolicyOperation(design *mc.NodeDesign) (
-	operation.Operation, error,
-) {
-	token := []byte("genesis-policies-from-contest")
-	t := design.GenesisPolicy.PolicyOperationBodyV0
-
-	var fact isaac.SetPolicyOperationFactV0
-	if f, err := isaac.NewSetPolicyOperationFactV0(token, t); err != nil {
+func (cmd *InitCommand) loadInitOperations(nr *mc.Launcher) ([]operation.Operation, error) {
+	var ops []operation.Operation
+	if o, err := mc.LoadPolicyOperation(nr.Design()); err != nil {
 		return nil, err
 	} else {
-		fact = f
+		ops = append(ops, o...)
 	}
 
-	if op, err := isaac.NewSetPolicyOperationV0FromFact(
-		design.Privatekey(),
-		fact,
-		design.NetworkID(),
-	); err != nil {
-		return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)
+	if o, err := mc.LoadOtherInitOperations(nr); err != nil {
+		return nil, err
 	} else {
-		return op, nil
+		ops = append(ops, o...)
 	}
-}
 
-func (cmd *InitCommand) loadInitOperations(nr *mc.Launcher) ([]operation.Operation, error) {
-	/*
-		var nodeAddress mc.Address
-		if a, err := mc.NewAddressFromKeys([]mc.Key{mc.NewKey(nr.Design().Privatekey().Publickey(), 100)}); err != nil {
-			return nil, err
-		} else {
-			nodeAddress = a
-		}
-
-		key := mc.StateKeyBalance(nodeAddress)
-		amount, _ := mc.NewAmountFromString("9999999999999999")
-		value, _ := state.NewStringValue(amount)
-	*/
-
-	return nil, nil
+	return ops, nil
 }

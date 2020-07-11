@@ -17,7 +17,17 @@ import (
 func createLauncherFromDesign(f string, version util.Version, log logging.Logger) (*mc.Launcher, error) {
 	var hinters []hint.Hinter
 	hinters = append(hinters, contestlib.Hinters...)
-	hinters = append(hinters, mc.Address(""))
+	hinters = append(hinters,
+		mc.Address(""),
+		mc.Key{},
+		mc.Keys{},
+		mc.GenesisAccount{},
+		mc.GenesisAccountFact{},
+		mc.CreateAccount{},
+		mc.CreateAccountFact{},
+		mc.Transfer{},
+		mc.TransferFact{},
+	)
 
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
