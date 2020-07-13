@@ -126,8 +126,10 @@ func (ks Keys) IsValid([]byte) error {
 		totalWeight += ks.keys[i].Weight()
 	}
 
-	if totalWeight > 100 {
-		return xerrors.Errorf("sum of weight of keys over 100, %d", totalWeight)
+	if totalWeight < ks.threshold {
+		return xerrors.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
+	} else if totalWeight > 100 {
+		return xerrors.Errorf("sum of weight over 100, %d", totalWeight)
 	}
 
 	if h, err := ks.GenerateHash(); err != nil {

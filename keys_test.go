@@ -97,7 +97,6 @@ func (t *testKeys) TestBadThreshold() {
 	t.NoError(err)
 	err = ks.IsValid(nil)
 	t.Contains(err.Error(), "invalid threshold")
-
 }
 
 func (t *testKeys) TestCheckSigning() {
@@ -111,6 +110,18 @@ func (t *testKeys) TestCheckSigning() {
 	ks, err := NewKeys(keys, 100)
 	t.NoError(err)
 	t.NoError(ks.IsValid(nil))
+}
+
+func (t *testKeys) TestSingleKeyUnderThreshold() {
+	pk := key.MustNewBTCPrivatekey()
+
+	keys := []Key{NewKey(pk.Publickey(), 23)}
+
+	ks, err := NewKeys(keys, 100)
+	t.NoError(err)
+
+	err = ks.IsValid(nil)
+	t.Contains(err.Error(), "sum of weight under threshold")
 }
 
 func TestKeys(t *testing.T) {
