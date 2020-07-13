@@ -30,7 +30,7 @@ func NewAddress(name string) (Address, error) {
 }
 
 func NewAddressFromKeys(keys []Key) (Address, error) {
-	if n := len(keys); n < 0 {
+	if n := len(keys); n < 1 {
 		return EmptyAddress, xerrors.Errorf("empty keys for Address")
 	} else {
 		for i := range keys {
