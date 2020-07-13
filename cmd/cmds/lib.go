@@ -1,8 +1,17 @@
 package cmds
 
 import (
+	"bufio"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"reflect"
+
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -44,17 +53,8 @@ func init() {
 	}
 }
 
-type MainFlags struct {
-	Version struct{} `cmd:"" help:"print version"` // TODO set ldflags
-	*contestlib.LogFlags
-	Init InitCommand `cmd:"" help:"initialize"`
-	Run  RunCommand  `cmd:"" help:"run node"`
-	Node NodeCommand `cmd:"" name:"node" help:"various node commands"`
-	Send SendCommand `cmd:"" name:"send" help:"send seal to remote mitum node"`
-}
-
-func setupLogging(flags *contestlib.LogFlags) (logging.Logger, error) {
-	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor); err != nil {
+func SetupLogging(flags *contestlib.LogFlags) (logging.Logger, error) {
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, os.Stderr); err != nil {
 		return logging.NilLogger, err
 	} else if l, err := contestlib.SetupLogging(o, flags.LogLevel.Zero(), flags.Verbose); err != nil {
 		return logging.NilLogger, err
@@ -75,13 +75,6 @@ func loadEncoders() (*encoder.Encoders, error) {
 }
 
 func createLauncherFromDesign(f string, version util.Version, log logging.Logger) (*mc.Launcher, error) {
-	var encs *encoder.Encoders
-	if e, err := loadEncoders(); err != nil {
-		return nil, err
-	} else {
-		encs = e
-	}
-
 	var design *mc.NodeDesign
 	if d, err := mc.LoadDesign(f, encs); err != nil {
 		return nil, xerrors.Errorf("failed to load design: %w", err)
@@ -102,4 +95,51 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 	_ = nr.SetLogger(log)
 
 	return nr, nil
+}
+
+func loadSealFromInput(f string) (seal.Seal, error) {
+	var b []byte
+
+	if len(f) > 0 {
+		if a, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
+			return nil, err
+		} else {
+			b = a
+		}
+	} else {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			sc := bufio.NewScanner(os.Stdin)
+			for sc.Scan() {
+				b = append(b, sc.Bytes()...)
+			}
+
+			if err := sc.Err(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if len(b) < 1 {
+		return nil, xerrors.Errorf("seal must be given")
+	}
+
+	if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
+		return nil, err
+	} else {
+		return sl, nil
+	}
+}
+
+func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal.Seal, error) {
+	p := reflect.New(reflect.TypeOf(sl))
+	p.Elem().Set(reflect.ValueOf(sl))
+
+	signer := p.Interface().(seal.Signer)
+
+	if err := signer.Sign(priv, networkID); err != nil {
+		return nil, err
+	}
+
+	return p.Elem().Interface().(seal.Seal), nil
 }

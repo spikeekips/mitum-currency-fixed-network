@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
@@ -16,13 +15,6 @@ type NodeInfoCommand struct {
 }
 
 func (cmd *NodeInfoCommand) Run() error {
-	var encs *encoder.Encoders
-	if e, err := loadEncoders(); err != nil {
-		return err
-	} else {
-		encs = e
-	}
-
 	var channel network.NetworkChannel
 	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
 		return err

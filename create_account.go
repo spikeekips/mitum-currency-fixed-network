@@ -99,7 +99,15 @@ func NewCreateAccount(fact CreateAccountFact, fs []operation.FactSign, memo stri
 	if bo, err := operation.NewBaseOperationFromFact(CreateAccountHint, fact, fs); err != nil {
 		return CreateAccount{}, err
 	} else {
-		return CreateAccount{BaseOperation: bo, Memo: memo}, nil
+		ca := CreateAccount{BaseOperation: bo, Memo: memo}
+
+		if h, err := ca.GenerateHash(); err != nil {
+			return CreateAccount{}, err
+		} else {
+			ca.BaseOperation = bo.SetHash(h)
+		}
+
+		return ca, nil
 	}
 }
 
@@ -113,6 +121,35 @@ func (ca CreateAccount) IsValid(networkID []byte) error {
 	}
 
 	return operation.IsValidOperation(ca, networkID)
+}
+
+func (ca CreateAccount) GenerateHash() (valuehash.Hash, error) {
+	bs := make([][]byte, len(ca.Signs())+1)
+	for i := range ca.Signs() {
+		bs[i] = ca.Signs()[i].Bytes()
+	}
+
+	bs[len(bs)-1] = []byte(ca.Memo)
+
+	e := util.ConcatBytesSlice(ca.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
+
+	return valuehash.NewSHA256(e), nil
+}
+
+func (ca CreateAccount) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
+	if o, err := ca.BaseOperation.AddFactSigns(fs...); err != nil {
+		return nil, err
+	} else {
+		ca.BaseOperation = o.(operation.BaseOperation)
+	}
+
+	if h, err := ca.GenerateHash(); err != nil {
+		return nil, err
+	} else {
+		ca.BaseOperation = ca.SetHash(h)
+	}
+
+	return ca, nil
 }
 
 func (ca CreateAccount) ProcessOperation(

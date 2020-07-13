@@ -20,7 +20,7 @@ type InitCommand struct {
 
 func (cmd *InitCommand) Run(flags *MainFlags, version util.Version) error {
 	var log logging.Logger
-	if l, err := setupLogging(flags.LogFlags); err != nil {
+	if l, err := SetupLogging(flags.LogFlags); err != nil {
 		return err
 	} else {
 		log = l

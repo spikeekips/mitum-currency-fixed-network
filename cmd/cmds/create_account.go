@@ -2,26 +2,18 @@ package cmds
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"strconv"
-	"strings"
 
 	"golang.org/x/xerrors"
 
-	mc "github.com/spikeekips/mitum-currency"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/launcher"
-	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
+
+	mc "github.com/spikeekips/mitum-currency"
 )
 
 type CreateAccountCommand struct {
-	URL        *url.URL       `name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"` // nolint
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
@@ -29,49 +21,31 @@ type CreateAccountCommand struct {
 	Token      string         `help:"token for operation" optional:""`
 	NetworkID  string         `name:"network-id" help:"network-id" required:""`
 	Keys       []KeyFlag      `name:"key" help:"key for new account (ex: \"<private key>,<weight>\")" sep:"@"`
-	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
+	Pretty     bool           `name:"pretty" help:"pretty format"`
 
 	keys mc.Keys
 }
 
-func (cmd *CreateAccountCommand) Run(flags *MainFlags, version util.Version) error {
-	var log logging.Logger
-	if cmd.DryRun {
-		log = logging.NilLogger
-	} else if l, err := setupLogging(flags.LogFlags); err != nil {
-		return err
-	} else {
-		log = l
-	}
-
-	log.Info().Str("version", version.String()).Msg("mitum-currency")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
-	defer log.Info().Msg("mitum-currency finished")
-
+func (cmd *CreateAccountCommand) Run() error {
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	}
 
 	var sl operation.Seal
-	if s, err := cmd.createOperation(); err != nil {
+	if s, err := cmd.createSeal(); err != nil {
 		return err
 	} else {
 		sl = s
 	}
 
-	if cmd.DryRun {
-		_, _ = fmt.Fprintln(os.Stdout, string(jsonenc.MustMarshalIndent(sl)))
-
-		return nil
+	var b []byte
+	if cmd.Pretty {
+		b = jsonenc.MustMarshalIndent(sl)
+	} else {
+		b = jsonenc.MustMarshal(sl)
 	}
 
-	log.Debug().Hinted("seal", sl.Hash()).Msg("trying to send seal")
-
-	if err := cmd.send(sl); err != nil {
-		log.Error().Err(err).Msg("failed to send seal")
-
-		return err
-	}
+	_, _ = fmt.Fprintln(os.Stdout, string(b))
 
 	return nil
 }
@@ -103,7 +77,7 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 	return nil
 }
 
-func (cmd *CreateAccountCommand) createOperation() (operation.Seal, error) {
+func (cmd *CreateAccountCommand) createSeal() (operation.Seal, error) {
 	fact := mc.NewCreateAccountFact([]byte(cmd.Token), cmd.Sender.Address, cmd.keys, cmd.Amount.Amount)
 
 	var fs []operation.FactSign
@@ -124,91 +98,4 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Seal, error) {
 	} else {
 		return sl, nil
 	}
-}
-
-func (cmd *CreateAccountCommand) send(sl operation.Seal) error {
-	var channel network.NetworkChannel
-	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
-		return err
-	} else {
-		channel = ch
-	}
-
-	return channel.SendSeal(sl)
-}
-
-type KeyFlag struct {
-	Key mc.Key
-}
-
-func (v *KeyFlag) UnmarshalText(b []byte) error {
-	l := strings.SplitN(string(b), ",", 2)
-	if len(l) != 2 {
-		return xerrors.Errorf(`wrong formatted; "<string private key>,<uint weight>"`)
-	}
-
-	var pk key.Publickey
-	if k, err := key.DecodePublickey(defaultJSONEnc, l[0]); err != nil {
-		return xerrors.Errorf("invalid public key, %q for --key: %w", l[0], err)
-	} else {
-		pk = k
-	}
-
-	var weight uint
-	if i, err := strconv.ParseUint(l[1], 10, 64); err != nil {
-		return xerrors.Errorf("invalid weight, %q for --key: %w", l[1], err)
-	} else {
-		weight = uint(i)
-	}
-
-	k := mc.NewKey(pk, weight)
-	if err := k.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid key string: %w", err)
-	} else {
-		v.Key = k
-	}
-
-	return nil
-}
-
-type AddressFlag struct {
-	mc.Address
-}
-
-func (v *AddressFlag) UnmarshalText(b []byte) error {
-	if a, err := mc.NewAddress(string(b)); err != nil {
-		return xerrors.Errorf("invalid Address string, %q: %w", string(b), err)
-	} else {
-		*v = AddressFlag{Address: a}
-	}
-
-	return nil
-}
-
-type PrivatekeyFlag struct {
-	key.Privatekey
-}
-
-func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
-	if k, err := key.DecodePrivatekey(defaultJSONEnc, string(b)); err != nil {
-		return xerrors.Errorf("invalid private key, %q: %w", string(b), err)
-	} else {
-		*v = PrivatekeyFlag{Privatekey: k}
-	}
-
-	return nil
-}
-
-type AmountFlag struct {
-	mc.Amount
-}
-
-func (v *AmountFlag) UnmarshalText(b []byte) error {
-	if a, err := mc.NewAmountFromString(string(b)); err != nil {
-		return xerrors.Errorf("invalid amount string, %q: %w", string(b), err)
-	} else {
-		*v = AmountFlag{Amount: a}
-	}
-
-	return nil
 }

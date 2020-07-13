@@ -20,18 +20,7 @@ type RunCommand struct {
 	Design string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
 }
 
-func (cmd *RunCommand) Run(flags *MainFlags, version util.Version) error {
-	var log logging.Logger
-	if l, err := setupLogging(flags.LogFlags); err != nil {
-		return err
-	} else {
-		log = l
-	}
-
-	log.Info().Str("version", version.String()).Msg("mitum-currency")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
-	defer log.Info().Msg("mitum-currency finished")
-
+func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 	log.Info().Msg("mitum-currency node started")
 
 	_, _ = maxprocs.Set(maxprocs.Logger(func(f string, s ...interface{}) {

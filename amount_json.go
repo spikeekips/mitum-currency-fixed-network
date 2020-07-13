@@ -1,18 +1,24 @@
 package mc
 
 import (
-	"math/big"
-
 	"github.com/spikeekips/mitum/util"
 )
 
+func (a Amount) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(a.String())
+}
+
 func (a *Amount) UnmarshalJSON(b []byte) error {
-	var i *big.Int
-	if err := util.JSON.Unmarshal(b, &i); err != nil {
+	var s string
+	if err := util.JSON.Unmarshal(b, &s); err != nil {
 		return err
 	}
 
-	a.Int = i
+	if i, err := NewAmountFromString(s); err != nil {
+		return err
+	} else {
+		*a = i
+	}
 
 	return nil
 }
