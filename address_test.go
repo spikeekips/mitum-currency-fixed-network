@@ -21,7 +21,10 @@ func (t *testAddress) TestSingleKey() {
 	a, err := NewAddressFromKeys([]Key{k})
 	t.NoError(err)
 
-	t.Equal(k.Key().Raw(), a.String())
+	b, err := NewAddressFromKeys([]Key{k})
+	t.NoError(err)
+
+	t.True(a.Equal(b))
 }
 
 func (t *testAddress) TestWrongKey() {
@@ -31,6 +34,20 @@ func (t *testAddress) TestWrongKey() {
 }
 
 func (t *testAddress) TestMultipleKey() {
+	var ks []Key
+	for i := 0; i < 3; i++ {
+		ks = append(ks, t.newKey(30))
+	}
+	a, err := NewAddressFromKeys(ks)
+	t.NoError(err)
+
+	b, err := NewAddressFromKeys(ks)
+	t.NoError(err)
+
+	t.Equal(a, b)
+}
+
+func (t *testAddress) TestMultipleKeyOrder() {
 	var ks []Key
 	for i := 0; i < 3; i++ {
 		ks = append(ks, t.newKey(30))

@@ -43,16 +43,14 @@ func NewAddressFromKeys(keys []Key) (Address, error) {
 		}
 	}
 
-	if len(keys) == 1 {
-		return NewAddress(keys[0].Key().Raw())
-	}
-
 	skeys := make([]string, len(keys))
 	for i := range keys {
 		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().Raw(), keys[i].Weight())
 	}
 
-	sort.Strings(skeys)
+	if len(keys) > 1 {
+		sort.Strings(skeys)
+	}
 
 	return NewAddress(valuehash.NewSHA256([]byte(strings.Join(skeys, ","))).String())
 }
