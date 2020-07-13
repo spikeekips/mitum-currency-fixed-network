@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"golang.org/x/xerrors"
 
@@ -97,37 +98,36 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 	return nr, nil
 }
 
-func loadSealFromInput(f string) (seal.Seal, error) {
+func loadFromStdInput() ([]byte, error) {
 	var b []byte
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		sc := bufio.NewScanner(os.Stdin)
+		for sc.Scan() {
+			b = append(b, sc.Bytes()...)
+		}
 
-	if len(f) > 0 {
-		if a, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
+		if err := sc.Err(); err != nil {
 			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
+func loadFromFileOrInput(f string) ([]byte, bool, error) {
+	if len(f) > 0 {
+		if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
+			return nil, false, err
 		} else {
-			b = a
-		}
-	} else {
-		stat, _ := os.Stdin.Stat()
-		if (stat.Mode() & os.ModeCharDevice) == 0 {
-			sc := bufio.NewScanner(os.Stdin)
-			for sc.Scan() {
-				b = append(b, sc.Bytes()...)
-			}
-
-			if err := sc.Err(); err != nil {
-				return nil, err
-			}
+			return b, true, nil
 		}
 	}
 
-	if len(b) < 1 {
-		return nil, xerrors.Errorf("seal must be given")
-	}
-
-	if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
-		return nil, err
+	if b, err := loadFromStdInput(); err != nil {
+		return nil, false, err
 	} else {
-		return sl, nil
+		return b, false, nil
 	}
 }
 
@@ -142,4 +142,25 @@ func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal
 	}
 
 	return p.Elem().Interface().(seal.Seal), nil
+}
+
+func loadKeyFromFileOrInput(s string) (key.Key, bool, error) {
+	var fromString bool
+	if len(s) > 0 {
+		fromString = true
+	} else if b, err := loadFromStdInput(); err != nil {
+		return nil, false, err
+	} else {
+		s = string(b)
+	}
+
+	s = strings.TrimSpace(s)
+
+	if pk, err := key.DecodeKey(defaultJSONEnc, s); err != nil {
+		return nil, fromString, err
+	} else if err := pk.IsValid(nil); err != nil {
+		return nil, fromString, err
+	} else {
+		return pk, fromString, nil
+	}
 }

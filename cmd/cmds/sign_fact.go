@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -20,8 +21,10 @@ type SignFactCommand struct {
 
 func (cmd *SignFactCommand) Run(log logging.Logger) error {
 	var sl operation.Seal
-	if s, err := loadSealFromInput(cmd.Seal); err != nil {
+	if b, fromFile, err := loadFromFileOrInput(cmd.Seal); err != nil {
 		return err
+	} else if s, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
+		log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
 	} else if so, ok := s.(operation.Seal); !ok {
 		return xerrors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
@@ -31,6 +34,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 	} else {
 		sl = so
 	}
+
 	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	nops := make([]operation.Operation, len(sl.Operations()))

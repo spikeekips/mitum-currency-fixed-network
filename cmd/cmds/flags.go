@@ -34,10 +34,12 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	}
 
 	var pk key.Publickey
-	if k, err := key.DecodePublickey(defaultJSONEnc, l[0]); err != nil {
+	if k, err := key.DecodeKey(defaultJSONEnc, l[0]); err != nil {
 		return xerrors.Errorf("invalid public key, %q for --key: %w", l[0], err)
+	} else if priv, ok := k.(key.Privatekey); ok {
+		pk = priv.Publickey()
 	} else {
-		pk = k
+		pk = k.(key.Publickey)
 	}
 
 	var weight uint

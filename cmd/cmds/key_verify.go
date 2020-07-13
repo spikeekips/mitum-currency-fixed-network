@@ -1,10 +1,8 @@
 package cmds
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/logging"
@@ -16,40 +14,13 @@ type VerifyKeyCommand struct {
 }
 
 func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
-	var s string
-	if len(cmd.Key) > 0 {
-		s = cmd.Key
-		log.Debug().Str("input", s).Msg("load from argument")
-	} else {
-		var b []byte
-		stat, _ := os.Stdin.Stat()
-		if (stat.Mode() & os.ModeCharDevice) == 0 {
-			sc := bufio.NewScanner(os.Stdin)
-			for sc.Scan() {
-				b = append(b, sc.Bytes()...)
-			}
-
-			if err := sc.Err(); err != nil {
-				return err
-			}
-		}
-
-		s = string(b)
-		log.Debug().Str("input", s).Msg("load from stdin")
-	}
-
-	s = strings.TrimSpace(s)
-
 	var pk key.Key
-	if k, err := key.DecodeKey(defaultJSONEnc, s); err != nil {
-		return err
-	} else if err := k.IsValid(nil); err != nil {
+	if k, fromString, err := loadKeyFromFileOrInput(cmd.Key); err != nil {
 		return err
 	} else {
 		pk = k
+		log.Debug().Bool("from_string", fromString).Interface("key", pk).Msg("key parsed")
 	}
-
-	log.Debug().Interface("key", pk).Msg("key parsed")
 
 	if !cmd.Detail {
 		return nil

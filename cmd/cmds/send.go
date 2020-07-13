@@ -22,12 +22,12 @@ type SendCommand struct {
 
 func (cmd *SendCommand) Run(log logging.Logger) error {
 	var sl seal.Seal
-	if s, err := loadSealFromInput(cmd.Seal); err != nil {
+	if b, fromFile, err := loadFromFileOrInput(cmd.Seal); err != nil {
 		return err
-	} else {
+	} else if s, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
 		sl = s
+		log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
 	}
-	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
 		if s, err := signSeal(sl, cmd.Privatekey, []byte(cmd.NetworkID)); err != nil {

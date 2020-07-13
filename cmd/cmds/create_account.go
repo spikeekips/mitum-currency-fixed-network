@@ -20,7 +20,7 @@ type CreateAccountCommand struct {
 	Threshold  uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Token      string         `help:"token for operation" optional:""`
 	NetworkID  string         `name:"network-id" help:"network-id" required:""`
-	Keys       []KeyFlag      `name:"key" help:"key for new account (ex: \"<private key>,<weight>\")" sep:"@"`
+	Keys       []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 
 	keys mc.Keys
