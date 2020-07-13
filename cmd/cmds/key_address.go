@@ -11,7 +11,7 @@ import (
 )
 
 type KeyAddressCommand struct {
-	Keys []KeyFlag `name:"key" help:"key for address (ex: \"<public key>,<weight>\")" sep:"@"`
+	Keys []KeyFlag `arg:"" name:"key" help:"key for address (ex: \"<public key>,<weight>\")" sep:"@" optional:""`
 }
 
 func (cmd *KeyAddressCommand) Run() error {

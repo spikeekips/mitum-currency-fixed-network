@@ -13,7 +13,7 @@ import (
 )
 
 type SendCommand struct {
-	URL        *url.URL       `name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"` // nolint
+	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	Privatekey PrivatekeyFlag `name:"privatekey" help:"privatekey for sign"`
 	NetworkID  string         `name:"network-id" help:"network-id" `
 	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`

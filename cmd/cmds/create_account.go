@@ -10,8 +10,8 @@ import (
 )
 
 type CreateAccountCommand struct {
-	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
+	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
 	Threshold  uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Token      string         `help:"token for operation" optional:""`

@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -99,6 +100,19 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 	return nr, nil
 }
 
+func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal.Seal, error) {
+	p := reflect.New(reflect.TypeOf(sl))
+	p.Elem().Set(reflect.ValueOf(sl))
+
+	signer := p.Interface().(seal.Signer)
+
+	if err := signer.Sign(priv, networkID); err != nil {
+		return nil, err
+	}
+
+	return p.Elem().Interface().(seal.Seal), nil
+}
+
 func loadFromStdInput() ([]byte, error) {
 	var b []byte
 	stat, _ := os.Stdin.Stat()
@@ -114,7 +128,7 @@ func loadFromStdInput() ([]byte, error) {
 		}
 	}
 
-	return b, nil
+	return bytes.TrimSpace(b), nil
 }
 
 func loadFromFileOrInput(f string) ([]byte, bool, error) {
@@ -126,24 +140,14 @@ func loadFromFileOrInput(f string) ([]byte, bool, error) {
 		}
 	}
 
-	if b, err := loadFromStdInput(); err != nil {
+	switch b, err := loadFromStdInput(); {
+	case err != nil:
 		return nil, false, err
-	} else {
+	case len(b) < 1:
+		return nil, false, xerrors.Errorf("empty input")
+	default:
 		return b, false, nil
 	}
-}
-
-func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal.Seal, error) {
-	p := reflect.New(reflect.TypeOf(sl))
-	p.Elem().Set(reflect.ValueOf(sl))
-
-	signer := p.Interface().(seal.Signer)
-
-	if err := signer.Sign(priv, networkID); err != nil {
-		return nil, err
-	}
-
-	return p.Elem().Interface().(seal.Seal), nil
 }
 
 func loadKeyFromFileOrInput(s string) (key.Key, bool, error) {
