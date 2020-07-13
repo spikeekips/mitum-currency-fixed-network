@@ -15,9 +15,10 @@ type TransferCommand struct {
 	Receiver   AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
 	Token      string         `help:"token for operation" optional:""`
-	NetworkID  string         `name:"network-id" help:"network-id" required:""`
+	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Memo       string         `name:"memo" help:"memo"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
+	Seal       FileLoad       `help:"seal" optional:"" type:"existingfile"`
 }
 
 func (cmd *TransferCommand) Run() error {
@@ -25,14 +26,23 @@ func (cmd *TransferCommand) Run() error {
 		return err
 	}
 
-	var sl operation.Seal
-	if s, err := cmd.createSeal(); err != nil {
+	var op operation.Operation
+	if o, err := cmd.createOperation(); err != nil {
 		return err
 	} else {
-		sl = s
+		op = o
 	}
 
-	prettyPrint(cmd.Pretty, sl)
+	if sl, err := loadSealAndAddOperation(
+		cmd.Seal.Bytes(),
+		cmd.Privatekey,
+		cmd.NetworkID.Bytes(),
+		op,
+	); err != nil {
+		return err
+	} else {
+		prettyPrint(cmd.Pretty, sl)
+	}
 
 	return nil
 }
@@ -42,22 +52,14 @@ func (cmd *TransferCommand) parseFlags() error {
 		cmd.Token = localtime.String(localtime.Now())
 	}
 
-	if len(cmd.Memo) < 1 {
-		if b, err := loadFromStdInput(); err != nil {
-			return err
-		} else {
-			cmd.Memo = string(b)
-		}
-	}
-
 	return nil
 }
 
-func (cmd *TransferCommand) createSeal() (operation.Seal, error) {
+func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 	fact := mc.NewTransferFact([]byte(cmd.Token), cmd.Sender.Address, cmd.Receiver.Address, cmd.Amount.Amount)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, []byte(cmd.NetworkID)); err != nil {
+	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.Bytes()); err != nil {
 		return nil, err
 	} else {
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
@@ -65,13 +67,7 @@ func (cmd *TransferCommand) createSeal() (operation.Seal, error) {
 
 	if op, err := mc.NewTransfer(fact, fs, cmd.Memo); err != nil {
 		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
-	} else if sl, err := operation.NewBaseSeal(
-		cmd.Privatekey,
-		[]operation.Operation{op},
-		[]byte(cmd.NetworkID),
-	); err != nil {
-		return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
 	} else {
-		return sl, nil
+		return op, nil
 	}
 }

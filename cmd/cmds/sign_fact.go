@@ -9,26 +9,24 @@ import (
 
 type SignFactCommand struct {
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	NetworkID  string         `name:"network-id" help:"network-id" required:""`
+	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       string         `help:"seal" optional:"" type:"existingfile"`
+	Seal       FileLoad       `help:"seal" optional:""`
 }
 
 func (cmd *SignFactCommand) Run(log logging.Logger) error {
-	var fromFile bool
 	var sl operation.Seal
-	if s, isf, err := loadSealFromFileOrInput(cmd.Seal, []byte(cmd.NetworkID)); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		return err
 	} else if so, ok := s.(operation.Seal); !ok {
 		return xerrors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
 		return xerrors.Errorf("seal is not operation.SealUpdater, %T", so)
 	} else {
-		fromFile = isf
 		sl = so
 	}
 
-	log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
+	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	nops := make([]operation.Operation, len(sl.Operations()))
 	for i := range sl.Operations() {
@@ -46,7 +44,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 			fsu = u
 		}
 
-		if sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), []byte(cmd.NetworkID)); err != nil {
+		if sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.Bytes()); err != nil {
 			return err
 		} else {
 			f := operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
@@ -61,7 +59,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 
 	sl = sl.(operation.SealUpdater).SetOperations(nops).(operation.Seal)
 
-	if s, err := signSeal(sl, cmd.Privatekey, []byte(cmd.NetworkID)); err != nil {
+	if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
 		return err
 	} else {
 		sl = s.(operation.Seal)

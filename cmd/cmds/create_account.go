@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 
 	mc "github.com/spikeekips/mitum-currency"
 )
@@ -15,27 +16,37 @@ type CreateAccountCommand struct {
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
 	Threshold  uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Token      string         `help:"token for operation" optional:""`
-	NetworkID  string         `name:"network-id" help:"network-id" required:""`
+	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Keys       []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Memo       string         `name:"memo" help:"memo"`
+	Seal       FileLoad       `help:"seal" optional:""`
 
 	keys mc.Keys
 }
 
-func (cmd *CreateAccountCommand) Run() error {
+func (cmd *CreateAccountCommand) Run(log logging.Logger) error {
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	}
 
-	var sl operation.Seal
-	if s, err := cmd.createSeal(); err != nil {
+	var op operation.Operation
+	if o, err := cmd.createOperation(); err != nil {
 		return err
 	} else {
-		sl = s
+		op = o
 	}
 
-	prettyPrint(cmd.Pretty, sl)
+	if sl, err := loadSealAndAddOperation(
+		cmd.Seal.Bytes(),
+		cmd.Privatekey,
+		cmd.NetworkID.Bytes(),
+		op,
+	); err != nil {
+		return err
+	} else {
+		prettyPrint(cmd.Pretty, sl)
+	}
 
 	return nil
 }
@@ -64,18 +75,10 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 		}
 	}
 
-	if len(cmd.Memo) < 1 {
-		if b, err := loadFromStdInput(); err != nil {
-			return err
-		} else {
-			cmd.Memo = string(b)
-		}
-	}
-
 	return nil
 }
 
-func (cmd *CreateAccountCommand) createSeal() (operation.Seal, error) {
+func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) {
 	fact := mc.NewCreateAccountFact([]byte(cmd.Token), cmd.Sender.Address, cmd.keys, cmd.Amount.Amount)
 
 	var fs []operation.FactSign
@@ -87,13 +90,7 @@ func (cmd *CreateAccountCommand) createSeal() (operation.Seal, error) {
 
 	if op, err := mc.NewCreateAccount(fact, fs, cmd.Memo); err != nil {
 		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
-	} else if sl, err := operation.NewBaseSeal(
-		cmd.Privatekey,
-		[]operation.Operation{op},
-		[]byte(cmd.NetworkID),
-	); err != nil {
-		return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
 	} else {
-		return sl, nil
+		return op, nil
 	}
 }

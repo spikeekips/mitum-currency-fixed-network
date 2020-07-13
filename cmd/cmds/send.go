@@ -15,22 +15,21 @@ import (
 type SendCommand struct {
 	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	Privatekey PrivatekeyFlag `name:"privatekey" help:"privatekey for sign"`
-	NetworkID  string         `name:"network-id" help:"network-id" `
+	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
 	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
-	Seal       string         `help:"seal" optional:"" type:"existingfile"`
+	Seal       FileLoad       `help:"seal" optional:"" type:"existingfile"`
 }
 
 func (cmd *SendCommand) Run(log logging.Logger) error {
 	var sl seal.Seal
-	if b, fromFile, err := loadFromFileOrInput(cmd.Seal); err != nil {
-		return err
-	} else if s, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		sl = s
-		log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
 	}
 
+	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+
 	if !cmd.Privatekey.Empty() {
-		if s, err := signSeal(sl, cmd.Privatekey, []byte(cmd.NetworkID)); err != nil {
+		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
 			return err
 		} else {
 			sl = s

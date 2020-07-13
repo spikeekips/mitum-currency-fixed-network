@@ -7,12 +7,12 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type GenerateKeyCommand struct {
 	Type   string `name:"type" help:"key type {btc ether stellar} (default: btc)" optional:"" default:"btc"`
-	Format string `name:"format" help:"output format {normal json} (default: normal)" optional:"" default:"normal"`
+	JSON   bool   `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
+	Pretty bool   `name:"pretty" help:"pretty format"`
 }
 
 func (cmd *GenerateKeyCommand) Run() error {
@@ -26,16 +26,6 @@ func (cmd *GenerateKeyCommand) Run() error {
 		}
 	}
 
-	if len(cmd.Format) < 1 {
-		cmd.Format = "normal"
-	} else {
-		switch cmd.Format {
-		case "normal", "json":
-		default:
-			return xerrors.Errorf("unknown format: %q", cmd.Format)
-		}
-	}
-
 	var priv key.Privatekey
 	switch cmd.Type {
 	case btc:
@@ -46,14 +36,13 @@ func (cmd *GenerateKeyCommand) Run() error {
 		priv = key.MustNewStellarPrivatekey()
 	}
 
-	switch cmd.Format {
-	case "json":
-		_, _ = fmt.Fprintln(os.Stdout, string(jsonenc.MustMarshalIndent(map[string]interface{}{
+	if cmd.JSON {
+		prettyPrint(cmd.Pretty, map[string]interface{}{
 			"type":       priv.Hint(),
 			"privatekey": priv,
 			"publickey":  priv.Publickey(),
-		})))
-	default:
+		})
+	} else {
 		_, _ = fmt.Fprintf(os.Stdout, "      hint: %s\n", priv.Hint().Verbose())
 		_, _ = fmt.Fprintf(os.Stdout, "privatekey: %s\n", priv.String())
 		_, _ = fmt.Fprintf(os.Stdout, " publickey: %s\n", priv.Publickey().String())

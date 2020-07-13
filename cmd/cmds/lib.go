@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -14,6 +12,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/util"
@@ -131,55 +130,29 @@ func loadFromStdInput() ([]byte, error) {
 	return bytes.TrimSpace(b), nil
 }
 
-func loadFromFileOrInput(f string) ([]byte, bool, error) {
-	if len(f) > 0 {
-		if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
-			return nil, false, err
-		} else {
-			return b, true, nil
-		}
+func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
+	if len(bytes.TrimSpace(b)) < 1 {
+		return nil, xerrors.Errorf("empty input")
 	}
 
-	switch b, err := loadFromStdInput(); {
-	case err != nil:
-		return nil, false, err
-	case len(b) < 1:
-		return nil, false, xerrors.Errorf("empty input")
-	default:
-		return b, false, nil
+	if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
+		return nil, err
+	} else if err := sl.IsValid(networkID); err != nil {
+		return nil, xerrors.Errorf("invalid seal: %w", err)
+	} else {
+		return sl, nil
 	}
 }
 
-func loadKeyFromFileOrInput(s string) (key.Key, bool, error) {
-	var fromString bool
-	if len(s) > 0 {
-		fromString = true
-	} else if b, err := loadFromStdInput(); err != nil {
-		return nil, false, err
-	} else {
-		s = string(b)
-	}
-
-	s = strings.TrimSpace(s)
+func loadKey(b []byte) (key.Key, error) {
+	s := strings.TrimSpace(string(b))
 
 	if pk, err := key.DecodeKey(defaultJSONEnc, s); err != nil {
-		return nil, fromString, err
+		return nil, err
 	} else if err := pk.IsValid(nil); err != nil {
-		return nil, fromString, err
+		return nil, err
 	} else {
-		return pk, fromString, nil
-	}
-}
-
-func loadSealFromFileOrInput(f string, networkID base.NetworkID) (seal.Seal, bool, error) {
-	if b, fromFile, err := loadFromFileOrInput(f); err != nil {
-		return nil, false, err
-	} else if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
-		return nil, false, err
-	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, false, xerrors.Errorf("invalid seal: %w", err)
-	} else {
-		return sl, fromFile, nil
+		return pk, nil
 	}
 }
 
@@ -192,4 +165,47 @@ func prettyPrint(pretty bool, i interface{}) {
 	}
 
 	_, _ = fmt.Fprintln(os.Stdout, string(b))
+}
+
+func loadSealAndAddOperation(
+	b []byte,
+	privatekey key.Privatekey,
+	networkID base.NetworkID,
+	op operation.Operation,
+) (operation.Seal, error) {
+	var sl operation.Seal
+	if b != nil {
+		if s, err := loadSeal(b, networkID); err != nil {
+			return nil, err
+		} else if so, ok := s.(operation.Seal); !ok {
+			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		} else if _, ok := so.(operation.SealUpdater); !ok {
+			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		} else {
+			sl = so
+		}
+	} else {
+		if bs, err := operation.NewBaseSeal(
+			privatekey,
+			[]operation.Operation{op},
+			networkID,
+		); err != nil {
+			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+		} else {
+			sl = bs
+		}
+	}
+
+	// NOTE add operation to existing seal
+	sl = sl.(operation.SealUpdater).SetOperations(
+		append(sl.Operations(), op),
+	).(operation.Seal)
+
+	if s, err := signSeal(sl, privatekey, networkID); err != nil {
+		return nil, err
+	} else {
+		sl = s.(operation.Seal)
+	}
+
+	return sl, nil
 }

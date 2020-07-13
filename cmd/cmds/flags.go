@@ -1,6 +1,9 @@
 package cmds
 
 import (
+	"bytes"
+	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -28,6 +31,14 @@ type KeyFlag struct {
 }
 
 func (v *KeyFlag) UnmarshalText(b []byte) error {
+	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
+		if c, err := loadFromStdInput(); err != nil {
+			return err
+		} else {
+			b = c
+		}
+	}
+
 	l := strings.SplitN(string(b), ",", 2)
 	if len(l) != 2 {
 		return xerrors.Errorf(`wrong formatted; "<string private key>,<uint weight>"`)
@@ -112,4 +123,72 @@ func (v *AmountFlag) UnmarshalText(b []byte) error {
 	}
 
 	return nil
+}
+
+type NetworkIDFlag []byte
+
+func (v *NetworkIDFlag) UnmarshalText(b []byte) error {
+	*v = b
+
+	return nil
+}
+
+func (v NetworkIDFlag) Bytes() []byte {
+	return []byte(v)
+}
+
+type FileLoad []byte
+
+func (v *FileLoad) UnmarshalText(b []byte) error {
+	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
+		if c, err := loadFromStdInput(); err != nil {
+			return err
+		} else {
+			*v = c
+
+			return nil
+		}
+	}
+
+	if c, err := ioutil.ReadFile(filepath.Clean(string(b))); err != nil {
+		return err
+	} else {
+		*v = c
+
+		return nil
+	}
+}
+
+func (v FileLoad) Bytes() []byte {
+	return []byte(v)
+}
+
+func (v FileLoad) String() string {
+	return string(v)
+}
+
+type StringLoad []byte
+
+func (v *StringLoad) UnmarshalText(b []byte) error {
+	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
+		if c, err := loadFromStdInput(); err != nil {
+			return err
+		} else {
+			*v = c
+
+			return nil
+		}
+	}
+
+	*v = b
+
+	return nil
+}
+
+func (v StringLoad) Bytes() []byte {
+	return []byte(v)
+}
+
+func (v StringLoad) String() string {
+	return string(v)
 }

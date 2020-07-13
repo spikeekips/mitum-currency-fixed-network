@@ -7,27 +7,25 @@ import (
 
 type SignSealCommand struct {
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	NetworkID  string         `name:"network-id" help:"network-id" required:""`
+	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       string         `help:"seal" optional:"" type:"existingfile"`
+	Seal       FileLoad       `help:"seal" optional:""`
 }
 
 func (cmd *SignSealCommand) Run(log logging.Logger) error {
-	var fromFile bool
 	var sl seal.Seal
-	if s, isf, err := loadSealFromFileOrInput(cmd.Seal, []byte(cmd.NetworkID)); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		return err
 	} else {
-		fromFile = isf
 		sl = s
 	}
 
-	log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
+	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
 		log.Debug().Msg("already signed")
 	} else {
-		if s, err := signSeal(sl, cmd.Privatekey, []byte(cmd.NetworkID)); err != nil {
+		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
 			return err
 		} else {
 			log.Debug().Msg("seal signed")

@@ -9,18 +9,19 @@ import (
 )
 
 type VerifyKeyCommand struct {
-	Key    string `arg:"" name:"key" help:"key" optional:""`
-	Detail bool   `name:"detail" short:"d" help:"print details"`
+	Key    StringLoad `arg:"" name:"key" help:"key" optional:""`
+	Detail bool       `name:"detail" short:"d" help:"print details"`
 }
 
 func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 	var pk key.Key
-	if k, fromString, err := loadKeyFromFileOrInput(cmd.Key); err != nil {
+	if k, err := loadKey(cmd.Key.Bytes()); err != nil {
 		return err
 	} else {
 		pk = k
-		log.Debug().Bool("from_string", fromString).Interface("key", pk).Msg("key parsed")
 	}
+
+	log.Debug().Interface("key", pk).Msg("key parsed")
 
 	if !cmd.Detail {
 		return nil
