@@ -17,7 +17,7 @@ import (
 
 type RunCommand struct {
 	*launcher.PprofFlags
-	Design string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
+	Design FileLoad `arg:"" name:"node design file" help:"node design file"`
 }
 
 func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {

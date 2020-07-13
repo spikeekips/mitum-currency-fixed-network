@@ -17,7 +17,7 @@ type SendCommand struct {
 	Privatekey PrivatekeyFlag `name:"privatekey" help:"privatekey for sign"`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
 	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
-	Seal       FileLoad       `help:"seal" optional:"" type:"existingfile"`
+	Seal       FileLoad       `help:"seal" optional:""`
 }
 
 func (cmd *SendCommand) Run(log logging.Logger) error {

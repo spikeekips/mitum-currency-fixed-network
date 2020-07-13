@@ -13,8 +13,8 @@ import (
 )
 
 type InitCommand struct {
-	Design  string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
-	Force   bool   `help:"clean the existing environment"`
+	Design  FileLoad `arg:"" name:"node design file" help:"node design file"`
+	Force   bool     `help:"clean the existing environment"`
 	version util.Version
 }
 
@@ -39,7 +39,7 @@ func (cmd *InitCommand) Run(flags *MainFlags, version util.Version) error {
 
 func (cmd *InitCommand) run(log logging.Logger) error {
 	var nr *mc.Launcher
-	if n, err := createLauncherFromDesign(cmd.Design, cmd.version, log); err != nil {
+	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, log); err != nil {
 		return err
 	} else {
 		nr = n

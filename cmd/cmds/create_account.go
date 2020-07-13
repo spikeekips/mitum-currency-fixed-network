@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
 
 	mc "github.com/spikeekips/mitum-currency"
 )
@@ -25,7 +24,7 @@ type CreateAccountCommand struct {
 	keys mc.Keys
 }
 
-func (cmd *CreateAccountCommand) Run(log logging.Logger) error {
+func (cmd *CreateAccountCommand) Run() error {
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	}

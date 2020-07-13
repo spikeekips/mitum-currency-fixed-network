@@ -76,10 +76,10 @@ func loadEncoders() (*encoder.Encoders, error) {
 	}
 }
 
-func createLauncherFromDesign(f string, version util.Version, log logging.Logger) (*mc.Launcher, error) {
+func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger) (*mc.Launcher, error) {
 	var design *mc.NodeDesign
-	if d, err := mc.LoadDesign(f, encs); err != nil {
-		return nil, xerrors.Errorf("failed to load design: %w", err)
+	if d, err := mc.LoadDesign(b, encs); err != nil {
+		return nil, err
 	} else {
 		design = d
 	}

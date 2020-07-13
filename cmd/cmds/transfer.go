@@ -18,7 +18,7 @@ type TransferCommand struct {
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Memo       string         `name:"memo" help:"memo"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       FileLoad       `help:"seal" optional:"" type:"existingfile"`
+	Seal       FileLoad       `help:"seal" optional:""`
 }
 
 func (cmd *TransferCommand) Run() error {
