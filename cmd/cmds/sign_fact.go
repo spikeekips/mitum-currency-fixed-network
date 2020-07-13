@@ -1,14 +1,9 @@
 package cmds
 
 import (
-	"fmt"
-	"os"
-
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -20,22 +15,20 @@ type SignFactCommand struct {
 }
 
 func (cmd *SignFactCommand) Run(log logging.Logger) error {
+	var fromFile bool
 	var sl operation.Seal
-	if b, fromFile, err := loadFromFileOrInput(cmd.Seal); err != nil {
+	if s, isf, err := loadSealFromFileOrInput(cmd.Seal, []byte(cmd.NetworkID)); err != nil {
 		return err
-	} else if s, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
-		log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
 	} else if so, ok := s.(operation.Seal); !ok {
 		return xerrors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
 		return xerrors.Errorf("seal is not operation.SealUpdater, %T", so)
-	} else if err := so.IsValid([]byte(cmd.NetworkID)); err != nil {
-		return xerrors.Errorf("invalid seal: %w", err)
 	} else {
+		fromFile = isf
 		sl = so
 	}
 
-	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	log.Debug().Bool("from_file", fromFile).Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	nops := make([]operation.Operation, len(sl.Operations()))
 	for i := range sl.Operations() {
@@ -76,7 +69,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 		log.Debug().Msg("seal signed")
 	}
 
-	_, _ = fmt.Fprintln(os.Stdout, string(jsonenc.MustMarshalIndent(sl)))
+	prettyPrint(cmd.Pretty, sl)
 
 	return nil
 }

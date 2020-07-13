@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -105,6 +106,7 @@ func loadFromStdInput() ([]byte, error) {
 		sc := bufio.NewScanner(os.Stdin)
 		for sc.Scan() {
 			b = append(b, sc.Bytes()...)
+			b = append(b, []byte("\n")...)
 		}
 
 		if err := sc.Err(); err != nil {
@@ -163,4 +165,27 @@ func loadKeyFromFileOrInput(s string) (key.Key, bool, error) {
 	} else {
 		return pk, fromString, nil
 	}
+}
+
+func loadSealFromFileOrInput(f string, networkID base.NetworkID) (seal.Seal, bool, error) {
+	if b, fromFile, err := loadFromFileOrInput(f); err != nil {
+		return nil, false, err
+	} else if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
+		return nil, false, err
+	} else if err := sl.IsValid(networkID); err != nil {
+		return nil, false, xerrors.Errorf("invalid seal: %w", err)
+	} else {
+		return sl, fromFile, nil
+	}
+}
+
+func prettyPrint(pretty bool, i interface{}) {
+	var b []byte
+	if pretty {
+		b = jsonenc.MustMarshalIndent(i)
+	} else {
+		b = jsonenc.MustMarshal(i)
+	}
+
+	_, _ = fmt.Fprintln(os.Stdout, string(b))
 }

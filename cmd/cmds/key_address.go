@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/rs/zerolog/log"
+
 	mc "github.com/spikeekips/mitum-currency"
 )
 
