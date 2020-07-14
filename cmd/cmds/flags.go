@@ -21,7 +21,6 @@ type MainFlags struct {
 	Init InitCommand `cmd:"" help:"initialize"`
 	Run  RunCommand  `cmd:"" help:"run node"`
 	Node NodeCommand `cmd:"" name:"node" help:"various node commands"`
-	Send SendCommand `cmd:"" name:"send" help:"send seal to remote mitum node"`
 	Seal SealCommand `cmd:"" name:"seal" help:"generate seal"`
 	Key  KeyCommand  `cmd:"" name:"key" help:"key"`
 }

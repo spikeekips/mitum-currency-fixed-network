@@ -1,6 +1,7 @@
 package cmds
 
 type SealCommand struct {
+	Send          SendCommand          `cmd:"" name:"send" help:"send seal to remote mitum node"`
 	CreateAccount CreateAccountCommand `cmd:"" name:"create-account" help:"create new account"`
 	Transfer      TransferCommand      `cmd:"" name:"transfer" help:"transfer amount"`
 	Sign          SignSealCommand      `cmd:"" name:"sign" help:"sign seal"`

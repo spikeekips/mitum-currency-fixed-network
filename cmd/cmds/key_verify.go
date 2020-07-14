@@ -11,6 +11,8 @@ import (
 type VerifyKeyCommand struct {
 	Key    StringLoad `arg:"" name:"key" help:"key" optional:""`
 	Detail bool       `name:"detail" short:"d" help:"print details"`
+	JSON   bool       `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
+	Pretty bool       `name:"pretty" help:"pretty format"`
 }
 
 func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
@@ -35,6 +37,26 @@ func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 		pub = t.Publickey()
 	case key.Publickey:
 		pub = t
+	}
+
+	if cmd.JSON {
+		m := map[string]interface{}{
+			"publickey": map[string]interface{}{
+				"hint": pub.Hint(),
+				"key":  pub.String(),
+			},
+		}
+
+		if priv != nil {
+			m["privtekey"] = map[string]interface{}{
+				"hint": priv.Hint(),
+				"key":  priv.String(),
+			}
+		}
+
+		prettyPrint(cmd.Pretty, m)
+
+		return nil
 	}
 
 	if priv != nil {

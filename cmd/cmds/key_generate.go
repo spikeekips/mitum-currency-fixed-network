@@ -38,9 +38,14 @@ func (cmd *GenerateKeyCommand) Run() error {
 
 	if cmd.JSON {
 		prettyPrint(cmd.Pretty, map[string]interface{}{
-			"type":       priv.Hint(),
-			"privatekey": priv,
-			"publickey":  priv.Publickey(),
+			"privatekey": map[string]interface{}{
+				"hint": priv.Hint(),
+				"key":  priv.String(),
+			},
+			"publickey": map[string]interface{}{
+				"hint": priv.Publickey().Hint(),
+				"key":  priv.Publickey().String(),
+			},
 		})
 	} else {
 		_, _ = fmt.Fprintf(os.Stdout, "      hint: %s\n", priv.Hint().Verbose())

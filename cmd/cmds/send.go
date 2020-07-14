@@ -1,28 +1,28 @@
 package cmds
 
 import (
-	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SendCommand struct {
 	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
-	Privatekey PrivatekeyFlag `name:"privatekey" help:"privatekey for sign"`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
-	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
 	Seal       FileLoad       `help:"seal" optional:""`
+	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
+	Pretty     bool           `name:"pretty" help:"pretty format"`
+	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey for sign"`
 }
 
 func (cmd *SendCommand) Run(log logging.Logger) error {
 	var sl seal.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+		return err
+	} else {
 		sl = s
 	}
 
@@ -39,7 +39,7 @@ func (cmd *SendCommand) Run(log logging.Logger) error {
 	}
 
 	if cmd.DryRun {
-		_, _ = fmt.Fprintln(os.Stdout, string(jsonenc.MustMarshalIndent(sl)))
+		prettyPrint(cmd.Pretty, sl)
 
 		return nil
 	}
