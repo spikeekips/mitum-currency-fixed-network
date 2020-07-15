@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -56,10 +57,27 @@ func init() {
 	}
 }
 
-func SetupLogging(flags *contestlib.LogFlags) (logging.Logger, error) {
-	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, os.Stderr); err != nil {
-		return logging.NilLogger, err
-	} else if l, err := contestlib.SetupLogging(o, flags.LogLevel.Zero(), flags.Verbose); err != nil {
+func SetupLogging(logs []string, flags *contestlib.LogFlags) (logging.Logger, error) {
+	var outputs []io.Writer
+	for _, l := range logs {
+		if o, err := contestlib.SetupLoggingOutput(l, flags.LogFormat, flags.LogColor, os.Stderr); err != nil {
+			return logging.Logger{}, err
+		} else {
+			outputs = append(outputs, o)
+		}
+	}
+
+	var output io.Writer
+	switch n := len(outputs); {
+	case n == 0:
+		output = os.Stderr
+	case n == 1:
+		output = outputs[0]
+	default:
+		output = zerolog.MultiLevelWriter(outputs...)
+	}
+
+	if l, err := contestlib.SetupLogging(output, flags.LogLevel.Zero(), flags.Verbose); err != nil {
 		return logging.NilLogger, err
 	} else {
 		return l, nil

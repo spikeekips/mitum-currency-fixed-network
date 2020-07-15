@@ -73,7 +73,7 @@ func run(flags *cmds.MainFlags, ctx *kong.Context, version util.Version) error {
 	defer contestlib.ExitHooks.Run()
 
 	var log logging.Logger
-	if l, err := cmds.SetupLogging(flags.LogFlags); err != nil {
+	if l, err := cmds.SetupLogging(flags.Log, flags.LogFlags); err != nil {
 		return err
 	} else {
 		log = l

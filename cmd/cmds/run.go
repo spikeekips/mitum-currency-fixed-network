@@ -3,6 +3,7 @@ package cmds
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/automaxprocs/maxprocs"
 	"golang.org/x/xerrors"
@@ -17,7 +18,8 @@ import (
 
 type RunCommand struct {
 	*launcher.PprofFlags
-	Design FileLoad `arg:"" name:"node design file" help:"node design file"`
+	Design    FileLoad      `arg:"" name:"node design file" help:"node design file"`
+	ExitAfter time.Duration `help:"exit after the given duration (default: none)" default:"0s"`
 }
 
 func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
@@ -52,5 +54,19 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 		return xerrors.Errorf("failed to start: %w", err)
 	}
 
-	return <-nr.ErrChan()
+	select {
+	case err := <-nr.ErrChan():
+		return err
+	case <-func(w time.Duration) <-chan time.Time {
+		if w < 1 {
+			ch := make(chan time.Time)
+			return ch
+		}
+
+		return time.After(w)
+	}(cmd.ExitAfter):
+		log.Info().Str("exit-after", cmd.ExitAfter.String()).Msg("expired, exit.")
+
+		return nil
+	}
 }
