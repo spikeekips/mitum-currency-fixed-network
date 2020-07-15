@@ -58,12 +58,12 @@ func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 	}
 
 	if priv != nil {
-		cmd.print("privatekey hint: %s\n", priv.Hint().Verbose())
-		cmd.print("     privatekey: %s\n", priv.String())
+		cmd.print("privatekey hint: %s", priv.Hint().Verbose())
+		cmd.print("     privatekey: %s", priv.String())
 	}
 
-	cmd.print(" publickey hint: %s\n", pub.Hint().Verbose())
-	cmd.print("      publickey: %s\n", pub.String())
+	cmd.print(" publickey hint: %s", pub.Hint().Verbose())
+	cmd.print("      publickey: %s", pub.String())
 
 	return nil
 }

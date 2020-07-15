@@ -80,6 +80,7 @@ func (cm *printCommand) out() io.Writer {
 
 func (cm *printCommand) print(f string, a ...interface{}) {
 	_, _ = fmt.Fprintf(cm.out(), f, a...)
+	_, _ = fmt.Fprintln(cm.out())
 }
 
 func (cm *printCommand) pretty(pretty bool, i interface{}) {

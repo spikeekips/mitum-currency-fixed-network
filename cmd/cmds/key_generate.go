@@ -46,9 +46,9 @@ func (cmd *GenerateKeyCommand) Run() error {
 			},
 		})
 	} else {
-		cmd.print("      hint: %s\n", priv.Hint().Verbose())
-		cmd.print("privatekey: %s\n", priv.String())
-		cmd.print(" publickey: %s\n", priv.Publickey().String())
+		cmd.print("      hint: %s", priv.Hint().Verbose())
+		cmd.print("privatekey: %s", priv.String())
+		cmd.print(" publickey: %s", priv.Publickey().String())
 	}
 
 	return nil

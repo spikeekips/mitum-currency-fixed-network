@@ -9,7 +9,7 @@ import (
 
 type NodeInfoCommand struct {
 	printCommand
-	URL    *url.URL `arg:"" name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"`
+	URL    *url.URL `arg:"" name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"` // nolint
 	Pretty bool     `name:"pretty" help:"pretty format"`
 }
 
