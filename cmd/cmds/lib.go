@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -63,6 +64,33 @@ func SetupLogging(flags *contestlib.LogFlags) (logging.Logger, error) {
 	} else {
 		return l, nil
 	}
+}
+
+type printCommand struct {
+	o io.Writer
+}
+
+func (cm *printCommand) out() io.Writer {
+	if cm.o != nil {
+		return cm.o
+	} else {
+		return os.Stdout
+	}
+}
+
+func (cm *printCommand) print(f string, a ...interface{}) {
+	_, _ = fmt.Fprintf(cm.out(), f, a...)
+}
+
+func (cm *printCommand) pretty(pretty bool, i interface{}) {
+	var b []byte
+	if pretty {
+		b = jsonenc.MustMarshalIndent(i)
+	} else {
+		b = jsonenc.MustMarshal(i)
+	}
+
+	_, _ = fmt.Fprintln(cm.out(), string(b))
 }
 
 func loadEncoders() (*encoder.Encoders, error) {

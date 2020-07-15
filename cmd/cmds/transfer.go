@@ -10,6 +10,7 @@ import (
 )
 
 type TransferCommand struct {
+	printCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Receiver   AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:""`
@@ -41,7 +42,7 @@ func (cmd *TransferCommand) Run() error {
 	); err != nil {
 		return err
 	} else {
-		prettyPrint(cmd.Pretty, sl)
+		cmd.pretty(cmd.Pretty, sl)
 	}
 
 	return nil

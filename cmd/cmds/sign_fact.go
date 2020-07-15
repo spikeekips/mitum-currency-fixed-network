@@ -8,6 +8,7 @@ import (
 )
 
 type SignFactCommand struct {
+	printCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
@@ -67,7 +68,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 		log.Debug().Msg("seal signed")
 	}
 
-	prettyPrint(cmd.Pretty, sl)
+	cmd.pretty(cmd.Pretty, sl)
 
 	return nil
 }

@@ -1,14 +1,12 @@
 package cmds
 
 import (
-	"fmt"
-	"os"
-
 	mc "github.com/spikeekips/mitum-currency"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type KeyAddressCommand struct {
+	printCommand
 	Keys []KeyFlag `arg:"" name:"key" help:"key for address (ex: \"<public key>,<weight>\")" sep:"@" optional:""`
 }
 
@@ -23,7 +21,7 @@ func (cmd *KeyAddressCommand) Run(log logging.Logger) error {
 	if a, err := mc.NewAddressFromKeys(keys); err != nil {
 		return err
 	} else {
-		_, _ = fmt.Fprintln(os.Stdout, a.String())
+		cmd.print(a.String())
 	}
 
 	return nil

@@ -1,15 +1,13 @@
 package cmds
 
 import (
-	"fmt"
-	"os"
-
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
 )
 
 type GenerateKeyCommand struct {
+	printCommand
 	Type   string `name:"type" help:"key type {btc ether stellar} (default: btc)" optional:"" default:"btc"`
 	JSON   bool   `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool   `name:"pretty" help:"pretty format"`
@@ -37,7 +35,7 @@ func (cmd *GenerateKeyCommand) Run() error {
 	}
 
 	if cmd.JSON {
-		prettyPrint(cmd.Pretty, map[string]interface{}{
+		cmd.pretty(cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
 				"hint": priv.Hint(),
 				"key":  priv.String(),
@@ -48,9 +46,9 @@ func (cmd *GenerateKeyCommand) Run() error {
 			},
 		})
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "      hint: %s\n", priv.Hint().Verbose())
-		_, _ = fmt.Fprintf(os.Stdout, "privatekey: %s\n", priv.String())
-		_, _ = fmt.Fprintf(os.Stdout, " publickey: %s\n", priv.Publickey().String())
+		cmd.print("      hint: %s\n", priv.Hint().Verbose())
+		cmd.print("privatekey: %s\n", priv.String())
+		cmd.print(" publickey: %s\n", priv.Publickey().String())
 	}
 
 	return nil

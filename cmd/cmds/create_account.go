@@ -10,6 +10,7 @@ import (
 )
 
 type CreateAccountCommand struct {
+	printCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
@@ -44,7 +45,7 @@ func (cmd *CreateAccountCommand) Run() error {
 	); err != nil {
 		return err
 	} else {
-		prettyPrint(cmd.Pretty, sl)
+		cmd.pretty(cmd.Pretty, sl)
 	}
 
 	return nil

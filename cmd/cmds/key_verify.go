@@ -1,15 +1,13 @@
 package cmds
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type VerifyKeyCommand struct {
-	Key    StringLoad `arg:"" name:"key" help:"key" optional:""`
+	printCommand
+	Key    StringLoad `arg:"" name:"key" help:"key" required:""`
 	Detail bool       `name:"detail" short:"d" help:"print details"`
 	JSON   bool       `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool       `name:"pretty" help:"pretty format"`
@@ -54,18 +52,18 @@ func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 			}
 		}
 
-		prettyPrint(cmd.Pretty, m)
+		cmd.pretty(cmd.Pretty, m)
 
 		return nil
 	}
 
 	if priv != nil {
-		_, _ = fmt.Fprintf(os.Stdout, "privatekey hint: %s\n", priv.Hint().Verbose())
-		_, _ = fmt.Fprintf(os.Stdout, "     privatekey: %s\n", priv.String())
+		cmd.print("privatekey hint: %s\n", priv.Hint().Verbose())
+		cmd.print("     privatekey: %s\n", priv.String())
 	}
 
-	_, _ = fmt.Fprintf(os.Stdout, " publickey hint: %s\n", pub.Hint().Verbose())
-	_, _ = fmt.Fprintf(os.Stdout, "      publickey: %s\n", pub.String())
+	cmd.print(" publickey hint: %s\n", pub.Hint().Verbose())
+	cmd.print("      publickey: %s\n", pub.String())
 
 	return nil
 }
