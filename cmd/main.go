@@ -62,8 +62,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	contestlib.ConnectSignal()
-
 	ctx.FatalIfErrorf(run(flags, ctx, version))
 
 	os.Exit(0)

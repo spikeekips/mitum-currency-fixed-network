@@ -50,6 +50,9 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 		return xerrors.Errorf("failed to generate node from design: %w", err)
 	}
 
+	contestlib.ConnectSignal()
+	defer contestlib.ExitHooks.Run()
+
 	if err := nr.Start(); err != nil {
 		return xerrors.Errorf("failed to start: %w", err)
 	}
