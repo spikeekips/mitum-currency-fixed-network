@@ -1,0 +1,17 @@
+address: mc-node
+privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
+storage: mongodb://localhost:27017/mc
+network-id: contest-network-id
+
+network:
+    bind: 0.0.0.0:54321
+    publish: quic://localhost:54321
+
+init-operations:
+    - name: genesis-account
+      account-keys:
+          threshold: 70
+          keys:
+              - privatekey: L5GTSKkRs9NPsXwYgACZdodNUJqCAWjz2BccuR4cAgxJumEZWjok-0112:0.0.1
+                weight: 100
+      balance: 3333

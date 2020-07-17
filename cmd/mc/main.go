@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 
-	"github.com/spikeekips/mitum-currency/cmd/cmds"
+	"github.com/spikeekips/mitum-currency/cmd/mc/cmds"
 )
 
 var Version string = "v0.0.1"
