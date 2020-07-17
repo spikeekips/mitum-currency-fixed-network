@@ -2,8 +2,6 @@ module github.com/spikeekips/mitum-currency
 
 go 1.14
 
-replace github.com/spikeekips/mitum => /workspace/mitum/src
-
 require (
 	github.com/alecthomas/kong v0.2.11
 	github.com/rs/zerolog v1.19.0
