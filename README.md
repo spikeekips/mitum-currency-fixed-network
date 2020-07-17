@@ -23,6 +23,18 @@ cryptocurrency blockchain network (at your own risk).
 
 #### Installation
 
+> NOTE: at this time, *mitum* and *mitum-currency* is actively developed and
+*mitum* is still in the state of prototype, (not too long). So before building
+mitum, you need to get mitum source.
+>
+> `$ git clone https://github.com/spikeekips/mitum`
+>
+> `$ cd mitum `
+>
+> `$ git checkout proto3`
+>
+> and then, add `replace github.com/spikeekips/mitum => <your mitum source directory>` to `go.mod` of *mitum-currency*.
+
 ```sh
 $ go get -u github.com/spikeekips/mitum-currency/cmd/mc
 ```

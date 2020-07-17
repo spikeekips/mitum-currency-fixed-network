@@ -18,3 +18,4 @@ tests/*/*/coverage/
 /*.log
 .*.yaml
 /.release-it.json
+/go.local.mod
