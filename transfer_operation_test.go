@@ -50,7 +50,7 @@ func (t *testTransferOperation) newTransfer(sender, receiver Address, amount Amo
 	return tf
 }
 
-func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *isaac.StatePool) state.StateUpdater {
+func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
@@ -66,7 +66,7 @@ func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *is
 	return su
 }
 
-func (t *testTransferOperation) newStateKeys(a Address, keys Keys, sp *isaac.StatePool) state.StateUpdater {
+func (t *testTransferOperation) newStateKeys(a Address, keys Keys, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
@@ -83,7 +83,7 @@ func (t *testTransferOperation) newStateKeys(a Address, keys Keys, sp *isaac.Sta
 }
 
 func (t *testTransferOperation) TestSenderNotExist() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -107,7 +107,7 @@ func (t *testTransferOperation) TestSenderNotExist() {
 }
 
 func (t *testTransferOperation) TestReceiverNotExist() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -136,7 +136,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 }
 
 func (t *testTransferOperation) TestInsufficientBalance() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -170,7 +170,7 @@ func (t *testTransferOperation) TestInsufficientBalance() {
 }
 
 func (t *testTransferOperation) TestSufficientBalance() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -218,7 +218,7 @@ func (t *testTransferOperation) TestSufficientBalance() {
 }
 
 func (t *testTransferOperation) TestUnderThreshold() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -252,7 +252,7 @@ func (t *testTransferOperation) TestUnderThreshold() {
 }
 
 func (t *testTransferOperation) TestUnknownKey() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()

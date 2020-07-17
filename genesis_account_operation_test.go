@@ -50,7 +50,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 
 	op := t.newOperaton(keys, amount)
 
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys.Keys())
@@ -61,7 +61,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 		sp.Set,
 	)
 	t.NoError(err)
-	t.Equal(2, len(sp.Updated()))
+	t.Equal(2, len(sp.Updates()))
 
 	nstate, found, err := sp.Get(StateKeyKeys(newAddress))
 	t.NoError(err)
@@ -92,7 +92,7 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 
 	op := t.newOperaton(keys, amount)
 
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	err = op.ProcessOperation(
@@ -132,7 +132,7 @@ func (t *testGenesisAccountOperation) TestTargetAccountExists() {
 
 	op := t.newOperaton(keys, amount)
 
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	{

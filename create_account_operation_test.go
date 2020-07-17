@@ -50,7 +50,7 @@ func (t *testCreateAccountOperation) newOperation(sender Address, amount Amount,
 	return ca
 }
 
-func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, sp *isaac.StatePool) state.StateUpdater {
+func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
@@ -66,7 +66,7 @@ func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, s
 	return su
 }
 
-func (t *testCreateAccountOperation) newStateKeys(a Address, keys Keys, sp *isaac.StatePool) state.StateUpdater {
+func (t *testCreateAccountOperation) newStateKeys(a Address, keys Keys, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
@@ -83,7 +83,7 @@ func (t *testCreateAccountOperation) newStateKeys(a Address, keys Keys, sp *isaa
 }
 
 func (t *testCreateAccountOperation) TestSufficientBalance() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -142,7 +142,7 @@ func (t *testCreateAccountOperation) TestSufficientBalance() {
 }
 
 func (t *testCreateAccountOperation) TestSenderKeysNotExist() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -168,7 +168,7 @@ func (t *testCreateAccountOperation) TestSenderKeysNotExist() {
 }
 
 func (t *testCreateAccountOperation) TestSenderBalanceNotExist() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -197,7 +197,7 @@ func (t *testCreateAccountOperation) TestSenderBalanceNotExist() {
 }
 
 func (t *testCreateAccountOperation) TestReceiverExists() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
@@ -232,7 +232,7 @@ func (t *testCreateAccountOperation) TestReceiverExists() {
 }
 
 func (t *testCreateAccountOperation) TestInsufficientBalance() {
-	sp, err := isaac.NewStatePool(t.Storage(nil, nil))
+	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	spk := key.MustNewBTCPrivatekey()
