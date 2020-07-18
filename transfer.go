@@ -142,9 +142,9 @@ func (tf Transfer) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpd
 	return tf, nil
 }
 
-func (tf Transfer) ProcessOperation(
+func (tf Transfer) Process(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	fact := tf.Fact().(TransferFact)
 
@@ -193,5 +193,5 @@ func (tf Transfer) ProcessOperation(
 		}
 	}
 
-	return setState(sBalance, rBalance)
+	return setState(tf.Hash(), sBalance, rBalance)
 }

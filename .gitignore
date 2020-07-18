@@ -19,3 +19,4 @@ tests/*/*/coverage/
 .*.yaml
 /.release-it.json
 /go.local.mod
+/go.local.sum

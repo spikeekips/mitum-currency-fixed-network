@@ -56,7 +56,7 @@ func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, s
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NoError(sp.Set(su))
+	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
 
 	ust, found, err := sp.Get(key)
 	t.NoError(err)
@@ -72,7 +72,7 @@ func (t *testCreateAccountOperation) newStateKeys(a Address, keys Keys, sp *isaa
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NoError(sp.Set(su))
+	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
 
 	ust, found, err := sp.Get(key)
 	t.NoError(err)
@@ -107,10 +107,7 @@ func (t *testCreateAccountOperation) TestSufficientBalance() {
 
 	ca := t.newOperation(sender, amount, rkeys, []key.Privatekey{spk})
 
-	err = ca.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = ca.Process(sp.Get, sp.Set)
 	t.NoError(err)
 
 	// checking value
@@ -158,10 +155,7 @@ func (t *testCreateAccountOperation) TestSenderKeysNotExist() {
 	amount := NewAmount(10)
 	ca := t.newOperation(sender, amount, rkeys, []key.Privatekey{spk})
 
-	err = ca.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = ca.Process(sp.Get, sp.Set)
 
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "keys of sender does not exist")
@@ -187,10 +181,7 @@ func (t *testCreateAccountOperation) TestSenderBalanceNotExist() {
 	amount := NewAmount(10)
 	ca := t.newOperation(sender, amount, rkeys, []key.Privatekey{spk})
 
-	err = ca.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = ca.Process(sp.Get, sp.Set)
 
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "balance of sender does not exist")
@@ -224,10 +215,7 @@ func (t *testCreateAccountOperation) TestReceiverExists() {
 
 	ca := t.newOperation(sender, amount, rkeys, []key.Privatekey{spk})
 
-	err = ca.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = ca.Process(sp.Get, sp.Set)
 	t.Contains(err.Error(), "keys of target already exists")
 }
 
@@ -255,10 +243,7 @@ func (t *testCreateAccountOperation) TestInsufficientBalance() {
 
 	ca := t.newOperation(sender, amount, rkeys, []key.Privatekey{spk})
 
-	err = ca.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = ca.Process(sp.Get, sp.Set)
 	t.Contains(err.Error(), "invalid amount; under zero")
 }
 

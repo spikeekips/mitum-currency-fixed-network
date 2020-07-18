@@ -152,9 +152,9 @@ func (ca CreateAccount) AddFactSigns(fs ...operation.FactSign) (operation.FactSi
 	return ca, nil
 }
 
-func (ca CreateAccount) ProcessOperation(
+func (ca CreateAccount) Process(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	fact := ca.Fact().(CreateAccountFact)
 
@@ -209,5 +209,5 @@ func (ca CreateAccount) ProcessOperation(
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	return setState(sBalance, nstate, nBalance)
+	return setState(ca.Hash(), sBalance, nstate, nBalance)
 }

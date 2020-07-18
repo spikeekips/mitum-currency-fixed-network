@@ -56,7 +56,7 @@ func (t *testTransferOperation) newStateAccount(a Address, amount Amount, sp *is
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NoError(sp.Set(su))
+	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
 
 	ust, found, err := sp.Get(key)
 	t.NoError(err)
@@ -72,7 +72,7 @@ func (t *testTransferOperation) newStateKeys(a Address, keys Keys, sp *isaac.Sta
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NoError(sp.Set(su))
+	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
 
 	ust, found, err := sp.Get(key)
 	t.NoError(err)
@@ -98,10 +98,7 @@ func (t *testTransferOperation) TestSenderNotExist() {
 
 	tf := t.newTransfer(sender, receiver, NewAmount(10), pks)
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "keys of sender does not exist")
 }
@@ -127,10 +124,7 @@ func (t *testTransferOperation) TestReceiverNotExist() {
 
 	tf := t.newTransfer(sender, receiver, NewAmount(3), pks)
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "keys of receiver does not exist")
 }
@@ -161,10 +155,7 @@ func (t *testTransferOperation) TestInsufficientBalance() {
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "invalid amount; under zero")
 }
@@ -196,10 +187,7 @@ func (t *testTransferOperation) TestSufficientBalance() {
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.NoError(err)
 
 	// checking value
@@ -243,10 +231,7 @@ func (t *testTransferOperation) TestUnderThreshold() {
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "not passed threshold")
 }
@@ -276,10 +261,7 @@ func (t *testTransferOperation) TestUnknownKey() {
 
 	tf := t.newTransfer(sender, receiver, amount, []key.Privatekey{spk, key.MustNewBTCPrivatekey()})
 
-	err = tf.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = tf.Process(sp.Get, sp.Set)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
 	t.Contains(err.Error(), "unknown key found")
 }

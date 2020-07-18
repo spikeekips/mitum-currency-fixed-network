@@ -133,9 +133,9 @@ func (ga GenesisAccount) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (ga GenesisAccount) ProcessOperation(
+func (ga GenesisAccount) Process(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	fact := ga.Fact().(GenesisAccountFact)
 
@@ -167,5 +167,5 @@ func (ga GenesisAccount) ProcessOperation(
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	return setState(nstate, nstateBalance)
+	return setState(ga.Hash(), nstate, nstateBalance)
 }

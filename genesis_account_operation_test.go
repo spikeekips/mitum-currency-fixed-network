@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testGenesisAccountOperation struct {
@@ -56,10 +57,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 	newAddress, err := NewAddressFromKeys(keys.Keys())
 	t.NoError(err)
 
-	err = op.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
 	t.Equal(2, len(sp.Updates()))
 
@@ -95,10 +93,7 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
-	err = op.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys.Keys())
@@ -141,13 +136,10 @@ func (t *testGenesisAccountOperation) TestTargetAccountExists() {
 		st, found, err := sp.Get(StateKeyBalance(newAddress))
 		t.NoError(err)
 		t.False(found)
-		sp.Set(st)
+		sp.Set(valuehash.RandomSHA256(), st)
 	}
 
-	err = op.ProcessOperation(
-		sp.Get,
-		sp.Set,
-	)
+	err = op.Process(sp.Get, sp.Set)
 	t.Contains(err.Error(), "balance of genesis already exists")
 }
 
