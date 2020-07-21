@@ -65,7 +65,9 @@ func testGenesisAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 		t.Equal(fact.amount, ufact.amount)
 
 		t.True(fact.keys.Hash().Equal(ufact.keys.Hash()))
-		t.Equal(fact.keys.Keys(), ufact.keys.Keys())
+		for i := range fact.keys.Keys() {
+			t.Equal(fact.keys.Keys()[i].Bytes(), ufact.keys.Keys()[i].Bytes())
+		}
 		t.Equal(fact.keys.Threshold(), ufact.keys.Threshold())
 	}
 

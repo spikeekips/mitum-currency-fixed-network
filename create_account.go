@@ -3,6 +3,7 @@ package mc
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
@@ -21,12 +22,12 @@ var (
 type CreateAccountFact struct {
 	h      valuehash.Hash
 	token  []byte
-	sender Address
+	sender base.Address
 	keys   Keys
 	amount Amount
 }
 
-func NewCreateAccountFact(token []byte, sender Address, keys Keys, amount Amount) CreateAccountFact {
+func NewCreateAccountFact(token []byte, sender base.Address, keys Keys, amount Amount) CreateAccountFact {
 	caf := CreateAccountFact{
 		token:  token,
 		sender: sender,
@@ -78,7 +79,7 @@ func (caf CreateAccountFact) Token() []byte {
 	return caf.token
 }
 
-func (caf CreateAccountFact) Sender() Address {
+func (caf CreateAccountFact) Sender() base.Address {
 	return caf.sender
 }
 

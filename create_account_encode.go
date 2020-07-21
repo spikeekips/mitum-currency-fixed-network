@@ -3,6 +3,7 @@ package mc
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -11,7 +12,7 @@ func (caf *CreateAccountFact) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	tk []byte,
-	sender Address,
+	bSender base.AddressDecoder,
 	bks []byte,
 	am Amount,
 ) error {
@@ -22,6 +23,13 @@ func (caf *CreateAccountFact) unpack(
 		return xerrors.Errorf("not Keys: %T", hinter)
 	} else {
 		keys = k
+	}
+
+	var sender base.Address
+	if a, err := bSender.Encode(enc); err != nil {
+		return err
+	} else {
+		sender = a
 	}
 
 	caf.h = h

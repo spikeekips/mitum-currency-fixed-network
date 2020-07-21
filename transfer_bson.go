@@ -1,8 +1,9 @@
-package mc
+package mc // nolint: dupl
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -21,26 +22,20 @@ func (tff TransferFact) MarshalBSON() ([]byte, error) {
 }
 
 type TransferFactBSONUnpacker struct {
-	H  valuehash.Bytes `bson:"hash"`
-	TK []byte          `bson:"token"`
-	SD Address         `bson:"sender"`
-	RC Address         `bson:"receiver"`
-	AM Amount          `bson:"amount"`
+	H  valuehash.Bytes     `bson:"hash"`
+	TK []byte              `bson:"token"`
+	SD base.AddressDecoder `bson:"sender"`
+	RC base.AddressDecoder `bson:"receiver"`
+	AM Amount              `bson:"amount"`
 }
 
-func (tff *TransferFact) UnmarshalBSON(b []byte) error {
+func (tff *TransferFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var utff TransferFactBSONUnpacker
-	if err := bson.Unmarshal(b, &utff); err != nil {
+	if err := enc.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
-	tff.h = utff.H
-	tff.token = utff.TK
-	tff.sender = utff.SD
-	tff.receiver = utff.RC
-	tff.amount = utff.AM
-
-	return nil
+	return tff.unpack(enc, utff.H, utff.TK, utff.SD, utff.RC, utff.AM)
 }
 
 func (tf Transfer) MarshalBSON() ([]byte, error) {

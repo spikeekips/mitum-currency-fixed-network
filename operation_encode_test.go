@@ -22,7 +22,7 @@ func (t *baseTestOperationEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	t.encs.AddEncoder(t.enc)
 
-	t.encs.AddHinter(key.BTCPublickey{})
+	t.encs.AddHinter(key.BTCPublickeyHinter)
 	t.encs.AddHinter(Address(""))
 	t.encs.AddHinter(operation.BaseFactSign{})
 	t.encs.AddHinter(Key{})

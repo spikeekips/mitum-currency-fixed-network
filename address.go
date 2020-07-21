@@ -45,7 +45,7 @@ func NewAddressFromKeys(keys []Key) (Address, error) {
 
 	skeys := make([]string, len(keys))
 	for i := range keys {
-		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().Raw(), keys[i].Weight())
+		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().String(), keys[i].Weight())
 	}
 
 	if len(keys) > 1 {
@@ -81,6 +81,20 @@ func (ca Address) Equal(a base.Address) bool {
 
 func (ca Address) Bytes() []byte {
 	return []byte(ca)
+}
+
+func (ca Address) MarshalText() ([]byte, error) {
+	return []byte(hint.HintedString(ca.Hint(), ca.String())), nil
+}
+
+func (ca *Address) UnmarshalText(b []byte) error {
+	if a, err := NewAddress(string(b)); err != nil {
+		return err
+	} else {
+		*ca = a
+
+		return nil
+	}
 }
 
 func (ca Address) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {

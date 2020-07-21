@@ -24,8 +24,8 @@ func (ky Key) MarshalJSON() ([]byte, error) {
 }
 
 type KeyJSONUnpacker struct {
-	W uint           `json:"weight"`
-	K key.KeyDecoder `json:"key"`
+	W uint                 `json:"weight"`
+	K key.PublickeyDecoder `json:"key"`
 }
 
 func (ky *Key) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

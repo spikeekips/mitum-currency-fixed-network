@@ -137,7 +137,7 @@ func (t *testKeysEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	encs.AddEncoder(t.enc)
 
-	encs.AddHinter(key.BTCPublickey{})
+	encs.AddHinter(key.BTCPublickeyHinter)
 	encs.AddHinter(Key{})
 	encs.AddHinter(Keys{})
 }

@@ -8,15 +8,13 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.KeyDecoder) error {
+func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) error {
 	ky.w = w
 
 	if k, err := kd.Encode(enc); err != nil {
 		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey; type=%T", k)
 	} else {
-		ky.k = pk
+		ky.k = k
 	}
 
 	return nil

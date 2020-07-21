@@ -12,17 +12,15 @@ func (gaf *GenesisAccountFact) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	tk []byte,
-	genesisNodeKey key.KeyDecoder,
+	genesisNodeKey key.PublickeyDecoder,
 	bks []byte,
 	am Amount,
 ) error {
 	var gkey key.Publickey
 	if k, err := genesisNodeKey.Encode(enc); err != nil {
 		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey, %T", k)
 	} else {
-		gkey = pk
+		gkey = k
 	}
 
 	var keys Keys

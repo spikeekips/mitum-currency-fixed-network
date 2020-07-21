@@ -19,8 +19,8 @@ func (ky Key) MarshalBSON() ([]byte, error) {
 }
 
 type KeyBSONUnpacker struct {
-	W uint           `bson:"weight"`
-	K key.KeyDecoder `bson:"key"`
+	W uint                 `bson:"weight"`
+	K key.PublickeyDecoder `bson:"key"`
 }
 
 func (ky *Key) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

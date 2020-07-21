@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -30,7 +31,7 @@ func (t *testCreateAccountOperation) SetupSuite() {
 	t.Encs.AddHinter(Transfer{})
 }
 
-func (t *testCreateAccountOperation) newOperation(sender Address, amount Amount, keys Keys, pks []key.Privatekey) CreateAccount {
+func (t *testCreateAccountOperation) newOperation(sender base.Address, amount Amount, keys Keys, pks []key.Privatekey) CreateAccount {
 	token := util.UUID().Bytes()
 	fact := NewCreateAccountFact(token, sender, keys, amount)
 
@@ -50,7 +51,7 @@ func (t *testCreateAccountOperation) newOperation(sender Address, amount Amount,
 	return ca
 }
 
-func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, sp *isaac.Statepool) state.StateUpdater {
+func (t *testCreateAccountOperation) newStateBalance(a base.Address, amount Amount, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
@@ -66,7 +67,7 @@ func (t *testCreateAccountOperation) newStateBalance(a Address, amount Amount, s
 	return su
 }
 
-func (t *testCreateAccountOperation) newStateKeys(a Address, keys Keys, sp *isaac.Statepool) state.StateUpdater {
+func (t *testCreateAccountOperation) newStateKeys(a base.Address, keys Keys, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
 	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())

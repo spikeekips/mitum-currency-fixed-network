@@ -12,8 +12,8 @@ type TransferFactJSONPacker struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
-	SD Address        `json:"sender"`
-	RC Address        `json:"receiver"`
+	SD base.Address   `json:"sender"`
+	RC base.Address   `json:"receiver"`
 	AM Amount         `json:"amount"`
 }
 
@@ -29,26 +29,20 @@ func (tff TransferFact) MarshalJSON() ([]byte, error) {
 }
 
 type TransferFactJSONUnpacker struct {
-	H  valuehash.Bytes `json:"hash"`
-	TK []byte          `json:"token"`
-	SD Address         `json:"sender"`
-	RC Address         `json:"receiver"`
-	AM Amount          `json:"amount"`
+	H  valuehash.Bytes     `json:"hash"`
+	TK []byte              `json:"token"`
+	SD base.AddressDecoder `json:"sender"`
+	RC base.AddressDecoder `json:"receiver"`
+	AM Amount              `json:"amount"`
 }
 
-func (tff *TransferFact) UnmarshalJSON(b []byte) error {
+func (tff *TransferFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var utff TransferFactJSONUnpacker
 	if err := util.JSON.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
-	tff.h = utff.H
-	tff.token = utff.TK
-	tff.sender = utff.SD
-	tff.receiver = utff.RC
-	tff.amount = utff.AM
-
-	return nil
+	return tff.unpack(enc, utff.H, utff.TK, utff.SD, utff.RC, utff.AM)
 }
 
 type TransferJSONPacker struct {

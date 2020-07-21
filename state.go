@@ -5,15 +5,16 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 )
 
-func StateKeyKeys(a Address) string {
+func StateKeyKeys(a base.Address) string {
 	return fmt.Sprintf("%s:keys", a.String())
 }
 
-func StateKeyBalance(a Address) string {
+func StateKeyBalance(a base.Address) string {
 	return fmt.Sprintf("%s:balance", a.String())
 }
 
@@ -56,7 +57,7 @@ func SetStateAmountValue(st state.StateUpdater, v Amount) error {
 }
 
 func checkFactSignsByState(
-	address Address,
+	address base.Address,
 	fs []operation.FactSign,
 	getState func(key string) (state.StateUpdater, bool, error),
 ) error {

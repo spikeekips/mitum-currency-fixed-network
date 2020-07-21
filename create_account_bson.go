@@ -1,8 +1,9 @@
-package mc
+package mc // nolint: dupl
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -21,11 +22,11 @@ func (caf CreateAccountFact) MarshalBSON() ([]byte, error) {
 }
 
 type CreateAccountFactBSONUnpacker struct {
-	H  valuehash.Bytes `bson:"hash"`
-	TK []byte          `bson:"token"`
-	SD Address         `bson:"sender"`
-	KS bson.Raw        `bson:"keys"`
-	AM Amount          `bson:"amount"`
+	H  valuehash.Bytes     `bson:"hash"`
+	TK []byte              `bson:"token"`
+	SD base.AddressDecoder `bson:"sender"`
+	KS bson.Raw            `bson:"keys"`
+	AM Amount              `bson:"amount"`
 }
 
 func (caf *CreateAccountFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

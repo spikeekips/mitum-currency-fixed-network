@@ -3,6 +3,7 @@ package mc
 import (
 	"encoding/json"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -13,7 +14,7 @@ type CreateAccountFactJSONPacker struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
-	SD Address        `json:"sender"`
+	SD base.Address   `json:"sender"`
 	KS Keys           `json:"keys"`
 	AM Amount         `json:"amount"`
 }
@@ -30,11 +31,11 @@ func (caf CreateAccountFact) MarshalJSON() ([]byte, error) {
 }
 
 type CreateAccountFactJSONUnpacker struct {
-	H  valuehash.Bytes `json:"hash"`
-	TK []byte          `json:"token"`
-	SD Address         `json:"sender"`
-	KS json.RawMessage `json:"keys"`
-	AM Amount          `json:"amount"`
+	H  valuehash.Bytes     `json:"hash"`
+	TK []byte              `json:"token"`
+	SD base.AddressDecoder `json:"sender"`
+	KS json.RawMessage     `json:"keys"`
+	AM Amount              `json:"amount"`
 }
 
 func (caf *CreateAccountFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

@@ -3,6 +3,7 @@ package mc
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
@@ -21,12 +22,12 @@ var (
 type TransferFact struct {
 	h        valuehash.Hash
 	token    []byte
-	sender   Address
-	receiver Address
+	sender   base.Address
+	receiver base.Address
 	amount   Amount
 }
 
-func NewTransferFact(token []byte, sender, receiver Address, amount Amount) TransferFact {
+func NewTransferFact(token []byte, sender, receiver base.Address, amount Amount) TransferFact {
 	tff := TransferFact{
 		token:    token,
 		sender:   sender,

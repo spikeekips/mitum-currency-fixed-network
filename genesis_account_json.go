@@ -31,11 +31,11 @@ func (gaf GenesisAccountFact) MarshalJSON() ([]byte, error) {
 }
 
 type GenesisAccountFactJSONUnpacker struct {
-	H  valuehash.Bytes `json:"hash"`
-	TK []byte          `json:"token"`
-	GK key.KeyDecoder  `json:"genesis_node_key"`
-	KS json.RawMessage `json:"keys"`
-	AM Amount          `json:"amount"`
+	H  valuehash.Bytes      `json:"hash"`
+	TK []byte               `json:"token"`
+	GK key.PublickeyDecoder `json:"genesis_node_key"`
+	KS json.RawMessage      `json:"keys"`
+	AM Amount               `json:"amount"`
 }
 
 func (gaf *GenesisAccountFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

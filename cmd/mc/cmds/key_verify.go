@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -59,11 +60,11 @@ func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 
 	if priv != nil {
 		cmd.print("privatekey hint: %s", priv.Hint().Verbose())
-		cmd.print("     privatekey: %s", priv.String())
+		cmd.print("     privatekey: %s", hint.HintedString(priv.Hint(), priv.String()))
 	}
 
 	cmd.print(" publickey hint: %s", pub.Hint().Verbose())
-	cmd.print("      publickey: %s", pub.String())
+	cmd.print("      publickey: %s", hint.HintedString(pub.Hint(), pub.String()))
 
 	return nil
 }

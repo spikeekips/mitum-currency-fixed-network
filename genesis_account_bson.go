@@ -22,11 +22,11 @@ func (gaf GenesisAccountFact) MarshalBSON() ([]byte, error) {
 }
 
 type GenesisAccountFactBSONUnpacker struct {
-	H  valuehash.Bytes `bson:"hash"`
-	TK []byte          `bson:"token"`
-	GK key.KeyDecoder  `bson:"genesis_node_key"`
-	KS bson.Raw        `bson:"keys"`
-	AM Amount          `bson:"amount"`
+	H  valuehash.Bytes      `bson:"hash"`
+	TK []byte               `bson:"token"`
+	GK key.PublickeyDecoder `bson:"genesis_node_key"`
+	KS bson.Raw             `bson:"keys"`
+	AM Amount               `bson:"amount"`
 }
 
 func (gaf *GenesisAccountFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
