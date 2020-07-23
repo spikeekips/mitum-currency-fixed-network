@@ -1,10 +1,10 @@
 ### mitum-currency
 
-[![CircleCI](https://img.shields.io/circleci/project/github/spikeekips/mitum-currency/proto3.svg?style=flat-square&logo=circleci&label=circleci&cacheSeconds=60)](https://circleci.com/gh/spikeekips/mitum-currency/tree/proto3)
-[![Documentation](https://readthedocs.org/projects/mitum-currency-doc/badge/?version=proto3)](https://mitum-currency-doc.readthedocs.io/en/latest/?badge=master)
+[![CircleCI](https://img.shields.io/circleci/project/github/spikeekips/mitum-currency/master.svg?style=flat-square&logo=circleci&label=circleci&cacheSeconds=60)](https://circleci.com/gh/spikeekips/mitum-currency/tree/master)
+[![Documentation](https://readthedocs.org/projects/mitum-currency-doc/badge/?version=master)](https://mitum-currency-doc.readthedocs.io/en/latest/?badge=master)
 [![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/spikeekips/mitum-currency?tab=overview)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum-currency)](https://goreportcard.com/report/github.com/spikeekips/mitum-currency)
-[![codecov](https://codecov.io/gh/spikeekips/mitum-currency/branch/proto3/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum-currency)
+[![codecov](https://codecov.io/gh/spikeekips/mitum-currency/branch/master/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum-currency)
 [![](https://tokei.rs/b1/github/spikeekips/mitum-currency?category=lines)](https://github.com/spikeekips/mitum-currency)
 
 *mitum-currency* is the cryptocurrency case of mitum model, based on
@@ -23,15 +23,10 @@ cryptocurrency blockchain network (at your own risk).
 
 #### Installation
 
-> NOTE: at this time, *mitum* and *mitum-currency* is actively developed and
-*mitum* is still in the state of prototype, (not too long). So before building
-mitum, you need to get mitum source.
->
+> NOTE: at this time, *mitum* and *mitum-currency* is actively developed, so
+before building mitum-currency, you will be better with building the latest
+mitum source. 
 > `$ git clone https://github.com/spikeekips/mitum`
->
-> `$ cd mitum `
->
-> `$ git checkout proto3`
 >
 > and then, add `replace github.com/spikeekips/mitum => <your mitum source directory>` to `go.mod` of *mitum-currency*.
 
