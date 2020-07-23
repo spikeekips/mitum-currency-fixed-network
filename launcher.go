@@ -9,20 +9,19 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type Launcher struct {
 	*logging.Logging
 	*launcher.Launcher
-	design *NodeDesign
+	design *launcher.NodeDesign
 }
 
-func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
+func NewLauncherFromDesign(design *launcher.NodeDesign, version util.Version) (*Launcher, error) {
 	nr := &Launcher{design: design}
 
-	if ca, err := NewAddress(design.Address); err != nil {
-		return nil, err
-	} else if bn, err := launcher.NewLauncher(ca, design.Privatekey(), design.NetworkID(), version); err != nil {
+	if bn, err := launcher.NewLauncher(design.Address(), design.Privatekey(), design.NetworkID(), version); err != nil {
 		return nil, err
 	} else {
 		nr.Launcher = bn
@@ -41,7 +40,7 @@ func (nr *Launcher) SetLogger(l logging.Logger) logging.Logger {
 	return nr.Log()
 }
 
-func (nr *Launcher) Design() *NodeDesign {
+func (nr *Launcher) Design() *launcher.NodeDesign {
 	return nr.design
 }
 
@@ -51,6 +50,8 @@ func (nr *Launcher) Initialize() error {
 		nr.attachNetwork,
 		nr.attachNodeChannel,
 		nr.attachRemoteNodes,
+		nr.attachSuffrage,
+		nr.attachProposalProcessor,
 		nr.Launcher.Initialize,
 	} {
 		if err := f(); err != nil {
@@ -133,18 +134,12 @@ func (nr *Launcher) attachRemoteNodes() error {
 	for i, r := range nr.design.Nodes {
 		r := r
 		l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Str("address", r.Address)
+			return ctx.Hinted("address", r.Address())
 		})
 
 		l.Debug().Msg("trying to create remote node")
 
-		var n *isaac.RemoteNode
-		if ca, err := NewAddress(r.Address); err != nil {
-			return err
-		} else {
-			n = isaac.NewRemoteNode(ca, r.Publickey())
-		}
-
+		n := isaac.NewRemoteNode(r.Address(), r.Publickey())
 		if ch, err := launcher.LoadNodeChannel(r.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {
@@ -156,4 +151,48 @@ func (nr *Launcher) attachRemoteNodes() error {
 	}
 
 	return nr.Localstate().Nodes().Add(nodes...)
+}
+
+func (nr *Launcher) attachSuffrage() error {
+	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("target", "suffrage")
+	})
+	l.Debug().Msg("trying to attach")
+
+	if sf, err := nr.design.Component.Suffrage.New(nr.Localstate(), nr.Encoders()); err != nil {
+		return xerrors.Errorf("failed to create new suffrage component: %w", err)
+	} else {
+		l.Debug().
+			Str("type", nr.design.Component.Suffrage.Type).
+			Interface("info", nr.design.Component.Suffrage.Info).
+			Msg("suffrage loaded")
+
+		_ = nr.SetSuffrage(sf)
+	}
+
+	l.Debug().Msg("attached")
+
+	return nil
+}
+
+func (nr *Launcher) attachProposalProcessor() error {
+	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("target", "proposal-processor")
+	})
+	l.Debug().Msg("trying to attach")
+
+	if pp, err := nr.design.Component.ProposalProcessor.New(nr.Localstate(), nr.Suffrage()); err != nil {
+		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
+	} else {
+		l.Debug().
+			Str("type", nr.design.Component.ProposalProcessor.Type).
+			Interface("info", nr.design.Component.ProposalProcessor.Info).
+			Msg("proposal processor loaded")
+
+		_ = nr.SetProposalProcessor(pp)
+	}
+
+	l.Debug().Msg("attached")
+
+	return nil
 }

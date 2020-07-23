@@ -14,41 +14,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func LoadDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
-	var design *NodeDesign
-	if err := yaml.Unmarshal(b, &design); err != nil {
-		return nil, xerrors.Errorf("failed to load design file: %w", err)
-	}
-
-	design.SetEncoders(encs)
-
-	if err := design.IsValid(nil); err != nil {
-		return nil, xerrors.Errorf("invalid design file: %w", err)
-	} else {
-		return design, nil
-	}
-}
-
-type NodeDesign struct {
-	*launcher.NodeDesign
-}
-
-func (nd NodeDesign) MarshalYAML() (interface{}, error) {
-	return nd.NodeDesign, nil
-}
-
-func (nd *NodeDesign) UnmarshalYAML(value *yaml.Node) error {
-	var d *launcher.NodeDesign
-	if err := value.Decode(&d); err != nil {
-		return err
-	}
-
-	*nd = NodeDesign{NodeDesign: d}
-
-	return nil
-}
-
-func LoadPolicyOperation(design *NodeDesign) ([]operation.Operation, error) {
+func LoadPolicyOperation(design *launcher.NodeDesign) ([]operation.Operation, error) {
 	t := design.GenesisPolicy.PolicyOperationBodyV0
 
 	var fact isaac.SetPolicyOperationFactV0
@@ -194,11 +160,7 @@ func LoadOtherInitOperations(nr *Launcher) ([]operation.Operation, error) {
 	return ops, nil
 }
 
-func LoadOtherInitOperation(
-	nr *Launcher,
-	name string,
-	m map[string]interface{},
-) (operation.Operation, error) {
+func LoadOtherInitOperation(nr *Launcher, name string, m map[string]interface{}) (operation.Operation, error) {
 	switch name {
 	case "genesis-account":
 		return LoadGenesisAccountOperation(nr, m)
@@ -207,10 +169,7 @@ func LoadOtherInitOperation(
 	}
 }
 
-func LoadGenesisAccountOperation(
-	nr *Launcher,
-	m map[string]interface{},
-) (GenesisAccount, error) {
+func LoadGenesisAccountOperation(nr *Launcher, m map[string]interface{}) (GenesisAccount, error) {
 	var gad *GenesisAccountDesign
 	if d, err := LoadGenesisAccountDesign(nr, m); err != nil {
 		return GenesisAccount{}, err

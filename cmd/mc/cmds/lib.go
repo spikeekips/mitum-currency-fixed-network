@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -124,8 +125,10 @@ func loadEncoders() (*encoder.Encoders, error) {
 }
 
 func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger) (*mc.Launcher, error) {
-	var design *mc.NodeDesign
-	if d, err := mc.LoadDesign(b, encs); err != nil {
+	var design *launcher.NodeDesign
+	if d, err := launcher.LoadNodeDesign(b, encs); err != nil {
+		return nil, err
+	} else if err := d.IsValid(nil); err != nil {
 		return nil, err
 	} else {
 		design = d

@@ -1,4 +1,4 @@
-address: mc-node
+address: mc-node-010a:0.0.1
 privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
 storage: mongodb://localhost:27017/mc
 network-id: contest-network-id
