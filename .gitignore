@@ -20,3 +20,4 @@ tests/*/*/coverage/
 /.release-it.json
 /go.local.mod
 /go.local.sum
+/mitum-currency

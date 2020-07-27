@@ -31,13 +31,13 @@ mitum source.
 > and then, add `replace github.com/spikeekips/mitum => <your mitum source directory>` to `go.mod` of *mitum-currency*.
 
 ```sh
-$ go get -u github.com/spikeekips/mitum-currency/cmd/mc
+$ go get -u github.com/spikeekips/mitum-currency
 ```
 
 Or, build it from source
 ```sh
 $ cd mitum-currency
-$ go build -o mc ./cmd/mc/main.go
+$ go build
 ```
 
 #### Run
@@ -48,11 +48,11 @@ At the first time, you can simply start node with example configuration.
 
 ```
 $ cd mitum-currency
-$ mc init cmd/mc/standalone.yml
-$ mc run  cmd/mc/standalone.yml
+$ mitum-currency init ./standalone.yml
+$ mitum-currency run  ./standalone.yml
 ```
 
-> Please check `$ mc --help` for detailed usage.
+> Please check `$ mitum-currency --help` for detailed usage.
 
 #### Test
 
