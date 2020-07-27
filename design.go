@@ -8,25 +8,17 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func LoadPolicyOperation(design *launcher.NodeDesign) ([]operation.Operation, error) {
-	t := design.GenesisPolicy.PolicyOperationBodyV0
-
-	var fact isaac.SetPolicyOperationFactV0
-	if f, err := isaac.NewSetPolicyOperationFactV0(design.NetworkID(), t); err != nil {
-		return nil, err
-	} else {
-		fact = f
-	}
-
-	if op, err := isaac.NewSetPolicyOperationV0FromFact(
+	if op, err := policy.NewSetPolicyV0(
+		design.GenesisPolicy.Policy().(policy.PolicyV0),
+		design.NetworkID(), // NOTE token
 		design.Privatekey(),
-		fact,
 		design.NetworkID(),
 	); err != nil {
 		return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)
