@@ -9,7 +9,7 @@ require (
 	github.com/nullstyle/go-xdr v0.0.0-20180726165426-f4c839f75077 // indirect
 	github.com/rs/zerolog v1.19.0
 	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b // indirect
-	github.com/spikeekips/mitum v0.0.0-20200727164816-65ceec0a2a13
+	github.com/spikeekips/mitum v0.0.0-20200727181715-9920a6d9e1d9
 	github.com/stellar/go v0.0.0-20200724192619-8789164de4e6 // indirect
 	github.com/stretchr/testify v1.6.1
 	go.mongodb.org/mongo-driver v1.3.5

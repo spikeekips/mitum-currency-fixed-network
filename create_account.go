@@ -102,11 +102,7 @@ func NewCreateAccount(fact CreateAccountFact, fs []operation.FactSign, memo stri
 	} else {
 		ca := CreateAccount{BaseOperation: bo, Memo: memo}
 
-		if h, err := ca.GenerateHash(); err != nil {
-			return CreateAccount{}, err
-		} else {
-			ca.BaseOperation = bo.SetHash(h)
-		}
+		ca.BaseOperation = bo.SetHash(ca.GenerateHash())
 
 		return ca, nil
 	}
@@ -124,7 +120,7 @@ func (ca CreateAccount) IsValid(networkID []byte) error {
 	return operation.IsValidOperation(ca, networkID)
 }
 
-func (ca CreateAccount) GenerateHash() (valuehash.Hash, error) {
+func (ca CreateAccount) GenerateHash() valuehash.Hash {
 	bs := make([][]byte, len(ca.Signs())+1)
 	for i := range ca.Signs() {
 		bs[i] = ca.Signs()[i].Bytes()
@@ -134,7 +130,7 @@ func (ca CreateAccount) GenerateHash() (valuehash.Hash, error) {
 
 	e := util.ConcatBytesSlice(ca.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
 
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(e)
 }
 
 func (ca CreateAccount) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
@@ -144,11 +140,7 @@ func (ca CreateAccount) AddFactSigns(fs ...operation.FactSign) (operation.FactSi
 		ca.BaseOperation = o.(operation.BaseOperation)
 	}
 
-	if h, err := ca.GenerateHash(); err != nil {
-		return nil, err
-	} else {
-		ca.BaseOperation = ca.SetHash(h)
-	}
+	ca.BaseOperation = ca.SetHash(ca.GenerateHash())
 
 	return ca, nil
 }

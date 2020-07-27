@@ -92,11 +92,7 @@ func NewTransfer(
 	} else {
 		tf := Transfer{BaseOperation: bo, Memo: memo}
 
-		if h, err := tf.GenerateHash(); err != nil {
-			return Transfer{}, err
-		} else {
-			tf.BaseOperation = bo.SetHash(h)
-		}
+		tf.BaseOperation = bo.SetHash(tf.GenerateHash())
 
 		return tf, nil
 	}
@@ -114,7 +110,7 @@ func (tf Transfer) IsValid(networkID []byte) error {
 	return operation.IsValidOperation(tf, networkID)
 }
 
-func (tf Transfer) GenerateHash() (valuehash.Hash, error) {
+func (tf Transfer) GenerateHash() valuehash.Hash {
 	bs := make([][]byte, len(tf.Signs())+1)
 	for i := range tf.Signs() {
 		bs[i] = tf.Signs()[i].Bytes()
@@ -124,7 +120,7 @@ func (tf Transfer) GenerateHash() (valuehash.Hash, error) {
 
 	e := util.ConcatBytesSlice(tf.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
 
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(e)
 }
 
 func (tf Transfer) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
@@ -134,11 +130,7 @@ func (tf Transfer) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpd
 		tf.BaseOperation = o.(operation.BaseOperation)
 	}
 
-	if h, err := tf.GenerateHash(); err != nil {
-		return nil, err
-	} else {
-		tf.BaseOperation = tf.SetHash(h)
-	}
+	tf.BaseOperation = tf.SetHash(tf.GenerateHash())
 
 	return tf, nil
 }
