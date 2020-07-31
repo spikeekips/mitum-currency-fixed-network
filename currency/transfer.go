@@ -77,6 +77,18 @@ func (tff TransferFact) IsValid([]byte) error {
 	return nil
 }
 
+func (tff TransferFact) Sender() base.Address {
+	return tff.sender
+}
+
+func (tff TransferFact) Receiver() base.Address {
+	return tff.receiver
+}
+
+func (tff TransferFact) Amount() Amount {
+	return tff.amount
+}
+
 type Transfer struct {
 	operation.BaseOperation
 	Memo string
