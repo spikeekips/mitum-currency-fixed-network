@@ -14,4 +14,10 @@ init-operations:
           keys:
               - privatekey: L5GTSKkRs9NPsXwYgACZdodNUJqCAWjz2BccuR4cAgxJumEZWjok-0112:0.0.1
                 weight: 100
-      balance: 3333
+      balance: "99999999999999999999"
+
+genesis-policy:
+    threshold: 67
+    number-of-acting-suffrage-nodes: 1
+    max-operations-in-seal: 100
+    max-operations-in-proposal: 100
