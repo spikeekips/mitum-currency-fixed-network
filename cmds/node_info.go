@@ -14,7 +14,7 @@ type NodeInfoCommand struct {
 }
 
 func (cmd *NodeInfoCommand) Run() error {
-	var channel network.NetworkChannel
+	var channel network.Channel
 	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
 		return err
 	} else {

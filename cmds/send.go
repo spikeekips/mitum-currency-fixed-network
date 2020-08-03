@@ -56,7 +56,7 @@ func (cmd *SendCommand) Run(log logging.Logger) error {
 }
 
 func (cmd *SendCommand) send(sl seal.Seal) error {
-	var channel network.NetworkChannel
+	var channel network.Channel
 	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
 		return err
 	} else {
