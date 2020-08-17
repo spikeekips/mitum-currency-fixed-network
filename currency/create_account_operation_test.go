@@ -18,6 +18,7 @@ import (
 type testCreateAccountOperation struct {
 	suite.Suite
 	isaac.StorageSupportTest
+	baseTestOperationProcessor
 }
 
 func (t *testCreateAccountOperation) SetupSuite() {
@@ -29,6 +30,8 @@ func (t *testCreateAccountOperation) SetupSuite() {
 	t.Encs.AddHinter(Keys{})
 	t.Encs.AddHinter(Address(""))
 	t.Encs.AddHinter(Transfer{})
+
+	t.baseTestOperationProcessor.SetupSuite()
 }
 
 func (t *testCreateAccountOperation) newOperation(sender base.Address, amount Amount, keys Keys, pks []key.Privatekey) CreateAccount {
@@ -54,7 +57,7 @@ func (t *testCreateAccountOperation) newOperation(sender base.Address, amount Am
 func (t *testCreateAccountOperation) newStateBalance(a base.Address, amount Amount, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
-	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
+	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
@@ -70,7 +73,7 @@ func (t *testCreateAccountOperation) newStateBalance(a base.Address, amount Amou
 func (t *testCreateAccountOperation) newStateKeys(a base.Address, keys Keys, sp *isaac.Statepool) state.StateUpdater {
 	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
-	su, err := state.NewStateV0(key, value, valuehash.RandomSHA256())
+	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NoError(sp.Set(valuehash.RandomSHA256(), su))
@@ -250,4 +253,14 @@ func (t *testCreateAccountOperation) TestInsufficientBalance() {
 
 func TestCreateAccountOperation(t *testing.T) {
 	suite.Run(t, new(testCreateAccountOperation))
+}
+
+func TestCreateAccountOperationProcessor(t *testing.T) {
+	n := new(testCreateAccountOperation)
+
+	n.process = func(sp *isaac.Statepool, op state.StateProcessor) error {
+		opr := (&OperationProcessor{})
+		return opr.New(sp).Process(op)
+	}
+	suite.Run(t, n)
 }

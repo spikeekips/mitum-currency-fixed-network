@@ -2,6 +2,7 @@ package currency
 
 import (
 	"fmt"
+	"sync"
 
 	"golang.org/x/xerrors"
 
@@ -9,6 +10,48 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 )
+
+type AmountState struct {
+	*sync.Mutex // TODO reconsider
+	state.StateUpdater
+}
+
+func NewAmountState(st state.StateUpdater) *AmountState {
+	return &AmountState{StateUpdater: st, Mutex: &sync.Mutex{}}
+}
+
+func (am *AmountState) setAmount(f func(Amount) Amount) error {
+	if b, err := StateAmountValue(am); err != nil {
+		return err
+	} else {
+		a := f(b)
+		if err := a.IsValid(nil); err != nil {
+			return err
+		} else if err := SetStateAmountValue(am, a); err != nil {
+			return err
+		} else {
+			return nil
+		}
+	}
+}
+
+func (am *AmountState) Add(a Amount) error {
+	am.Lock()
+	defer am.Unlock()
+
+	return am.setAmount(func(b Amount) Amount {
+		return b.Add(a)
+	})
+}
+
+func (am *AmountState) Sub(a Amount) error {
+	am.Lock()
+	defer am.Unlock()
+
+	return am.setAmount(func(b Amount) Amount {
+		return b.Sub(a)
+	})
+}
 
 func StateKeyKeys(a base.Address) string {
 	return fmt.Sprintf("%s:keys", a.String())

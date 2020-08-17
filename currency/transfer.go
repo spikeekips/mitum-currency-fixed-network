@@ -160,15 +160,23 @@ func (tf Transfer) Process(
 		return err
 	}
 
-	var sBalance, rBalance state.StateUpdater
+	var sBalance, rBalance *AmountState
 	{
-		var err error
-		if sBalance, err = existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
+		if s, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
 			return err
+		} else if st, ok := s.(*AmountState); !ok {
+			return xerrors.Errorf("expected AmountState, but %T", s)
+		} else {
+			sBalance = st
 		}
-		if rBalance, err = existsAccountState(
+
+		if s, err := existsAccountState(
 			StateKeyBalance(fact.receiver), "balance of receiver", getState); err != nil {
 			return err
+		} else if st, ok := s.(*AmountState); !ok {
+			return xerrors.Errorf("expected AmountState, but %T", s)
+		} else {
+			rBalance = st
 		}
 	}
 
@@ -176,27 +184,11 @@ func (tf Transfer) Process(
 		return xerrors.Errorf("invalid signing: %w", err)
 	}
 
-	if b, err := StateAmountValue(sBalance); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+	if err := sBalance.Sub(fact.amount); err != nil {
+		return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
+	} else if err := rBalance.Add(fact.amount); err != nil {
+		return state.IgnoreOperationProcessingError.Errorf("failed to add amount from balance: %w", err)
 	} else {
-		n := b.Sub(fact.amount)
-		if err := n.IsValid(nil); err != nil {
-			return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
-		} else if err := SetStateAmountValue(sBalance, n); err != nil {
-			return state.IgnoreOperationProcessingError.Wrap(err)
-		}
+		return setState(tf.Hash(), sBalance, rBalance)
 	}
-
-	if b, err := StateAmountValue(rBalance); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
-	} else {
-		n := b.Add(fact.amount)
-		if err := n.IsValid(nil); err != nil {
-			return state.IgnoreOperationProcessingError.Errorf("failed to add amount from balance: %w", err)
-		} else if err := SetStateAmountValue(rBalance, n); err != nil {
-			return state.IgnoreOperationProcessingError.Wrap(err)
-		}
-	}
-
-	return setState(tf.Hash(), sBalance, rBalance)
 }
