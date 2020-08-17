@@ -146,61 +146,88 @@ func (ca CreateAccount) AddFactSigns(fs ...operation.FactSign) (operation.FactSi
 }
 
 func (ca CreateAccount) Process(
+	func(key string) (state.StateUpdater, bool, error),
+	func(valuehash.Hash, ...state.StateUpdater) error,
+) error {
+	return nil
+}
+
+type CreateAccountProcessor struct {
+	CreateAccount
+	sb *AmountState
+	na base.Address
+	ns state.StateUpdater
+	nb *AmountState
+}
+
+func (ca *CreateAccountProcessor) PreProcess(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	_ func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	fact := ca.Fact().(CreateAccountFact)
 
-	if _, err := existsAccountState(StateKeyKeys(fact.sender), "keys of sender", getState); err != nil {
+	if fact.Amount().IsZero() {
+		return xerrors.Errorf("amount should be over zero")
+	}
+
+	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
 		return err
 	}
 
-	var newAddress Address
 	if a, err := NewAddressFromKeys(fact.keys.Keys()); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
+	} else if st, err := notExistsAccountState(StateKeyKeys(a), "keys of target", getState); err != nil {
+		return err
+	} else if b, err := notExistsAccountState(StateKeyBalance(a), "balance of target", getState); err != nil {
+		return err
+	} else if ast, ok := b.(*AmountState); !ok {
+		return xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
-		newAddress = a
+		ca.na = a
+		ca.ns = st
+		ca.nb = ast
 	}
 
-	var err error
-	var sBalance, nstate, nBalance state.StateUpdater
-	{
-		if nstate, err = notExistsAccountState(StateKeyKeys(newAddress), "keys of target", getState); err != nil {
-			return err
-		}
-
-		if sBalance, err = existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
-			return err
-		}
-
-		if nBalance, err = notExistsAccountState(
-			StateKeyBalance(newAddress), "balance of target", getState); err != nil {
-			return err
-		}
+	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
+		return err
+	} else if b, err := StateAmountValue(st); err != nil {
+		return state.IgnoreOperationProcessingError.Wrap(err)
+	} else if b.Compare(fact.Amount()) < 0 {
+		return state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+	} else if ast, ok := st.(*AmountState); !ok {
+		return xerrors.Errorf("expected AmountState, but %T", st)
+	} else {
+		ca.sb = ast
 	}
 
 	if err := checkFactSignsByState(fact.sender, ca.Signs(), getState); err != nil {
 		return state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
 	}
 
-	if b, err := StateAmountValue(sBalance); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
-	} else {
-		n := b.Sub(fact.amount)
-		if err := n.IsValid(nil); err != nil {
-			return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
-		} else if err := SetStateAmountValue(sBalance, n); err != nil {
-			return state.IgnoreOperationProcessingError.Wrap(err)
-		}
+	return nil
+}
+
+func (ca *CreateAccountProcessor) Process(
+	_ func(key string) (state.StateUpdater, bool, error),
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
+) error {
+	fact := ca.Fact().(CreateAccountFact)
+
+	if ca.na == nil || ca.ns == nil || ca.sb == nil || ca.nb == nil {
+		return xerrors.Errorf("PreProcess not executed")
 	}
 
-	if err := SetStateKeysValue(nstate, fact.keys); err != nil {
+	if err := ca.sb.Sub(fact.amount); err != nil {
+		return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
+	}
+
+	if err := SetStateKeysValue(ca.ns, fact.keys); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	if err := SetStateAmountValue(nBalance, fact.amount); err != nil {
+	if err := ca.nb.Add(fact.amount); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	}
 
-	return setState(ca.Hash(), sBalance, nstate, nBalance)
+	return setState(ca.Hash(), ca.sb, ca.ns, ca.nb)
 }

@@ -297,7 +297,7 @@ func (t *testAmount) TestCmp() {
 			func() {
 				a := MustAmountFromString(c.a)
 				b := MustAmountFromString(c.b)
-				result := a.Cmp(b)
+				result := a.Compare(b)
 
 				t.Equal(c.result, result, "%d: %v; %v != %v", i, c.name, c.result, result)
 			},

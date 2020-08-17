@@ -47,12 +47,12 @@ func (a Amount) Equal(b Amount) bool {
 	return a.Int.Cmp(b.Int) == 0
 }
 
-func (a Amount) Cmp(b Amount) int {
+func (a Amount) Compare(b Amount) int {
 	return a.Int.Cmp(b.Int)
 }
 
 func (a Amount) IsValid([]byte) error {
-	if a.Cmp(ZeroAmount) < 0 {
+	if a.Compare(ZeroAmount) < 0 {
 		return xerrors.Errorf("invalid amount; under zero")
 	}
 

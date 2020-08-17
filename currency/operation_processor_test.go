@@ -38,7 +38,7 @@ func (t *testConcurrentOperationsProcessor) TestNew() {
 		co, err := NewConcurrentOperationsProcessor(1, sp, time.Second, nil)
 		t.NoError(err)
 
-		co.start()
+		co.Start()
 		t.NoError(co.Close())
 	}
 }

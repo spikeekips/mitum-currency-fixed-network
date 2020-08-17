@@ -20,6 +20,10 @@ func NewAmountState(st state.StateUpdater) *AmountState {
 	return &AmountState{StateUpdater: st, Mutex: &sync.Mutex{}}
 }
 
+func (am *AmountState) Amount() (Amount, error) {
+	return StateAmountValue(am)
+}
+
 func (am *AmountState) setAmount(f func(Amount) Amount) error {
 	if b, err := StateAmountValue(am); err != nil {
 		return err
@@ -62,7 +66,9 @@ func StateKeyBalance(a base.Address) string {
 }
 
 func StateAmountValue(st state.State) (Amount, error) {
-	if s, ok := st.Value().Interface().(string); !ok {
+	if i := st.Value(); i == nil {
+		return ZeroAmount, nil
+	} else if s, ok := i.Interface().(string); !ok {
 		return NilAmount, xerrors.Errorf("invalid balance value found, %T", st.Value().Interface())
 	} else if a, err := NewAmountFromString(s); err != nil {
 		return NilAmount, xerrors.Errorf("invalid balance value found, %q : %w", s, err)
@@ -120,6 +126,20 @@ func checkFactSignsByState(
 	}
 
 	return nil
+}
+
+func checkExistsAccountState(
+	key string,
+	getState func(key string) (state.StateUpdater, bool, error),
+) error {
+	switch _, found, err := getState(key); {
+	case err != nil:
+		return err
+	case !found:
+		return state.IgnoreOperationProcessingError.Errorf("account state, %q does not exist", key)
+	default:
+		return nil
+	}
 }
 
 func existsAccountState(

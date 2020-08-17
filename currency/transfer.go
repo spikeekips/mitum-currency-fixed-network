@@ -148,47 +148,82 @@ func (tf Transfer) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpd
 }
 
 func (tf Transfer) Process(
+	func(key string) (state.StateUpdater, bool, error),
+	func(valuehash.Hash, ...state.StateUpdater) error,
+) error {
+	// NOTE Process is nil func
+	return nil
+}
+
+type TransferProcessor struct {
+	Transfer
+
+	sb *AmountState
+	rb *AmountState
+}
+
+func (tf *TransferProcessor) PreProcess(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	_ func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	fact := tf.Fact().(TransferFact)
 
-	if _, err := existsAccountState(StateKeyKeys(fact.sender), "keys of sender", getState); err != nil {
+	if fact.Amount().IsZero() {
+		return xerrors.Errorf("amount should be over zero")
+	}
+
+	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
 		return err
 	}
+
 	if _, err := existsAccountState(StateKeyKeys(fact.receiver), "keys of receiver", getState); err != nil {
 		return err
 	}
 
-	var sBalance, rBalance *AmountState
-	{
-		if s, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
-			return err
-		} else if st, ok := s.(*AmountState); !ok {
-			return xerrors.Errorf("expected AmountState, but %T", s)
-		} else {
-			sBalance = st
-		}
+	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
+		return err
+	} else if ast, ok := st.(*AmountState); !ok {
+		return xerrors.Errorf("expected AmountState, but %T", st)
+	} else {
+		tf.sb = ast
+	}
 
-		if s, err := existsAccountState(
-			StateKeyBalance(fact.receiver), "balance of receiver", getState); err != nil {
-			return err
-		} else if st, ok := s.(*AmountState); !ok {
-			return xerrors.Errorf("expected AmountState, but %T", s)
-		} else {
-			rBalance = st
-		}
+	if st, err := existsAccountState(StateKeyBalance(fact.receiver), "balance of receiver", getState); err != nil {
+		return err
+	} else if ast, ok := st.(*AmountState); !ok {
+		return xerrors.Errorf("expected AmountState, but %T", st)
+	} else {
+		tf.rb = ast
 	}
 
 	if err := checkFactSignsByState(fact.sender, tf.Signs(), getState); err != nil {
 		return xerrors.Errorf("invalid signing: %w", err)
 	}
 
-	if err := sBalance.Sub(fact.amount); err != nil {
+	if b, err := StateAmountValue(tf.sb); err != nil {
+		return state.IgnoreOperationProcessingError.Wrap(err)
+	} else if b.Compare(fact.Amount()) < 0 {
+		return state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+	}
+
+	return nil
+}
+
+func (tf *TransferProcessor) Process(
+	_ func(key string) (state.StateUpdater, bool, error),
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
+) error {
+	if tf.sb == nil || tf.rb == nil {
+		return xerrors.Errorf("PreProcess not executed")
+	}
+
+	fact := tf.Fact().(TransferFact)
+
+	if err := tf.sb.Sub(fact.amount); err != nil {
 		return state.IgnoreOperationProcessingError.Errorf("failed to sub amount from balance: %w", err)
-	} else if err := rBalance.Add(fact.amount); err != nil {
+	} else if err := tf.rb.Add(fact.amount); err != nil {
 		return state.IgnoreOperationProcessingError.Errorf("failed to add amount from balance: %w", err)
 	} else {
-		return setState(tf.Hash(), sBalance, rBalance)
+		return setState(tf.Hash(), tf.sb, tf.rb)
 	}
 }
