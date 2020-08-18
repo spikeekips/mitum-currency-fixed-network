@@ -481,6 +481,8 @@ github.com/spikeekips/mitum v0.0.0-20200812170144-725e0a68a26e h1:AqXaWxO/ULQt+e
 github.com/spikeekips/mitum v0.0.0-20200812170144-725e0a68a26e/go.mod h1:TiRXuPwOQNxRjwniJVBDhFJnaqPtBp9og0ZkWEod31I=
 github.com/spikeekips/mitum v0.0.0-20200815075647-d40681196ec7 h1:PAZpVsUnXKkn+FPrZqOV44I4jNX5TkjPnOuiTKfiUPY=
 github.com/spikeekips/mitum v0.0.0-20200815075647-d40681196ec7/go.mod h1:TiRXuPwOQNxRjwniJVBDhFJnaqPtBp9og0ZkWEod31I=
+github.com/spikeekips/mitum v0.0.0-20200818152122-a70cb35f3809 h1:osYuxMvjKP/Iun1hFpad3NuIzxGjwTAgbBV1jPvWqBU=
+github.com/spikeekips/mitum v0.0.0-20200818152122-a70cb35f3809/go.mod h1:TiRXuPwOQNxRjwniJVBDhFJnaqPtBp9og0ZkWEod31I=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570/go.mod h1:8OR4w3TdeIHIh1g6EMY5p0gVNOovcWC+1vpc7naMuAw=
 github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3/go.mod h1:hpGUWaI9xL8pRQCTXQgocU38Qw1g0Us7n5PxxTwTCYU=
