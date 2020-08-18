@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -246,13 +247,13 @@ func (t *testTransferOperation) TestConcurrentOperationsProcessor() {
 		wk.Done(true)
 	}()
 
-	var ops []state.StateProcessor
+	var ops []operation.Operation
 	for err := range errchan {
 		if err == nil || err.(acerr).ac == nil {
 			continue
 		}
 
-		op := err.(acerr).ac.(state.StateProcessor)
+		op := err.(acerr).ac.(operation.Operation)
 		ops = append(ops, op)
 	}
 
@@ -269,9 +270,9 @@ func (t *testTransferOperation) TestConcurrentOperationsProcessor() {
 	t.pool = pool
 
 	started := time.Now()
-	co, err := NewConcurrentOperationsProcessor(100, t.pool, time.Second*10, oppHintSet)
+	co, err := isaac.NewConcurrentOperationsProcessor(100, t.pool, oppHintSet)
 	t.NoError(err)
-	co.Start()
+	co.Start(context.Background())
 
 	for _, op := range ops {
 		t.NoError(co.Process(op))
