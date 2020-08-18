@@ -163,25 +163,25 @@ type CreateAccountProcessor struct {
 func (ca *CreateAccountProcessor) PreProcess(
 	getState func(key string) (state.StateUpdater, bool, error),
 	_ func(valuehash.Hash, ...state.StateUpdater) error,
-) error {
+) (state.Processor, error) {
 	fact := ca.Fact().(CreateAccountFact)
 
 	if fact.Amount().IsZero() {
-		return xerrors.Errorf("amount should be over zero")
+		return nil, xerrors.Errorf("amount should be over zero")
 	}
 
 	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
-		return err
+		return nil, err
 	}
 
 	if a, err := NewAddressFromKeys(fact.keys.Keys()); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, state.IgnoreOperationProcessingError.Wrap(err)
 	} else if st, err := notExistsAccountState(StateKeyKeys(a), "keys of target", getState); err != nil {
-		return err
+		return nil, err
 	} else if b, err := notExistsAccountState(StateKeyBalance(a), "balance of target", getState); err != nil {
-		return err
+		return nil, err
 	} else if ast, ok := b.(*AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
+		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
 		ca.na = a
 		ca.ns = st
@@ -189,22 +189,22 @@ func (ca *CreateAccountProcessor) PreProcess(
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
-		return err
+		return nil, err
 	} else if b, err := StateAmountValue(st); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, state.IgnoreOperationProcessingError.Wrap(err)
 	} else if b.Compare(fact.Amount()) < 0 {
-		return state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+		return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
 	} else if ast, ok := st.(*AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
+		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
 		ca.sb = ast
 	}
 
 	if err := checkFactSignsByState(fact.sender, ca.Signs(), getState); err != nil {
-		return state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
+		return nil, state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
 	}
 
-	return nil
+	return ca, nil
 }
 
 func (ca *CreateAccountProcessor) Process(

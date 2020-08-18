@@ -165,48 +165,48 @@ type TransferProcessor struct {
 func (tf *TransferProcessor) PreProcess(
 	getState func(key string) (state.StateUpdater, bool, error),
 	_ func(valuehash.Hash, ...state.StateUpdater) error,
-) error {
+) (state.Processor, error) {
 	fact := tf.Fact().(TransferFact)
 
 	if fact.Amount().IsZero() {
-		return xerrors.Errorf("amount should be over zero")
+		return nil, xerrors.Errorf("amount should be over zero")
 	}
 
 	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := existsAccountState(StateKeyKeys(fact.receiver), "keys of receiver", getState); err != nil {
-		return err
+		return nil, err
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
-		return err
+		return nil, err
 	} else if ast, ok := st.(*AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
+		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
 		tf.sb = ast
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(fact.receiver), "balance of receiver", getState); err != nil {
-		return err
+		return nil, err
 	} else if ast, ok := st.(*AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
+		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
 		tf.rb = ast
 	}
 
 	if err := checkFactSignsByState(fact.sender, tf.Signs(), getState); err != nil {
-		return xerrors.Errorf("invalid signing: %w", err)
+		return nil, xerrors.Errorf("invalid signing: %w", err)
 	}
 
 	if b, err := StateAmountValue(tf.sb); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, state.IgnoreOperationProcessingError.Wrap(err)
 	} else if b.Compare(fact.Amount()) < 0 {
-		return state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+		return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
 	}
 
-	return nil
+	return tf, nil
 }
 
 func (tf *TransferProcessor) Process(

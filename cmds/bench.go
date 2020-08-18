@@ -121,6 +121,13 @@ func (cmd *BenchCommand) bench() error {
 	cmd.dp = isaac.NewDefaultProposalProcessor(cmd.local, cmd.suffrage)
 	cmd.dp.(logging.SetLogger).SetLogger(cmd.log)
 
+	if _, err := cmd.dp.AddOperationProcessor(currency.Transfer{}, &currency.OperationProcessor{}); err != nil {
+		return err
+	}
+	if _, err := cmd.dp.AddOperationProcessor(currency.CreateAccount{}, &currency.OperationProcessor{}); err != nil {
+		return err
+	}
+
 	var proposal ballot.Proposal
 	var ivp base.Voteproof
 
@@ -177,6 +184,10 @@ func (cmd *BenchCommand) checkNewBlock(blk block.Block) error {
 	case !found:
 		return xerrors.Errorf("new block not found")
 	default:
+		if ublk.Operations().Empty() {
+			return xerrors.Errorf("all operations not found; epty block.Operations()")
+		}
+
 		for _, op := range cmd.ops {
 			if n, err := ublk.Operations().Get([]byte(op.Fact().Hash().String())); err != nil {
 				return err
