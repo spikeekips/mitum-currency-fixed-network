@@ -42,10 +42,10 @@ func init() {
 		currency.Keys{},
 		currency.GenesisAccount{},
 		currency.GenesisAccountFact{},
-		currency.CreateAccount{},
-		currency.CreateAccountFact{},
-		currency.Transfer{},
-		currency.TransferFact{},
+		currency.CreateAccounts{},
+		currency.CreateAccountsFact{},
+		currency.Transfers{},
+		currency.TransfersFact{},
 	)
 
 	if es, err := loadEncoders(); err != nil {

@@ -79,7 +79,12 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 }
 
 func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) {
-	fact := currency.NewCreateAccountFact([]byte(cmd.Token), cmd.Sender.Address, cmd.keys, cmd.Amount.Amount)
+	item := currency.NewCreateAccountItem(cmd.keys, cmd.Amount.Amount)
+	fact := currency.NewCreateAccountsFact(
+		[]byte(cmd.Token),
+		cmd.Sender.Address,
+		[]currency.CreateAccountItem{item},
+	)
 
 	var fs []operation.FactSign
 	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, []byte(cmd.NetworkID)); err != nil {
@@ -88,7 +93,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 	}
 
-	if op, err := currency.NewCreateAccount(fact, fs, cmd.Memo); err != nil {
+	if op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo); err != nil {
 		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
 	} else {
 		return op, nil

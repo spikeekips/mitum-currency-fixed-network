@@ -1,6 +1,9 @@
 package currency
 
 import (
+	"bytes"
+	"sort"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
@@ -85,11 +88,19 @@ func (ks Keys) GenerateHash() (valuehash.Hash, error) {
 
 func (ks Keys) Bytes() []byte {
 	bs := make([][]byte, len(ks.keys)+1)
-	for i := range ks.keys {
-		bs[i] = ks.keys[i].Bytes()
+
+	// NOTE sorted by Key.Key()
+	keys := make([]Key, len(ks.keys))
+	copy(keys, ks.keys)
+
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(ks.keys[i].Key().Bytes(), ks.keys[j].Key().Bytes()) < 0
+	})
+	for i := range keys {
+		bs[i] = keys[i].Bytes()
 	}
 
-	bs[len(ks.keys)] = util.UintToBytes(ks.threshold)
+	bs[len(keys)] = util.UintToBytes(ks.threshold)
 
 	return util.ConcatBytesSlice(bs...)
 }

@@ -7,41 +7,45 @@ import (
 	"os"
 	"time"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
-	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum-currency/currency"
 )
 
-var genesisAmountString string = "99999999999999999999999999"
+var genesisAmountString = "99999999999999999999999999"
 
 type BenchCommand struct {
-	StorageURI *url.URL `name:"storage" help:"mongodb storage uri (default:mongodb://localhost:27017)" default:"mongodb://localhost:27017"` // nolint
-	Operations uint     `arg:"" name:"operations" help:"number of operations (default:10)" default:"10"`
-	NoHeader   bool     `name:"no-header" help:"don't print header output" default:"false"`
-	log        logging.Logger
-	ops        []operation.Operation
-	local      *isaac.Localstate
-	senderPriv key.Privatekey
-	sender     currency.Address
-	storage    storage.Storage
-	suffrage   base.Suffrage
-	networkID  base.NetworkID
-	dp         isaac.ProposalProcessor
+	StorageURI     *url.URL `name:"storage" help:"mongodb storage uri (default:mongodb://localhost:27017)" default:"mongodb://localhost:27017"` // nolint
+	Operations     uint     `arg:"" name:"operations" help:"number of operations (default:10)" default:"10"`
+	log            logging.Logger
+	priv           key.Privatekey
+	networkID      base.NetworkID
+	storage        storage.Storage
+	genesisPriv    key.Privatekey
+	genesisAddress base.Address
+	lastHeight     base.Height
+	lastBlock      valuehash.Hash
+	local          *isaac.Localstate
+	suffrage       base.Suffrage
+	accounts       []*account
+	ops            []operation.Operation
+	ivp            base.Voteproof
+	proposal       ballot.Proposal
+	block          block.Block
 }
 
 func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
@@ -68,12 +72,8 @@ func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
 }
 
 func (cmd *BenchCommand) run() error {
-	if !cmd.NoHeader {
-		_, _ = fmt.Fprintln(os.Stdout, `date,ops,type,value`)
-	}
-
+	cmd.priv = key.MustNewBTCPrivatekey()
 	cmd.networkID = util.UUID().Bytes()
-	cmd.senderPriv = key.MustNewBTCPrivatekey()
 
 	if st, err := cmd.prepareStorage(); err != nil {
 		return err
@@ -89,7 +89,7 @@ func (cmd *BenchCommand) run() error {
 	cmd.log.Debug().Msg("storage prepared")
 
 	if local, err := cmd.localstate(); err != nil {
-		return err
+		return xerrors.Errorf("failed to preaper localstate: %w", err)
 	} else {
 		cmd.local = local
 	}
@@ -97,245 +97,384 @@ func (cmd *BenchCommand) run() error {
 
 	cmd.suffrage = base.NewFixedSuffrage(cmd.local.Node().Address(), []base.Address{cmd.local.Node().Address()})
 	if err := cmd.suffrage.Initialize(); err != nil {
-		return err
+		return xerrors.Errorf("failed to initialize suffrage: %w", err)
 	}
 	cmd.log.Debug().Msg("fixed suffrage prepared")
 
-	cmd.log.Debug().Uint("operations", cmd.Operations).Msg("trying to create operations")
-	if ops, err := cmd.newOperations(cmd.Operations); err != nil {
-		return err
-	} else {
-		cmd.ops = ops
+	if err := cmd.elapsed("prepare-accounts", cmd.prepareAccounts); err != nil {
+		return xerrors.Errorf("failed to prepare accounts: %w", err)
+	}
+	cmd.log.Debug().Msg("accounts prepared")
+
+	if err := cmd.elapsed("prepare-operations", cmd.prepareOperations); err != nil {
+		return xerrors.Errorf("failed to prepare operations: %w", err)
+	}
+	cmd.log.Debug().Int("operations", len(cmd.ops)).Msg("operations prepared")
+
+	if err := cmd.elapsed("prepare-processor", cmd.prepareProcessor); err != nil {
+		return xerrors.Errorf("failed to prepare processor: %w", err)
+	}
+	cmd.log.Debug().Msg("processor prepared")
+
+	if err := cmd.elapsed("process", cmd.process); err != nil {
+		return xerrors.Errorf("failed to process: %w", err)
 	}
 
-	if err := cmd.bench(); err != nil {
-		return err
+	if err := cmd.elapsed("check-result", cmd.checkProcess); err != nil {
+		return xerrors.Errorf("failed to check result: %w", err)
 	}
+
+	cmd.log.Debug().Msg("checked")
 
 	return nil
 }
 
-func (cmd *BenchCommand) bench() error {
-	cmd.log.Debug().Msg("trying to bench")
+func (cmd *BenchCommand) prepareStorage() (storage.Storage, error) {
+	uri := cmd.StorageURI
+	uri.Path = fmt.Sprintf("bench_%s", util.UUID().String())
 
-	cmd.dp = isaac.NewDefaultProposalProcessor(cmd.local, cmd.suffrage)
-	cmd.dp.(logging.SetLogger).SetLogger(cmd.log)
-
-	if _, err := cmd.dp.AddOperationProcessor(currency.Transfer{}, &currency.OperationProcessor{}); err != nil {
-		return err
-	}
-	if _, err := cmd.dp.AddOperationProcessor(currency.CreateAccount{}, &currency.OperationProcessor{}); err != nil {
-		return err
+	client, err := mongodbstorage.NewClient(uri.String(), time.Second*2, time.Second*2)
+	if err != nil {
+		return nil, err
 	}
 
-	var proposal ballot.Proposal
-	var ivp base.Voteproof
-
-	cmd.log.Debug().Msg("trying to prepare")
-	s := time.Now()
-	if p, v, err := cmd.prepare(); err != nil {
-		return err
+	if st, err := mongodbstorage.NewStorage(client, encs, nil); err != nil {
+		return nil, err
+	} else if err := st.Initialize(); err != nil {
+		return nil, err
 	} else {
-		elapsed := time.Since(s)
-		cmd.log.Debug().Dur("elapsed", elapsed).Msg("prepared")
-		printCSV(cmd.Operations, "bench-prepare", elapsed)
-
-		proposal = p
-		ivp = v
+		return st, nil
 	}
-
-	var blk block.Block
-	var bs storage.BlockStorage
-
-	s = time.Now()
-	if a, b, err := cmd.process(proposal, ivp); err != nil {
-		return err
-	} else {
-		elapsed := time.Since(s)
-		cmd.log.Debug().Dur("elapsed", elapsed).Msg("processed")
-
-		printCSV(cmd.Operations, "bench-process", elapsed)
-
-		for k, v := range cmd.dp.States() {
-			printCSV(cmd.Operations, "pp-"+k, v)
-		}
-
-		blk = a
-		bs = b
-	}
-
-	s = time.Now()
-	if err := cmd.commit(bs); err != nil {
-		return err
-	} else {
-		elapsed := time.Since(s)
-		cmd.log.Debug().Dur("elapsed", elapsed).Msg("committed")
-
-		printCSV(cmd.Operations, "bench-commit", elapsed)
-	}
-
-	return cmd.checkNewBlock(blk)
 }
 
-func (cmd *BenchCommand) checkNewBlock(blk block.Block) error {
-	switch ublk, found, err := cmd.local.Storage().Block(blk.Hash()); {
+func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
+	var address currency.Address
+	if addr, err := currency.NewAddress("bench"); err != nil {
+		return nil, err
+	} else {
+		address = addr
+	}
+
+	priv := key.MustNewBTCPrivatekey()
+
+	n := isaac.NewLocalNode(address, priv)
+	cmd.log.Debug().Msg("local node created")
+
+	local, err := isaac.NewLocalstate(cmd.storage, n, cmd.networkID)
+	if err != nil {
+		return nil, err
+	} else if err := local.Initialize(); err != nil {
+		return nil, err
+	}
+	cmd.log.Debug().Msg("localstate created")
+
+	cmd.genesisPriv = key.MustNewBTCPrivatekey()
+
+	ks := []currency.Key{currency.NewKey(cmd.genesisPriv.Publickey(), 100)}
+	keys, _ := currency.NewKeys(ks, 100)
+	cmd.genesisAddress, _ = currency.NewAddressFromKeys(keys)
+
+	amount, _ := currency.NewAmountFromString(genesisAmountString)
+	cmd.log.Debug().
+		Str("amount", amount.String()).
+		Str("privatekey", cmd.genesisPriv.String()).
+		Str("address", cmd.genesisAddress.String()).
+		Msg("trying to create genesis account")
+	if ga, err := currency.NewGenesisAccount(cmd.genesisPriv, keys, amount, cmd.networkID); err != nil {
+		return nil, err
+	} else if genesis, err := isaac.NewGenesisBlockV0Generator(local, []operation.Operation{ga}); err != nil {
+		return nil, err
+	} else if _, err := genesis.Generate(); err != nil {
+		return nil, err
+	}
+	cmd.log.Debug().Msg("genesis account generated")
+
+	_, _ = local.Policy().SetMaxOperationsInProposal(cmd.Operations)
+
+	switch m, found, err := cmd.storage.LastManifest(); {
 	case err != nil:
-		return err
+		return nil, err
 	case !found:
-		return xerrors.Errorf("new block not found")
+		return nil, xerrors.Errorf("last block not found")
 	default:
-		if ublk.Operations().Empty() {
-			return xerrors.Errorf("all operations not found; epty block.Operations()")
+		cmd.lastHeight = m.Height()
+		cmd.lastBlock = m.Hash()
+	}
+
+	return local, nil
+}
+
+type account struct {
+	Priv    key.Privatekey
+	Address base.Address
+	Keys    currency.Keys
+}
+
+func newAccount() *account {
+	priv := key.MustNewBTCPrivatekey()
+	ks := []currency.Key{currency.NewKey(priv.Publickey(), 100)}
+	keys, _ := currency.NewKeys(ks, 100)
+	address, _ := currency.NewAddressFromKeys(keys)
+
+	return &account{
+		Priv:    priv,
+		Address: address,
+		Keys:    keys,
+	}
+}
+
+type acerr struct {
+	err error
+	ac  interface{}
+	sts []state.State
+}
+
+func (ac acerr) Error() string {
+	return ac.err.Error()
+}
+
+func (cmd *BenchCommand) prepareAccounts() error {
+	var n uint = 100
+	if n > cmd.Operations {
+		n = cmd.Operations
+	}
+
+	cmd.log.Debug().Uint("number_of_accounts", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
+
+	errchan := make(chan error)
+	wk := util.NewDistributeWorker(n, errchan)
+
+	go func() {
+		_ = wk.Run(
+			func(i uint, j interface{}) error {
+				if j == nil {
+					return nil
+				}
+				ac, sts, err := cmd.createAccount(currency.NewAmount(int64(100)))
+
+				return acerr{err: err, ac: ac, sts: sts}
+			},
+		)
+
+		close(errchan)
+	}()
+
+	go func() {
+		for i := 0; i < int(cmd.Operations); i++ {
+			wk.NewJob(i)
+		}
+		wk.Done(true)
+	}()
+
+	acs := make([]*account, int(cmd.Operations))
+	var i int
+	for err := range errchan {
+		if err == nil {
+			continue
 		}
 
-		for _, op := range cmd.ops {
-			if n, err := ublk.Operations().Get([]byte(op.Fact().Hash().String())); err != nil {
-				return err
-			} else if n == nil {
-				err := xerrors.Errorf("operation not found")
-				cmd.log.Error().Err(err).Hinted("operation", op.Fact().Hash()).Send()
+		aerr := err.(acerr)
+		if aerr.err != nil {
+			return err
+		}
 
+		acs[i] = err.(acerr).ac.(*account)
+
+		for _, st := range err.(acerr).sts {
+			if err := cmd.storage.NewState(st); err != nil {
 				return err
 			}
 		}
+		i++
+	}
+
+	cmd.accounts = acs
+
+	return nil
+}
+
+func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []state.State, error) {
+	ac := newAccount()
+
+	sts := make([]state.State, 2)
+
+	{
+		key := currency.StateKeyKeys(ac.Address)
+		value, _ := state.NewHintedValue(ac.Keys)
+		if st, err := state.NewStateV0Updater(key, value, nil); err != nil {
+			return nil, nil, err
+		} else if err := st.SetHash(st.GenerateHash()); err != nil {
+			return nil, nil, err
+		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
+			return nil, nil, err
+		} else if err := st.SetCurrentBlock(cmd.lastHeight, cmd.lastBlock); err != nil {
+			return nil, nil, err
+		} else {
+			sts[0] = st.State()
+		}
+	}
+
+	{
+		key := currency.StateKeyBalance(ac.Address)
+		value, _ := state.NewStringValue(amount.String())
+		if st, err := state.NewStateV0Updater(key, value, nil); err != nil {
+			return nil, nil, err
+		} else if err := st.SetHash(st.GenerateHash()); err != nil {
+			return nil, nil, err
+		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
+			return nil, nil, err
+		} else if err := st.SetCurrentBlock(cmd.lastHeight, cmd.lastBlock); err != nil {
+			return nil, nil, err
+		} else {
+			sts[1] = st.State()
+		}
+	}
+
+	return ac, sts, nil
+}
+
+func (cmd *BenchCommand) prepareOperations() error {
+	var n uint = 100
+	if n > cmd.Operations {
+		n = cmd.Operations
+	}
+
+	cmd.log.Debug().Uint("number_of_operations", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
+
+	errchan := make(chan error)
+	wk := util.NewDistributeWorker(n, errchan)
+
+	go func() {
+		_ = wk.Run(
+			func(_ uint, j interface{}) error {
+				if j == nil {
+					return nil
+				}
+
+				i := j.(int)
+
+				sender := cmd.accounts[i]
+				var receiver *account
+				if len(cmd.accounts) == i+1 {
+					receiver = cmd.accounts[0]
+				} else {
+					receiver = cmd.accounts[i+1]
+				}
+				op, err := cmd.newOperation(sender, receiver, currency.NewAmount(1))
+
+				return acerr{err: err, ac: op}
+			},
+		)
+
+		close(errchan)
+	}()
+
+	go func() {
+		for i := 0; i < int(cmd.Operations); i++ {
+			wk.NewJob(i)
+		}
+		wk.Done(true)
+	}()
+
+	ops := make([]operation.Operation, cmd.Operations)
+	var i int
+	for err := range errchan {
+		if err == nil {
+			continue
+		}
+
+		ops[i] = err.(acerr).ac.(operation.Operation)
+		if i == int(cmd.Operations)-1 {
+			break
+		}
+
+		i++
+	}
+
+	cmd.ops = ops
+
+	return cmd.elapsed("generate-seals", cmd.generateSeals)
+}
+
+func (cmd *BenchCommand) generateSeals() error {
+	l := int(cmd.local.Policy().MaxOperationsInSeal())
+	var ops []operation.Operation // nolint: prealloc
+	for i := range cmd.ops {
+		ops = append(ops, cmd.ops[i])
+		if len(ops) == l {
+			if err := cmd.generateSeal(ops); err != nil {
+				return err
+			}
+
+			ops = nil
+		}
+	}
+
+	if len(ops) > 0 {
+		if err := cmd.generateSeal(ops); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (cmd *BenchCommand) prepare() (ballot.Proposal, base.Voteproof, error) {
-	max := uint(len(cmd.ops))
-	_, _ = cmd.local.Policy().SetMaxOperationsInSeal(max)
-	_, _ = cmd.local.Policy().SetMaxOperationsInProposal(max)
-
-	if sl, err := operation.NewBaseSeal(
-		cmd.senderPriv,
-		cmd.ops,
-		cmd.networkID,
-	); err != nil {
-		return nil, nil, err
+func (cmd *BenchCommand) generateSeal(ops []operation.Operation) error {
+	if sl, err := operation.NewBaseSeal(cmd.priv, ops, cmd.networkID); err != nil {
+		return err
 	} else if err := cmd.storage.NewSeals([]seal.Seal{sl}); err != nil {
-		return nil, nil, xerrors.Errorf("failed to store new seal: %w", err)
-	}
-
-	_ = cmd.dp.(logging.SetLogger).SetLogger(cmd.log)
-	pm := isaac.NewProposalMaker(cmd.local)
-
-	ib := cmd.newINITBallot(cmd.local)
-	initFact := ib.INITBallotFactV0
-
-	var proposal ballot.Proposal
-	var ivp base.Voteproof
-	if vp, err := cmd.newVoteproof(base.StageINIT, initFact); err != nil {
-		return nil, nil, xerrors.Errorf("failed to make new voteproof: %w", err)
+		return xerrors.Errorf("failed to store new seal: %w", err)
 	} else {
-		ivp = vp
-	}
-
-	if b, err := pm.Proposal(ivp.Round()); err != nil {
-		return nil, nil, xerrors.Errorf("failed to make new proposal: %w", err)
-	} else {
-		proposal = b
-	}
-
-	if err := cmd.local.Storage().NewProposal(proposal); err != nil {
-		return nil, nil, xerrors.Errorf("failed to store new proposal: %w", err)
-	}
-
-	return proposal, ivp, nil
-}
-
-func (cmd *BenchCommand) process(proposal ballot.Proposal, ivp base.Voteproof) (
-	block.Block, storage.BlockStorage, error,
-) {
-	var blk block.Block
-	if b, err := cmd.dp.ProcessINIT(proposal.Hash(), ivp); err != nil {
-		return nil, nil, err
-	} else {
-		blk = b
-	}
-
-	acceptFact := ballot.NewACCEPTBallotV0(
-		nil,
-		ivp.Height(),
-		ivp.Round(),
-		proposal.Hash(),
-		blk.Hash(),
-		nil,
-	).Fact()
-
-	if avp, err := cmd.newVoteproof(base.StageACCEPT, acceptFact); err != nil {
-		return nil, nil, xerrors.Errorf("failed to make new voteproof: %w", err)
-	} else if bs, err := cmd.dp.ProcessACCEPT(proposal.Hash(), avp); err != nil {
-		return nil, nil, xerrors.Errorf("failed to process accept voteproof: %w", err)
-	} else {
-		return blk, bs, nil
+		return nil
 	}
 }
 
-func (cmd *BenchCommand) commit(bs storage.BlockStorage) error {
-	if err := bs.Commit(context.Background()); err != nil {
-		return xerrors.Errorf("failed to commit: %w", err)
-	}
-
-	return nil
-}
-
-func (cmd *BenchCommand) newOperation(
-	sender base.Address,
-	amount currency.Amount,
-	keys currency.Keys,
-	pks []key.Privatekey,
-) (currency.CreateAccount, error) {
+func (cmd *BenchCommand) newOperation(sender, receiver *account, amount currency.Amount) (currency.Transfers, error) {
 	token := util.UUID().Bytes()
-	fact := currency.NewCreateAccountFact(token, sender, keys, amount)
+	item := currency.NewTransferItem(receiver.Address, amount)
+	fact := currency.NewTransfersFact(
+		token,
+		sender.Address,
+		[]currency.TransferItem{item},
+	)
 
 	var fs []operation.FactSign
-	for _, pk := range pks {
-		if sig, err := operation.NewFactSignature(pk, fact, nil); err != nil {
-			return currency.CreateAccount{}, err
-		} else {
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
-		}
+	if sig, err := operation.NewFactSignature(sender.Priv, fact, nil); err != nil {
+		return currency.Transfers{}, err
+	} else {
+		fs = append(fs, operation.NewBaseFactSign(sender.Priv.Publickey(), sig))
 	}
 
-	if ca, err := currency.NewCreateAccount(fact, fs, ""); err != nil {
-		return currency.CreateAccount{}, err
+	if tf, err := currency.NewTransfers(fact, fs, ""); err != nil {
+		return currency.Transfers{}, err
 	} else {
-		return ca, nil
+		return tf, nil
 	}
 }
 
-func (cmd *BenchCommand) newOperations(n uint) ([]operation.Operation, error) {
-	ops := make([]operation.Operation, n)
-	for i := uint(0); i < n; i++ {
-		keys, _ := currency.NewKeys([]currency.Key{currency.NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)}, 100)
-		if ca, err := cmd.newOperation(
-			cmd.sender,
-			currency.NewAmount(1),
-			keys,
-			[]key.Privatekey{cmd.senderPriv},
-		); err != nil {
-			return nil, err
-		} else {
-			ops[i] = ca
-		}
-	}
+func (cmd *BenchCommand) prepareProcessor() error {
+	pm := isaac.NewProposalMaker(cmd.local)
 
-	return ops, nil
-}
+	ib := cmd.newINITBallot()
+	initFact := ib.INITBallotFactV0
 
-func (cmd *BenchCommand) newINITBallot(local *isaac.Localstate) ballot.INITBallotV0 {
-	var ib ballot.INITBallotV0
-	if b, err := isaac.NewINITBallotV0Round0(local.Storage(), local.Node().Address()); err != nil {
-		panic(err)
+	if vp, err := cmd.newVoteproof(base.StageINIT, initFact); err != nil {
+		return xerrors.Errorf("failed to make new voteproof: %w", err)
 	} else {
-		ib = b
+		cmd.ivp = vp
 	}
 
-	_ = ib.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
+	if b, err := pm.Proposal(cmd.ivp.Round()); err != nil {
+		return xerrors.Errorf("failed to make new proposal: %w", err)
+	} else if err := cmd.local.Storage().NewProposal(b); err != nil {
+		return xerrors.Errorf("failed to store new proposal: %w", err)
+	} else {
+		cmd.proposal = b
+	}
 
-	return ib
+	cmd.log.Debug().Int("facts", len(cmd.proposal.Facts())).Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
+
+	return nil
 }
 
 func (cmd *BenchCommand) newVoteproof(stage base.Stage, fact base.Fact) (base.VoteproofV0, error) {
@@ -387,74 +526,120 @@ func (cmd *BenchCommand) newVoteproof(stage base.Stage, fact base.Fact) (base.Vo
 	return vp, nil
 }
 
-func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
-	var address currency.Address
-	if addr, err := currency.NewAddress("bench"); err != nil {
-		return nil, err
+func (cmd *BenchCommand) newINITBallot() ballot.INITBallotV0 {
+	var ib ballot.INITBallotV0
+	if b, err := isaac.NewINITBallotV0Round0(cmd.local.Storage(), cmd.local.Node().Address()); err != nil {
+		panic(err)
 	} else {
-		address = addr
+		ib = b
 	}
-	cmd.log.Debug().Str("address", address.String()).Msg("address created")
 
-	priv := key.MustNewBTCPrivatekey()
-	cmd.log.Debug().Str("privatekey", priv.String()).Msg("private key of local node created")
+	_ = ib.Sign(cmd.local.Node().Privatekey(), cmd.local.Policy().NetworkID())
 
-	n := isaac.NewLocalNode(address, priv)
-	cmd.log.Debug().Msg("local node created")
-
-	local, err := isaac.NewLocalstate(cmd.storage, n, cmd.networkID)
-	if err != nil {
-		return nil, err
-	} else if err := local.Initialize(); err != nil {
-		return nil, err
-	}
-	cmd.log.Debug().Msg("localstate created")
-
-	ks := []currency.Key{currency.NewKey(cmd.senderPriv.Publickey(), 100)}
-	keys, _ := currency.NewKeys(ks, 100)
-	cmd.sender, _ = currency.NewAddressFromKeys(ks)
-
-	amount, _ := currency.NewAmountFromString(genesisAmountString)
-	cmd.log.Debug().
-		Str("amount", amount.String()).
-		Str("privatekey", cmd.senderPriv.String()).
-		Str("address", cmd.sender.String()).
-		Msg("trying to create genesis account")
-	if ga, err := currency.NewGenesisAccount(cmd.senderPriv, keys, amount, cmd.networkID); err != nil {
-		return nil, err
-	} else if genesis, err := isaac.NewGenesisBlockV0Generator(local, []operation.Operation{ga}); err != nil {
-		return nil, err
-	} else if _, err := genesis.Generate(); err != nil {
-		return nil, err
-	}
-	cmd.log.Debug().Msg("genesis account generated")
-
-	return local, nil
+	return ib
 }
 
-func (cmd *BenchCommand) prepareStorage() (storage.Storage, error) {
-	uri := cmd.StorageURI
-	uri.Path = fmt.Sprintf("bench_%s", util.UUID().String())
+func (cmd *BenchCommand) process() error {
+	dp := isaac.NewDefaultProposalProcessor(cmd.local, cmd.suffrage)
+	_ = dp.SetLogger(cmd.log)
 
-	client, err := mongodbstorage.NewClient(uri.String(), time.Second*2, time.Second*2)
-	if err != nil {
-		return nil, err
+	if _, err := dp.AddOperationProcessor(currency.Transfers{}, &currency.OperationProcessor{}); err != nil {
+		return err
+	} else if _, err := dp.AddOperationProcessor(currency.CreateAccounts{}, &currency.OperationProcessor{}); err != nil {
+		return err
 	}
 
-	var benc encoder.Encoder
-	if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil {
-		return nil, err
+	started := time.Now()
+	var blk block.Block
+	if b, err := dp.ProcessINIT(cmd.proposal.Hash(), cmd.ivp); err != nil {
+		return err
 	} else {
-		benc = e
+		cmd.printElapsed("process-init", started)
+
+		blk = b
 	}
 
-	if st, err := mongodbstorage.NewStorage(client, encs, benc); err != nil {
-		return nil, err
-	} else if err := st.Initialize(); err != nil {
-		return nil, err
+	cmd.log.Debug().Msg("init processed")
+
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		cmd.ivp.Height(),
+		cmd.ivp.Round(),
+		cmd.proposal.Hash(),
+		blk.Hash(),
+		nil,
+	).Fact()
+
+	started = time.Now()
+	var bs storage.BlockStorage
+	if avp, err := cmd.newVoteproof(base.StageACCEPT, acceptFact); err != nil {
+		return xerrors.Errorf("failed to make new voteproof: %w", err)
+	} else if s, err := dp.ProcessACCEPT(cmd.proposal.Hash(), avp); err != nil {
+		return xerrors.Errorf("failed to process accept voteproof: %w", err)
 	} else {
-		return st, nil
+		cmd.printElapsed("process-accept", started)
+
+		bs = s
 	}
+	cmd.log.Debug().Msg("acccept processed")
+
+	for k, v := range dp.States() {
+		printCSV(cmd.Operations, "pp-"+k, v)
+	}
+
+	cmd.log.Debug().Msg("trying to commit")
+	if err := cmd.commit(bs); err != nil {
+		return xerrors.Errorf("failed to commit: %w", err)
+	}
+	cmd.log.Debug().Msg("committed")
+
+	cmd.block = blk
+
+	return nil
+}
+
+func (cmd *BenchCommand) commit(bs storage.BlockStorage) error {
+	started := time.Now()
+	defer func() {
+		cmd.printElapsed("commit", started)
+
+		for k, v := range bs.States() {
+			printCSV(cmd.Operations, "bs-"+k, v)
+		}
+	}()
+
+	return bs.Commit(context.Background())
+}
+
+func (cmd *BenchCommand) checkProcess() error {
+	var ops int
+	_ = cmd.block.Operations().Traverse(func(tree.Node) (bool, error) {
+		ops++
+		return true, nil
+	})
+
+	var sts int
+	_ = cmd.block.States().Traverse(func(tree.Node) (bool, error) {
+		sts++
+		return true, nil
+	})
+
+	cmd.log.Debug().Int("operations", ops).Int("states", sts).Msg("block processed")
+
+	return nil
+}
+
+func (cmd *BenchCommand) elapsed(s string, f func() error) error {
+	started := time.Now()
+	defer func() {
+		cmd.printElapsed(s, started)
+	}()
+
+	return f()
+}
+
+func (cmd *BenchCommand) printElapsed(s string, started time.Time) {
+	printCSV(cmd.Operations, s, time.Since(started))
 }
 
 func printCSV(ops uint, s string, v interface{}) {

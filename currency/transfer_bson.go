@@ -9,15 +9,35 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (tff TransferFact) MarshalBSON() ([]byte, error) {
+func (tff TransferItem) MarshalBSON() ([]byte, error) {
+	return bsonenc.Marshal(bson.M{
+		"receiver": tff.receiver,
+		"amount":   tff.amount,
+	})
+}
+
+type TransferItemBSONUnpacker struct {
+	RC base.AddressDecoder `bson:"receiver"`
+	AM Amount              `bson:"amount"`
+}
+
+func (tff *TransferItem) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var utff TransferItemBSONUnpacker
+	if err := enc.Unmarshal(b, &utff); err != nil {
+		return err
+	}
+
+	return tff.unpack(enc, utff.RC, utff.AM)
+}
+
+func (tff TransfersFact) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(
 		bsonenc.MergeBSONM(bsonenc.NewHintedDoc(tff.Hint()),
 			bson.M{
-				"hash":     tff.h,
-				"token":    tff.token,
-				"sender":   tff.sender,
-				"receiver": tff.receiver,
-				"amount":   tff.amount,
+				"hash":   tff.h,
+				"token":  tff.token,
+				"sender": tff.sender,
+				"items":  tff.items,
 			}))
 }
 
@@ -25,20 +45,29 @@ type TransferFactBSONUnpacker struct {
 	H  valuehash.Bytes     `bson:"hash"`
 	TK []byte              `bson:"token"`
 	SD base.AddressDecoder `bson:"sender"`
-	RC base.AddressDecoder `bson:"receiver"`
-	AM Amount              `bson:"amount"`
+	IT []bson.Raw          `bson:"items"`
 }
 
-func (tff *TransferFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (tff *TransfersFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var utff TransferFactBSONUnpacker
 	if err := enc.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
-	return tff.unpack(enc, utff.H, utff.TK, utff.SD, utff.RC, utff.AM)
+	its := make([]TransferItem, len(utff.IT))
+	for i := range utff.IT {
+		it := new(TransferItem)
+		if err := it.UnpackBSON(utff.IT[i], enc); err != nil {
+			return err
+		}
+
+		its[i] = *it
+	}
+
+	return tff.unpack(enc, utff.H, utff.TK, utff.SD, its)
 }
 
-func (tf Transfer) MarshalBSON() ([]byte, error) {
+func (tf Transfers) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(
 		bsonenc.MergeBSONM(
 			tf.BaseOperation.BSONM(),
@@ -46,13 +75,13 @@ func (tf Transfer) MarshalBSON() ([]byte, error) {
 		))
 }
 
-func (tf *Transfer) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (tf *Transfers) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ubo operation.BaseOperation
 	if err := ubo.UnpackBSON(b, enc); err != nil {
 		return err
 	}
 
-	*tf = Transfer{BaseOperation: ubo}
+	*tf = Transfers{BaseOperation: ubo}
 
 	var um MemoBSONUnpacker
 	if err := enc.Unmarshal(b, &um); err != nil {

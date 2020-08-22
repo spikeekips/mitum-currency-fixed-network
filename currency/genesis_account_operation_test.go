@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -54,19 +55,23 @@ func (t *testGenesisAccountOperation) TestNew() {
 	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
-	newAddress, err := NewAddressFromKeys(keys.Keys())
+	newAddress, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
 	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
 	t.Equal(2, len(sp.Updates()))
 
-	nstate, found, err := sp.Get(StateKeyKeys(newAddress))
-	t.NoError(err)
-	t.True(found)
-	t.NotNil(nstate)
+	var ns, nb state.StateUpdater
+	for _, st := range sp.Updates() {
+		if key := st.Key(); key == StateKeyKeys(newAddress) {
+			ns = st
+		} else if key == StateKeyBalance(newAddress) {
+			nb = st
+		}
+	}
 
-	ukeys := nstate.Value().Interface().(Keys)
+	ukeys := ns.Value().Interface().(Keys)
 	t.Equal(len(keys.Keys()), len(ukeys.Keys()))
 	t.Equal(keys.Threshold(), ukeys.Threshold())
 	for i := range keys.Keys() {
@@ -74,12 +79,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 		t.True(keys.Keys()[i].Key().Equal(ukeys.Keys()[i].Key()))
 	}
 
-	nstateBalance, found, err := sp.Get(StateKeyBalance(newAddress))
-	t.NoError(err)
-	t.True(found)
-	t.NotNil(nstateBalance)
-
-	t.Equal(amount.String(), nstateBalance.Value().Interface())
+	t.Equal(amount.String(), nb.Value().Interface())
 }
 
 func (t *testGenesisAccountOperation) TestMultipleTarget() {
@@ -96,15 +96,19 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
 
-	newAddress, err := NewAddressFromKeys(keys.Keys())
+	newAddress, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
-	nstate, found, err := sp.Get(StateKeyKeys(newAddress))
-	t.NoError(err)
-	t.True(found)
-	t.NotNil(nstate)
+	var ns, nb state.StateUpdater
+	for _, st := range sp.Updates() {
+		if key := st.Key(); key == StateKeyKeys(newAddress) {
+			ns = st
+		} else if key == StateKeyBalance(newAddress) {
+			nb = st
+		}
+	}
 
-	ukeys := nstate.Value().Interface().(Keys)
+	ukeys := ns.Value().Interface().(Keys)
 	t.Equal(len(keys.Keys()), len(ukeys.Keys()))
 	t.Equal(keys.Threshold(), ukeys.Threshold())
 	for i := range keys.Keys() {
@@ -112,12 +116,7 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 		t.True(keys.Keys()[i].Key().Equal(ukeys.Keys()[i].Key()))
 	}
 
-	nstateBalance, found, err := sp.Get(StateKeyBalance(newAddress))
-	t.NoError(err)
-	t.True(found)
-	t.NotNil(nstateBalance)
-
-	t.Equal(amount.String(), nstateBalance.Value().Interface())
+	t.Equal(amount.String(), nb.Value().Interface())
 }
 
 func (t *testGenesisAccountOperation) TestTargetAccountExists() {
@@ -131,13 +130,15 @@ func (t *testGenesisAccountOperation) TestTargetAccountExists() {
 	t.NoError(err)
 
 	{
-		newAddress, err := NewAddressFromKeys(keys.Keys())
+		newAddress, err := NewAddressFromKeys(keys)
 		t.NoError(err)
-		st, found, err := sp.Get(StateKeyBalance(newAddress))
+		st, exists, err := sp.Get(StateKeyBalance(newAddress))
 		t.NoError(err)
-		t.False(found)
+		t.False(exists)
 		sp.Set(valuehash.RandomSHA256(), st)
 	}
+
+	return
 
 	err = op.Process(sp.Get, sp.Set)
 	t.Contains(err.Error(), "balance of genesis already exists")

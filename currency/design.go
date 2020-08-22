@@ -76,7 +76,7 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 		akd.Keys = keys
 	}
 
-	if a, err := NewAddressFromKeys(akd.Keys.Keys()); err != nil {
+	if a, err := NewAddressFromKeys(akd.Keys); err != nil {
 		return err
 	} else {
 		akd.Address = a

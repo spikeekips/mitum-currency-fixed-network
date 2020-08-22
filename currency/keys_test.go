@@ -58,6 +58,16 @@ func (t *testKeys) TestNew() {
 	t.Equal(2, len(ks.Keys()))
 }
 
+func (t *testKeys) TestSorting() {
+	k0 := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	k1 := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+
+	ks0, _ := NewKeys([]Key{k0, k1}, 100)
+	ks1, _ := NewKeys([]Key{k1, k0}, 100)
+
+	t.True(ks0.Hash().Equal(ks1.Hash()))
+}
+
 func (t *testKeys) TestWeightOver100() {
 	keys := []Key{
 		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),

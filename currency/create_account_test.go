@@ -15,11 +15,11 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type testCreateAcount struct {
-	suite.Suite
+type testCreateAccounts struct {
+	baseTest
 }
 
-func (t *testCreateAcount) TestNew() {
+func (t *testCreateAccounts) TestNew() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
@@ -28,10 +28,14 @@ func (t *testCreateAcount) TestNew() {
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
-	sender, _ := NewAddressFromKeys([]Key{skey})
+
+	keys, _ := NewKeys([]Key{skey}, 50)
+	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
-	fact := NewCreateAccountFact(token, sender, skeys, NewAmount(10))
+
+	item := NewCreateAccountItem(skeys, NewAmount(10))
+	fact := NewCreateAccountsFact(token, sender, []CreateAccountItem{item})
 
 	var fs []operation.FactSign
 
@@ -42,7 +46,7 @@ func (t *testCreateAcount) TestNew() {
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	ca, err := NewCreateAccount(fact, fs, "")
+	ca, err := NewCreateAccounts(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(ca.IsValid(nil))
@@ -51,7 +55,7 @@ func (t *testCreateAcount) TestNew() {
 	t.Implements((*operation.Operation)(nil), ca)
 }
 
-func (t *testCreateAcount) TestOverSizeMemo() {
+func (t *testCreateAccounts) TestZeroAmount() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
@@ -60,10 +64,101 @@ func (t *testCreateAcount) TestOverSizeMemo() {
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
-	sender, _ := NewAddressFromKeys([]Key{skey})
+
+	keys, _ := NewKeys([]Key{skey}, 50)
+	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
-	fact := NewCreateAccountFact(token, sender, skeys, NewAmount(10))
+
+	item := NewCreateAccountItem(skeys, NewAmount(0))
+	err := item.IsValid(nil)
+	t.Contains(err.Error(), "amount should be over zero")
+
+	fact := NewCreateAccountsFact(token, sender, []CreateAccountItem{item})
+
+	var fs []operation.FactSign
+
+	for _, pk := range pks {
+		sig, err := operation.NewFactSignature(pk, fact, nil)
+		t.NoError(err)
+
+		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+	}
+
+	ca, err := NewCreateAccounts(fact, fs, "")
+	t.NoError(err)
+
+	err = ca.IsValid(nil)
+	t.Contains(err.Error(), "amount should be over zero")
+}
+
+func (t *testCreateAccounts) TestDuplicatedKeys() {
+	var items []CreateAccountItem
+	{
+		pk := key.MustNewBTCPrivatekey()
+		key := NewKey(pk.Publickey(), 100)
+		keys, _ := NewKeys([]Key{key}, 100)
+
+		items = append(items, NewCreateAccountItem(keys, NewAmount(10)))
+		items = append(items, NewCreateAccountItem(keys, NewAmount(30)))
+	}
+
+	token := util.UUID().Bytes()
+	pk := key.MustNewBTCPrivatekey()
+	key := NewKey(pk.Publickey(), 100)
+
+	keys, _ := NewKeys([]Key{key}, 100)
+	sender, _ := NewAddressFromKeys(keys)
+	fact := NewCreateAccountsFact(token, sender, items)
+
+	sig, err := operation.NewFactSignature(pk, fact, nil)
+	t.NoError(err)
+	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+
+	ca, err := NewCreateAccounts(fact, fs, "")
+	t.NoError(err)
+
+	err = ca.IsValid(nil)
+	t.Contains(err.Error(), "duplicated acocunt Keys found")
+}
+
+func (t *testCreateAccounts) TestSameWithSender() {
+	pk := key.MustNewBTCPrivatekey()
+	key := NewKey(pk.Publickey(), 100)
+	keys, _ := NewKeys([]Key{key}, 100)
+
+	items := []CreateAccountItem{NewCreateAccountItem(keys, NewAmount(10))}
+
+	token := util.UUID().Bytes()
+	sender, _ := NewAddressFromKeys(keys)
+	fact := NewCreateAccountsFact(token, sender, items)
+
+	sig, err := operation.NewFactSignature(pk, fact, nil)
+	t.NoError(err)
+	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+
+	ca, err := NewCreateAccounts(fact, fs, "")
+	t.NoError(err)
+
+	err = ca.IsValid(nil)
+	t.Contains(err.Error(), "target address is same with sender")
+}
+
+func (t *testCreateAccounts) TestOverSizeMemo() {
+	spk := key.MustNewBTCPrivatekey()
+	rpk := key.MustNewBTCPrivatekey()
+
+	skey := NewKey(spk.Publickey(), 50)
+	rkey := NewKey(rpk.Publickey(), 50)
+	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+
+	pks := []key.Privatekey{spk, rpk}
+	sender, _ := NewAddressFromKeys(skeys)
+
+	token := util.UUID().Bytes()
+
+	item := NewCreateAccountItem(skeys, NewAmount(10))
+	fact := NewCreateAccountsFact(token, sender, []CreateAccountItem{item})
 
 	var fs []operation.FactSign
 
@@ -75,18 +170,18 @@ func (t *testCreateAcount) TestOverSizeMemo() {
 	}
 
 	memo := strings.Repeat("a", MaxMemoSize) + "a"
-	ca, err := NewCreateAccount(fact, fs, memo)
+	ca, err := NewCreateAccounts(fact, fs, memo)
 	t.NoError(err)
 
 	err = ca.IsValid(nil)
 	t.Contains(err.Error(), "memo over max size")
 }
 
-func TestCreateAcount(t *testing.T) {
-	suite.Run(t, new(testCreateAcount))
+func TestCreateAccounts(t *testing.T) {
+	suite.Run(t, new(testCreateAccounts))
 }
 
-func testCreateAccountEncode(enc encoder.Encoder) suite.TestingSuite {
+func testCreateAccountsEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
@@ -98,9 +193,10 @@ func testCreateAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 		skeys, _ := NewKeys([]Key{skey, NewKey(rpk.Publickey(), 50)}, 100)
 
 		pks := []key.Privatekey{spk, rpk}
-		sender, _ := NewAddressFromKeys([]Key{skey})
+		sender, _ := NewAddressFromKeys(skeys)
 
-		fact := NewCreateAccountFact(util.UUID().Bytes(), sender, skeys, NewAmount(10))
+		item := NewCreateAccountItem(skeys, NewAmount(10))
+		fact := NewCreateAccountsFact(util.UUID().Bytes(), sender, []CreateAccountItem{item})
 
 		var fs []operation.FactSign
 
@@ -111,39 +207,45 @@ func testCreateAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
-		ca, err := NewCreateAccount(fact, fs, util.UUID().String())
+		ca, err := NewCreateAccounts(fact, fs, util.UUID().String())
 		t.NoError(err)
 
 		return ca
 	}
 
 	t.compare = func(a, b operation.Operation) {
-		ca := a.(CreateAccount)
-		cb := b.(CreateAccount)
+		ca := a.(CreateAccounts)
+		cb := b.(CreateAccounts)
 
 		t.Equal(ca.Memo, cb.Memo)
 
-		fact := a.Fact().(CreateAccountFact)
-		ufact := b.Fact().(CreateAccountFact)
+		fact := a.Fact().(CreateAccountsFact)
+		ufact := b.Fact().(CreateAccountsFact)
 
 		t.True(fact.sender.Equal(ufact.sender))
-		t.Equal(fact.amount, ufact.amount)
+		t.Equal(fact.Amount(), ufact.Amount())
+		t.Equal(len(fact.Items()), len(ufact.Items()))
 
-		t.True(fact.keys.Hash().Equal(ufact.keys.Hash()))
-		for i := range fact.keys.Keys() {
-			t.Equal(fact.keys.Keys()[i].Bytes(), ufact.keys.Keys()[i].Bytes())
+		for i := range fact.Items() {
+			a := fact.Items()[i]
+			b := ufact.Items()[i]
+
+			t.True(a.keys.Hash().Equal(b.keys.Hash()))
+			for i := range a.keys.Keys() {
+				t.Equal(a.keys.Keys()[i].Bytes(), b.keys.Keys()[i].Bytes())
+			}
+
+			t.Equal(a.keys.Threshold(), b.keys.Threshold())
 		}
-
-		t.Equal(fact.keys.Threshold(), ufact.keys.Threshold())
 	}
 
 	return t
 }
 
-func TestCreateAccountEncodeJSON(t *testing.T) {
-	suite.Run(t, testCreateAccountEncode(jsonenc.NewEncoder()))
+func TestCreateAccountsEncodeJSON(t *testing.T) {
+	suite.Run(t, testCreateAccountsEncode(jsonenc.NewEncoder()))
 }
 
-func TestCreateAccountEncodeBSON(t *testing.T) {
-	suite.Run(t, testCreateAccountEncode(bsonenc.NewEncoder()))
+func TestCreateAccountsEncodeBSON(t *testing.T) {
+	suite.Run(t, testCreateAccountsEncode(bsonenc.NewEncoder()))
 }

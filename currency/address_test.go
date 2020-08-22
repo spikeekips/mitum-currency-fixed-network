@@ -18,10 +18,13 @@ func (t *testAddress) newKey(weight uint) Key {
 
 func (t *testAddress) TestSingleKey() {
 	k := t.newKey(100)
-	a, err := NewAddressFromKeys([]Key{k})
+	keys, err := NewKeys([]Key{k}, 100)
 	t.NoError(err)
 
-	b, err := NewAddressFromKeys([]Key{k})
+	a, err := NewAddressFromKeys(keys)
+	t.NoError(err)
+
+	b, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
 	t.True(a.Equal(b))
@@ -29,7 +32,10 @@ func (t *testAddress) TestSingleKey() {
 
 func (t *testAddress) TestWrongKey() {
 	k := t.newKey(101)
-	_, err := NewAddressFromKeys([]Key{k})
+	keys, err := NewKeys([]Key{k}, 100)
+	t.NoError(err)
+
+	_, err = NewAddressFromKeys(keys)
 	t.Contains(err.Error(), "invalid key")
 }
 
@@ -38,10 +44,13 @@ func (t *testAddress) TestMultipleKey() {
 	for i := 0; i < 3; i++ {
 		ks = append(ks, t.newKey(30))
 	}
-	a, err := NewAddressFromKeys(ks)
+	keys, err := NewKeys(ks, 90)
 	t.NoError(err)
 
-	b, err := NewAddressFromKeys(ks)
+	a, err := NewAddressFromKeys(keys)
+	t.NoError(err)
+
+	b, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
 	t.Equal(a, b)
@@ -52,7 +61,11 @@ func (t *testAddress) TestMultipleKeyOrder() {
 	for i := 0; i < 3; i++ {
 		ks = append(ks, t.newKey(30))
 	}
-	a, err := NewAddressFromKeys(ks)
+
+	keys, err := NewKeys(ks, 90)
+	t.NoError(err)
+
+	a, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
 	// set different order
@@ -61,7 +74,7 @@ func (t *testAddress) TestMultipleKeyOrder() {
 	nks = append(nks, ks[1])
 	nks = append(nks, ks[0])
 
-	b, err := NewAddressFromKeys(ks)
+	b, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
 	t.Equal(a, b)

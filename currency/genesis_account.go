@@ -134,38 +134,42 @@ func (ga GenesisAccount) IsValid(networkID []byte) error {
 }
 
 func (ga GenesisAccount) Process(
-	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	getState func(key string) (state.State, bool, error),
+	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := ga.Fact().(GenesisAccountFact)
 
 	var newAddress Address
-	if a, err := NewAddressFromKeys(fact.keys.Keys()); err != nil {
+	if a, err := NewAddressFromKeys(fact.keys); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		newAddress = a
 	}
 
-	var nstate, nstateBalance state.StateUpdater
-	{
-		var err error
-		if nstate, err = notExistsAccountState(StateKeyKeys(newAddress), "key of genesis", getState); err != nil {
-			return err
-		}
-
-		if nstateBalance, err = notExistsAccountState(
-			StateKeyBalance(newAddress), "balance of genesis", getState); err != nil {
-			return err
-		}
+	var ns, nb state.State
+	if st, err := notExistsAccountState(StateKeyKeys(newAddress), "key of genesis", getState); err != nil {
+		return err
+	} else {
+		ns = st
 	}
 
-	if err := SetStateKeysValue(nstate, fact.keys); err != nil {
+	if st, err := notExistsAccountState(StateKeyBalance(newAddress), "balance of genesis", getState); err != nil {
+		return err
+	} else {
+		nb = st
+	}
+
+	if st, err := SetStateKeysValue(ns, fact.keys); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
+	} else {
+		ns = st
 	}
 
-	if err := SetStateAmountValue(nstateBalance, fact.amount); err != nil {
+	if st, err := SetStateAmountValue(nb, fact.amount); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
+	} else {
+		nb = st
 	}
 
-	return setState(ga.Hash(), nstate, nstateBalance)
+	return setState(ga.Hash(), ns, nb)
 }

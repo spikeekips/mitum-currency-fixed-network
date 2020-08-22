@@ -32,19 +32,23 @@ func generateAccount() *account { // nolint: unused
 	priv := key.MustNewBTCPrivatekey()
 
 	key := NewKey(priv.Publickey(), 100)
-	address, _ := NewAddressFromKeys([]Key{key})
+
+	keys, err := NewKeys([]Key{key}, 100)
+	if err != nil {
+		panic(err)
+	}
+
+	address, _ := NewAddressFromKeys(keys)
 
 	return &account{Address: address, Priv: priv, Key: key}
 }
 
-type baseTestOperationProcessor struct { // nolint: unused
+type baseTest struct { // nolint: unused
 	suite.Suite
 	isaac.StorageSupportTest
-	pool *isaac.Statepool
-	opr  isaac.OperationProcessor
 }
 
-func (t *baseTestOperationProcessor) SetupSuite() {
+func (t *baseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
 	_ = t.Encs.AddHinter(key.BTCPublickey{})
@@ -52,30 +56,48 @@ func (t *baseTestOperationProcessor) SetupSuite() {
 	_ = t.Encs.AddHinter(Key{})
 	_ = t.Encs.AddHinter(Keys{})
 	_ = t.Encs.AddHinter(Address(""))
-	_ = t.Encs.AddHinter(CreateAccount{})
-	_ = t.Encs.AddHinter(Transfer{})
+	_ = t.Encs.AddHinter(CreateAccounts{})
+	_ = t.Encs.AddHinter(Transfers{})
 }
 
-func (t *baseTestOperationProcessor) SetupTest() {
-	pool, err := isaac.NewStatepool(t.Storage(nil, nil))
-	t.NoError(err)
-	t.pool = pool
-
-	opr := &OperationProcessor{}
-	t.opr = opr.New(t.pool)
+func (t *baseTest) newAccount() *account {
+	return generateAccount()
 }
 
-func (t *baseTestOperationProcessor) newAccount(exists bool, amount Amount) *account {
-	ac := generateAccount()
+type baseTestOperationProcessor struct { // nolint: unused
+	baseTest
+}
 
-	if !exists {
-		return ac
+func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*isaac.Statepool, isaac.OperationProcessor) {
+	base := map[string]state.State{}
+	for _, l := range s {
+		for _, st := range l {
+			base[st.Key()] = st
+		}
 	}
 
-	_ = t.newStateKeys(ac.Address, ac.Keys())
-	_ = t.newStateBalance(ac.Address, amount)
+	pool, err := isaac.NewStatepoolWithBase(t.Storage(nil, nil), base)
+	t.NoError(err)
 
-	return ac
+	opr := (&OperationProcessor{}).New(pool)
+
+	return pool, opr
+}
+
+func (t *baseTestOperationProcessor) newAccount(exists bool, amount Amount) (*account, []state.State) {
+	ac := t.baseTest.newAccount()
+
+	if !exists {
+		return ac, nil
+	}
+
+	var st []state.State
+	st = append(st,
+		t.newStateKeys(ac.Address, ac.Keys()),
+		t.newStateBalance(ac.Address, amount),
+	)
+
+	return ac, st
 }
 
 func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amount) state.StateUpdater {
@@ -83,13 +105,6 @@ func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amou
 	value, _ := state.NewStringValue(amount.String())
 	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
-
-	t.NoError(t.pool.Set(valuehash.RandomSHA256(), su))
-
-	ust, found, err := t.pool.Get(key)
-	t.NoError(err)
-	t.NotNil(ust)
-	t.True(found)
 
 	return su
 }
@@ -99,13 +114,6 @@ func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) sta
 	value, _ := state.NewHintedValue(keys)
 	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
 	t.NoError(err)
-
-	t.NoError(t.pool.Set(valuehash.RandomSHA256(), su))
-
-	ust, found, err := t.pool.Get(key)
-	t.NoError(err)
-	t.NotNil(ust)
-	t.True(found)
 
 	return su
 }

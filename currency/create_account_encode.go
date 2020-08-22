@@ -8,11 +8,8 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (caf *CreateAccountFact) unpack(
+func (cai *CreateAccountItem) unpack(
 	enc encoder.Encoder,
-	h valuehash.Hash,
-	tk []byte,
-	bSender base.AddressDecoder,
 	bks []byte,
 	am Amount,
 ) error {
@@ -25,6 +22,19 @@ func (caf *CreateAccountFact) unpack(
 		keys = k
 	}
 
+	cai.keys = keys
+	cai.amount = am
+
+	return nil
+}
+
+func (caf *CreateAccountsFact) unpack(
+	enc encoder.Encoder,
+	h valuehash.Hash,
+	tk []byte,
+	bSender base.AddressDecoder,
+	its []CreateAccountItem,
+) error {
 	var sender base.Address
 	if a, err := bSender.Encode(enc); err != nil {
 		return err
@@ -35,8 +45,7 @@ func (caf *CreateAccountFact) unpack(
 	caf.h = h
 	caf.token = tk
 	caf.sender = sender
-	caf.keys = keys
-	caf.amount = am
+	caf.items = its
 
 	return nil
 }

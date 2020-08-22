@@ -1,17 +1,13 @@
 package currency
 
 import (
-	"fmt"
-	"sort"
 	"strings"
 
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -29,30 +25,12 @@ func NewAddress(name string) (Address, error) {
 	return ca, ca.IsValid(nil)
 }
 
-func NewAddressFromKeys(keys []Key) (Address, error) {
-	if n := len(keys); n < 1 {
-		return EmptyAddress, xerrors.Errorf("empty keys for Address")
-	} else {
-		for i := range keys {
-			k := keys[i]
-			if err := k.IsValid(nil); err != nil {
-				return EmptyAddress, xerrors.Errorf("invalid key found: %w", err)
-			} else if _, ok := k.Key().(key.Publickey); !ok {
-				return EmptyAddress, xerrors.Errorf("key should be key.Publickey; %T found", k)
-			}
-		}
+func NewAddressFromKeys(keys Keys) (Address, error) {
+	if err := keys.IsValid(nil); err != nil {
+		return EmptyAddress, err
 	}
 
-	skeys := make([]string, len(keys))
-	for i := range keys {
-		skeys[i] = fmt.Sprintf("%s:%d", keys[i].Key().String(), keys[i].Weight())
-	}
-
-	if len(keys) > 1 {
-		sort.Strings(skeys)
-	}
-
-	return NewAddress(valuehash.NewSHA256([]byte(strings.Join(skeys, ","))).String())
+	return NewAddress(keys.Hash().String())
 }
 
 func (ca Address) String() string {

@@ -28,10 +28,10 @@ func (t *baseTestOperationEncode) SetupSuite() {
 	t.encs.AddHinter(Key{})
 	t.encs.AddHinter(Keys{})
 
-	t.encs.AddHinter(TransferFact{})
-	t.encs.AddHinter(Transfer{})
-	t.encs.AddHinter(CreateAccountFact{})
-	t.encs.AddHinter(CreateAccount{})
+	t.encs.AddHinter(TransfersFact{})
+	t.encs.AddHinter(Transfers{})
+	t.encs.AddHinter(CreateAccountsFact{})
+	t.encs.AddHinter(CreateAccounts{})
 	t.encs.AddHinter(GenesisAccountFact{})
 	t.encs.AddHinter(GenesisAccount{})
 }

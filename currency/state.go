@@ -2,7 +2,6 @@ package currency
 
 import (
 	"fmt"
-	"sync"
 
 	"golang.org/x/xerrors"
 
@@ -12,49 +11,37 @@ import (
 )
 
 type AmountState struct {
-	*sync.Mutex // TODO reconsider
-	state.StateUpdater
+	state.State
+	add    Amount
+	exists bool
 }
 
-func NewAmountState(st state.StateUpdater) *AmountState {
-	return &AmountState{StateUpdater: st, Mutex: &sync.Mutex{}}
+func NewAmountState(st state.State, exists bool) AmountState {
+	return AmountState{State: st, add: ZeroAmount, exists: exists}
 }
 
-func (am *AmountState) Amount() (Amount, error) {
+func (am AmountState) Amount() (Amount, error) {
 	return StateAmountValue(am)
 }
 
-func (am *AmountState) setAmount(f func(Amount) Amount) error {
-	if b, err := StateAmountValue(am); err != nil {
-		return err
+func (am AmountState) Add(a Amount) AmountState {
+	am.add = am.add.Add(a)
+
+	return am
+}
+
+func (am AmountState) Sub(a Amount) AmountState {
+	am.add = am.add.Sub(a)
+
+	return am
+}
+
+func (am AmountState) Merge(source state.State) (state.State, error) {
+	if base, err := StateAmountValue(source); err != nil {
+		return nil, err
 	} else {
-		a := f(b)
-		if err := a.IsValid(nil); err != nil {
-			return err
-		} else if err := SetStateAmountValue(am, a); err != nil {
-			return err
-		} else {
-			return nil
-		}
+		return SetStateAmountValue(am.State, base.Add(am.add))
 	}
-}
-
-func (am *AmountState) Add(a Amount) error {
-	am.Lock()
-	defer am.Unlock()
-
-	return am.setAmount(func(b Amount) Amount {
-		return b.Add(a)
-	})
-}
-
-func (am *AmountState) Sub(a Amount) error {
-	am.Lock()
-	defer am.Unlock()
-
-	return am.setAmount(func(b Amount) Amount {
-		return b.Sub(a)
-	})
 }
 
 func StateKeyKeys(a base.Address) string {
@@ -85,30 +72,26 @@ func StateKeysValue(st state.State) (Keys, error) {
 	}
 }
 
-func SetStateKeysValue(st state.StateUpdater, v Keys) error {
+func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 	if uv, err := state.NewHintedValue(v); err != nil {
-		return err
-	} else if err := st.SetValue(uv); err != nil {
-		return err
+		return nil, err
+	} else {
+		return st.SetValue(uv)
 	}
-
-	return nil
 }
 
-func SetStateAmountValue(st state.StateUpdater, v Amount) error {
+func SetStateAmountValue(st state.State, v Amount) (state.State, error) {
 	if uv, err := state.NewStringValue(v); err != nil {
-		return err
-	} else if err := st.SetValue(uv); err != nil {
-		return err
+		return nil, err
+	} else {
+		return st.SetValue(uv)
 	}
-
-	return nil
 }
 
 func checkFactSignsByState(
 	address base.Address,
 	fs []operation.FactSign,
-	getState func(key string) (state.StateUpdater, bool, error),
+	getState func(key string) (state.State, bool, error),
 ) error {
 	var keys Keys
 	if st, err := existsAccountState(StateKeyKeys(address), "keys of account", getState); err != nil {
@@ -130,7 +113,7 @@ func checkFactSignsByState(
 
 func checkExistsAccountState(
 	key string,
-	getState func(key string) (state.StateUpdater, bool, error),
+	getState func(key string) (state.State, bool, error),
 ) error {
 	switch _, found, err := getState(key); {
 	case err != nil:
@@ -145,8 +128,8 @@ func checkExistsAccountState(
 func existsAccountState(
 	k,
 	name string,
-	getState func(key string) (state.StateUpdater, bool, error),
-) (state.StateUpdater, error) {
+	getState func(key string) (state.State, bool, error),
+) (state.State, error) {
 	switch st, found, err := getState(k); {
 	case err != nil:
 		return nil, err
@@ -160,8 +143,8 @@ func existsAccountState(
 func notExistsAccountState(
 	k,
 	name string,
-	getState func(key string) (state.StateUpdater, bool, error),
-) (state.StateUpdater, error) {
+	getState func(key string) (state.State, bool, error),
+) (state.State, error) {
 	switch st, found, err := getState(k); {
 	case err != nil:
 		return nil, err

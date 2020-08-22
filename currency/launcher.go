@@ -184,10 +184,10 @@ func (nr *Launcher) attachProposalProcessor() error {
 	if pp, err := nr.design.Component.ProposalProcessor.New(nr.Localstate(), nr.Suffrage()); err != nil {
 		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
 	} else {
-		if _, err := pp.AddOperationProcessor(Transfer{}, &OperationProcessor{}); err != nil {
+		if _, err := pp.AddOperationProcessor(Transfers{}, &OperationProcessor{}); err != nil {
 			return err
 		}
-		if _, err := pp.AddOperationProcessor(CreateAccount{}, &OperationProcessor{}); err != nil {
+		if _, err := pp.AddOperationProcessor(CreateAccounts{}, &OperationProcessor{}); err != nil {
 			return err
 		}
 

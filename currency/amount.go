@@ -74,3 +74,7 @@ func (a Amount) Mul(b Amount) Amount {
 func (a Amount) Div(b Amount) Amount {
 	return NewAmountFromBigInt((new(big.Int)).Div(a.Int, b.Int))
 }
+
+func (a Amount) Neg() Amount {
+	return NewAmountFromBigInt((new(big.Int)).Neg(a.Int))
+}

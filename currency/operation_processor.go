@@ -5,70 +5,53 @@ import (
 
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type OperationProcessor struct {
 	sync.RWMutex
 	pool             *isaac.Statepool
-	amountPool       map[string]*AmountState
+	amountPool       map[string]AmountState
 	processedSenders map[string]struct{}
 }
 
 func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
 	return &OperationProcessor{
 		pool:             pool,
-		amountPool:       map[string]*AmountState{},
+		amountPool:       map[string]AmountState{},
 		processedSenders: map[string]struct{}{},
 	}
 }
 
-func (opr *OperationProcessor) getState(key string) (state.StateUpdater, bool, error) {
+func (opr *OperationProcessor) getState(key string) (state.State, bool, error) {
 	opr.Lock()
 	defer opr.Unlock()
 
 	if ast, found := opr.amountPool[key]; found {
-		return ast, true, nil
-	} else if st, found, err := opr.pool.Get(key); err != nil {
+		return ast, ast.exists, nil
+	} else if st, exists, err := opr.pool.Get(key); err != nil {
 		return nil, false, err
 	} else {
-		ast := NewAmountState(st)
+		ast := NewAmountState(st, exists)
 		opr.amountPool[key] = ast
 
-		return ast, found, nil
+		return ast, ast.exists, nil
 	}
-}
-
-func (opr *OperationProcessor) setState(oph valuehash.Hash, s ...state.StateUpdater) error {
-	ns := make([]state.StateUpdater, len(s))
-	for i := range s {
-		if u, ok := s[i].(*AmountState); ok {
-			ns[i] = u.StateUpdater
-		} else {
-			ns[i] = s[i]
-		}
-	}
-
-	return opr.pool.Set(oph, ns...)
 }
 
 func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
 	var sp state.Processor
 	var sender string
-	var get func(string) (state.StateUpdater, bool, error)
-	var set func(valuehash.Hash, ...state.StateUpdater) error
+	var get func(string) (state.State, bool, error)
 
 	switch t := op.(type) {
-	case Transfer:
+	case Transfers:
 		get = opr.getState
-		set = opr.setState
-		sp = &TransferProcessor{Transfer: t}
-		sender = t.Fact().(TransferFact).Sender().String()
-	case CreateAccount:
+		sp = &TransfersProcessor{Transfers: t}
+		sender = t.Fact().(TransfersFact).Sender().String()
+	case CreateAccounts:
 		get = opr.getState
-		set = opr.setState
-		sp = &CreateAccountProcessor{CreateAccount: t}
-		sender = t.Fact().(CreateAccountFact).Sender().String()
+		sp = &CreateAccountsProcessor{CreateAccounts: t}
+		sender = t.Fact().(CreateAccountsFact).Sender().String()
 	default:
 		return op, nil
 	}
@@ -84,7 +67,7 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		return nil, state.IgnoreOperationProcessingError.Errorf("violates only one sender in proposal")
 	}
 
-	if pr, err := sp.(state.PreProcessor).PreProcess(get, set); err != nil {
+	if pr, err := sp.(state.PreProcessor).PreProcess(get, opr.pool.Set); err != nil {
 		return nil, err
 	} else {
 		opr.Lock()
@@ -97,9 +80,9 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 
 func (opr *OperationProcessor) Process(op state.Processor) error {
 	switch op.(type) {
-	case *TransferProcessor, *CreateAccountProcessor:
+	case *TransfersProcessor, *CreateAccountsProcessor:
 		return opr.process(op)
-	case Transfer, CreateAccount:
+	case Transfers, CreateAccounts:
 		if pr, err := opr.PreProcess(op); err != nil {
 			return err
 		} else {
@@ -112,21 +95,18 @@ func (opr *OperationProcessor) Process(op state.Processor) error {
 
 func (opr *OperationProcessor) process(op state.Processor) error {
 	var sp state.Processor
-	var get func(string) (state.StateUpdater, bool, error)
-	var set func(valuehash.Hash, ...state.StateUpdater) error
+	var get func(string) (state.State, bool, error)
 
 	switch t := op.(type) {
-	case *TransferProcessor:
+	case *TransfersProcessor:
 		get = opr.getState
-		set = opr.setState
 		sp = t
-	case *CreateAccountProcessor:
+	case *CreateAccountsProcessor:
 		get = opr.getState
-		set = opr.setState
 		sp = t
 	default:
 		return op.Process(opr.pool.Get, opr.pool.Set)
 	}
 
-	return sp.Process(get, set)
+	return sp.Process(get, opr.pool.Set)
 }

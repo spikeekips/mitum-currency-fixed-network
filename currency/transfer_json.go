@@ -1,6 +1,8 @@
 package currency
 
 import (
+	"encoding/json"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
@@ -8,23 +10,47 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+type TransferItemJSONPacker struct {
+	RC base.Address `json:"receiver"`
+	AM Amount       `json:"amount"`
+}
+
+func (tff TransferItem) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(TransferItemJSONPacker{
+		RC: tff.receiver,
+		AM: tff.amount,
+	})
+}
+
+type TransferItemJSONUnpacker struct {
+	RC base.AddressDecoder `json:"receiver"`
+	AM Amount              `json:"amount"`
+}
+
+func (tff *TransferItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var utff TransferItemJSONUnpacker
+	if err := util.JSON.Unmarshal(b, &utff); err != nil {
+		return err
+	}
+
+	return tff.unpack(enc, utff.RC, utff.AM)
+}
+
 type TransferFactJSONPacker struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
 	SD base.Address   `json:"sender"`
-	RC base.Address   `json:"receiver"`
-	AM Amount         `json:"amount"`
+	IT []TransferItem `json:"items"`
 }
 
-func (tff TransferFact) MarshalJSON() ([]byte, error) {
+func (tff TransfersFact) MarshalJSON() ([]byte, error) {
 	return util.JSON.Marshal(TransferFactJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(tff.Hint()),
 		H:          tff.h,
 		TK:         tff.token,
 		SD:         tff.sender,
-		RC:         tff.receiver,
-		AM:         tff.amount,
+		IT:         tff.items,
 	})
 }
 
@@ -32,17 +58,26 @@ type TransferFactJSONUnpacker struct {
 	H  valuehash.Bytes     `json:"hash"`
 	TK []byte              `json:"token"`
 	SD base.AddressDecoder `json:"sender"`
-	RC base.AddressDecoder `json:"receiver"`
-	AM Amount              `json:"amount"`
+	IT []json.RawMessage   `json:"items"`
 }
 
-func (tff *TransferFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (tff *TransfersFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var utff TransferFactJSONUnpacker
 	if err := util.JSON.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
-	return tff.unpack(enc, utff.H, utff.TK, utff.SD, utff.RC, utff.AM)
+	its := make([]TransferItem, len(utff.IT))
+	for i := range utff.IT {
+		it := new(TransferItem)
+		if err := it.UnpackJSON(utff.IT[i], enc); err != nil {
+			return err
+		}
+
+		its[i] = *it
+	}
+
+	return tff.unpack(enc, utff.H, utff.TK, utff.SD, its)
 }
 
 type TransferJSONPacker struct {
@@ -52,20 +87,20 @@ type TransferJSONPacker struct {
 	FS []operation.FactSign `json:"fact_signs"`
 }
 
-func (tf Transfer) MarshalJSON() ([]byte, error) {
+func (tf Transfers) MarshalJSON() ([]byte, error) {
 	m := tf.BaseOperation.JSONM()
 	m["memo"] = tf.Memo
 
 	return util.JSON.Marshal(m)
 }
 
-func (tf *Transfer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (tf *Transfers) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ubo operation.BaseOperation
 	if err := ubo.UnpackJSON(b, enc); err != nil {
 		return err
 	}
 
-	*tf = Transfer{BaseOperation: ubo}
+	*tf = Transfers{BaseOperation: ubo}
 
 	var um MemoJSONUnpacker
 	if err := enc.Unmarshal(b, &um); err != nil {

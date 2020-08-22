@@ -15,16 +15,17 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type testTransfer struct {
+type testTransfers struct {
 	suite.Suite
 }
 
-func (t *testTransfer) TestNew() {
+func (t *testTransfers) TestNew() {
 	s := MustAddress(util.UUID().String())
 	r := MustAddress(util.UUID().String())
 
 	token := util.UUID().Bytes()
-	fact := NewTransferFact(token, s, r, NewAmount(10))
+	items := []TransferItem{NewTransferItem(r, NewAmount(10))}
+	fact := NewTransfersFact(token, s, items)
 
 	var fs []operation.FactSign
 
@@ -39,7 +40,7 @@ func (t *testTransfer) TestNew() {
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
-	tf, err := NewTransfer(fact, fs, "")
+	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
 
 	t.NoError(tf.IsValid(nil))
@@ -48,12 +49,86 @@ func (t *testTransfer) TestNew() {
 	t.Implements((*operation.Operation)(nil), tf)
 }
 
-func (t *testTransfer) TestOverSizeMemo() {
+func (t *testTransfers) TestZeroAmount() {
 	s := MustAddress(util.UUID().String())
 	r := MustAddress(util.UUID().String())
 
 	token := util.UUID().Bytes()
-	fact := NewTransferFact(token, s, r, NewAmount(10))
+	items := []TransferItem{NewTransferItem(r, NewAmount(0))}
+
+	err := items[0].IsValid(nil)
+	t.Contains(err.Error(), "amount should be over zero")
+
+	fact := NewTransfersFact(token, s, items)
+
+	pk := key.MustNewBTCPrivatekey()
+	sig, err := operation.NewFactSignature(pk, fact, nil)
+	t.NoError(err)
+
+	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+
+	tf, err := NewTransfers(fact, fs, "")
+	t.NoError(err)
+
+	err = tf.IsValid(nil)
+	t.Contains(err.Error(), "amount should be over zero")
+}
+
+func (t *testTransfers) TestDuplicatedReceivers() {
+	s := MustAddress(util.UUID().String())
+	r := MustAddress(util.UUID().String())
+
+	token := util.UUID().Bytes()
+	items := []TransferItem{
+		NewTransferItem(r, NewAmount(1)),
+		NewTransferItem(r, NewAmount(1)),
+	}
+	fact := NewTransfersFact(token, s, items)
+
+	pk := key.MustNewBTCPrivatekey()
+	sig, err := operation.NewFactSignature(pk, fact, nil)
+	t.NoError(err)
+
+	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+
+	tf, err := NewTransfers(fact, fs, "")
+	t.NoError(err)
+
+	err = tf.IsValid(nil)
+	t.Contains(err.Error(), "duplicated receiver found")
+}
+
+func (t *testTransfers) TestSameWithSender() {
+	s := MustAddress(util.UUID().String())
+	r := MustAddress(util.UUID().String())
+
+	token := util.UUID().Bytes()
+	items := []TransferItem{
+		NewTransferItem(r, NewAmount(1)),
+		NewTransferItem(s, NewAmount(1)),
+	}
+	fact := NewTransfersFact(token, s, items)
+
+	pk := key.MustNewBTCPrivatekey()
+	sig, err := operation.NewFactSignature(pk, fact, nil)
+	t.NoError(err)
+
+	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+
+	tf, err := NewTransfers(fact, fs, "")
+	t.NoError(err)
+
+	err = tf.IsValid(nil)
+	t.Contains(err.Error(), "receiver is same with sender")
+}
+
+func (t *testTransfers) TestOverSizeMemo() {
+	s := MustAddress(util.UUID().String())
+	r := MustAddress(util.UUID().String())
+
+	token := util.UUID().Bytes()
+	items := []TransferItem{NewTransferItem(r, NewAmount(10))}
+	fact := NewTransfersFact(token, s, items)
 
 	var fs []operation.FactSign
 
@@ -69,18 +144,18 @@ func (t *testTransfer) TestOverSizeMemo() {
 	}
 
 	memo := strings.Repeat("a", MaxMemoSize) + "a"
-	tf, err := NewTransfer(fact, fs, memo)
+	tf, err := NewTransfers(fact, fs, memo)
 	t.NoError(err)
 
 	err = tf.IsValid(nil)
 	t.Contains(err.Error(), "memo over max size")
 }
 
-func TestTransfer(t *testing.T) {
-	suite.Run(t, new(testTransfer))
+func TestTransfers(t *testing.T) {
+	suite.Run(t, new(testTransfers))
 }
 
-func testTransferEncode(enc encoder.Encoder) suite.TestingSuite {
+func testTransfersEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
@@ -89,7 +164,8 @@ func testTransferEncode(enc encoder.Encoder) suite.TestingSuite {
 		r := MustAddress(util.UUID().String())
 
 		token := util.UUID().Bytes()
-		fact := NewTransferFact(token, s, r, NewAmount(10))
+		items := []TransferItem{NewTransferItem(r, NewAmount(10))}
+		fact := NewTransfersFact(token, s, items)
 
 		var fs []operation.FactSign
 
@@ -104,33 +180,40 @@ func testTransferEncode(enc encoder.Encoder) suite.TestingSuite {
 			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
-		tf, err := NewTransfer(fact, fs, util.UUID().String())
+		tf, err := NewTransfers(fact, fs, util.UUID().String())
 		t.NoError(err)
 
 		return tf
 	}
 
 	t.compare = func(a, b operation.Operation) {
-		ta := a.(Transfer)
-		tb := b.(Transfer)
+		ta := a.(Transfers)
+		tb := b.(Transfers)
 
 		t.Equal(ta.Memo, tb.Memo)
 
-		fact := a.Fact().(TransferFact)
-		ufact := b.Fact().(TransferFact)
+		fact := a.Fact().(TransfersFact)
+		ufact := b.Fact().(TransfersFact)
 
 		t.True(fact.sender.Equal(ufact.sender))
-		t.True(fact.receiver.Equal(ufact.receiver))
-		t.Equal(fact.amount, ufact.amount)
+		t.Equal(len(fact.Items()), len(ufact.Items()))
+
+		for i := range fact.Items() {
+			a := fact.Items()[i]
+			b := ufact.Items()[i]
+
+			t.True(a.receiver.Equal(b.receiver))
+			t.Equal(a.amount, b.amount)
+		}
 	}
 
 	return t
 }
 
-func TestTransferEncodeJSON(t *testing.T) {
-	suite.Run(t, testTransferEncode(jsonenc.NewEncoder()))
+func TestTransfersEncodeJSON(t *testing.T) {
+	suite.Run(t, testTransfersEncode(jsonenc.NewEncoder()))
 }
 
-func TestTransferEncodeBSON(t *testing.T) {
-	suite.Run(t, testTransferEncode(bsonenc.NewEncoder()))
+func TestTransfersEncodeBSON(t *testing.T) {
+	suite.Run(t, testTransfersEncode(bsonenc.NewEncoder()))
 }
