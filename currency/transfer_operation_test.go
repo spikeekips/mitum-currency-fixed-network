@@ -298,7 +298,7 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 
 	co, err := isaac.NewConcurrentOperationsProcessor(100, pool, oppHintSet)
 	t.NoError(err)
-	co.Start(context.Background())
+	co.Start(context.Background(), nil)
 
 	for _, op := range ops {
 		t.NoError(co.Process(op))

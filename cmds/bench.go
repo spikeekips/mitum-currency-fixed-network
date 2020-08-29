@@ -16,8 +16,10 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
+	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/localfs"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -155,15 +157,21 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 		address = addr
 	}
 
-	priv := key.MustNewBTCPrivatekey()
-
-	n := isaac.NewLocalNode(address, priv)
+	n := isaac.NewLocalNode(address, key.MustNewBTCPrivatekey())
 	cmd.log.Debug().Msg("local node created")
 
-	local, err := isaac.NewLocalstate(cmd.storage, n, cmd.networkID)
+	local, err := isaac.NewLocalstate(cmd.storage, localfs.TempBlockFS(defaultJSONEnc), n, cmd.networkID)
 	if err != nil {
 		return nil, err
-	} else if err := local.Initialize(); err != nil {
+	}
+
+	contestlib.ExitHooks.Add(func() {
+		if err := local.BlockFS().Clean(true); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		}
+	})
+
+	if err := local.Initialize(); err != nil {
 		return nil, err
 	}
 	cmd.log.Debug().Msg("localstate created")
@@ -528,7 +536,7 @@ func (cmd *BenchCommand) newVoteproof(stage base.Stage, fact base.Fact) (base.Vo
 
 func (cmd *BenchCommand) newINITBallot() ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
-	if b, err := isaac.NewINITBallotV0Round0(cmd.local.Storage(), cmd.local.Node().Address()); err != nil {
+	if b, err := isaac.NewINITBallotV0Round0(cmd.local); err != nil {
 		panic(err)
 	} else {
 		ib = b

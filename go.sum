@@ -459,6 +459,10 @@ github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032 h1:MkQ0/kOH6dURkyjY
 github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032/go.mod h1:aZ7I77406KbNbSmbC8xrtP6gwzUg+2e1du462z5pynE=
 github.com/spikeekips/mitum v0.0.0-20200824143257-f14860a7f06f h1:rE3nGEMoFOpMgch4N7lvl/22rF/gv04QiRPUFiYL4dU=
 github.com/spikeekips/mitum v0.0.0-20200824143257-f14860a7f06f/go.mod h1:GvxFJzQPA7fcTTB8CNgNtJ3XfQCGQQ6na4hG4I6D/Sg=
+github.com/spikeekips/mitum v0.0.0-20200829214357-ca046e52a2f9 h1:Rn5JfHW41lBVMnoV6tj+T0htrrFlcmzECUVanfsifEM=
+github.com/spikeekips/mitum v0.0.0-20200829214357-ca046e52a2f9/go.mod h1:GvxFJzQPA7fcTTB8CNgNtJ3XfQCGQQ6na4hG4I6D/Sg=
+github.com/spikeekips/mitum v0.0.0-20200829220115-5ea3f89ad65a h1:oi32TECgNf74rmO/LS2BcLC0KJV1ZZqz9lJfia2PBI4=
+github.com/spikeekips/mitum v0.0.0-20200829220115-5ea3f89ad65a/go.mod h1:GvxFJzQPA7fcTTB8CNgNtJ3XfQCGQQ6na4hG4I6D/Sg=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570/go.mod h1:8OR4w3TdeIHIh1g6EMY5p0gVNOovcWC+1vpc7naMuAw=
 github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3/go.mod h1:hpGUWaI9xL8pRQCTXQgocU38Qw1g0Us7n5PxxTwTCYU=
