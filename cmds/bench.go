@@ -15,7 +15,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
@@ -45,9 +44,11 @@ type BenchCommand struct {
 	suffrage       base.Suffrage
 	accounts       []*account
 	ops            []operation.Operation
+	opsExclude     []operation.Operation
 	ivp            base.Voteproof
 	proposal       ballot.Proposal
 	block          block.Block
+	previousBlock  block.Block
 }
 
 func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
@@ -58,8 +59,8 @@ func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
 		log = l
 	}
 
-	if cmd.Operations < 1 {
-		return xerrors.Errorf("operations should be over 0")
+	if cmd.Operations < 4 {
+		return xerrors.Errorf("operations should be over 4")
 	}
 
 	log.Info().Str("version", version.String()).Msg("mitum-currency")
@@ -106,24 +107,77 @@ func (cmd *BenchCommand) run() error {
 	if err := cmd.elapsed("prepare-accounts", cmd.prepareAccounts); err != nil {
 		return xerrors.Errorf("failed to prepare accounts: %w", err)
 	}
-	cmd.log.Debug().Msg("accounts prepared")
+	cmd.log.Debug().Int("accounts", len(cmd.accounts)).Msg("accounts prepared")
 
 	if err := cmd.elapsed("prepare-operations", cmd.prepareOperations); err != nil {
 		return xerrors.Errorf("failed to prepare operations: %w", err)
 	}
-	cmd.log.Debug().Int("operations", len(cmd.ops)).Msg("operations prepared")
+	cmd.log.Debug().
+		Int("operations", len(cmd.ops)).Int("excluded_operations", len(cmd.opsExclude)).
+		Msg("operations prepared")
 
 	if err := cmd.elapsed("prepare-processor", cmd.prepareProcessor); err != nil {
 		return xerrors.Errorf("failed to prepare processor: %w", err)
 	}
 	cmd.log.Debug().Msg("processor prepared")
 
+	cmd.log.Debug().Msg("running again for checking block hash")
+	for i := 0; i < 10; i++ {
+		if cmd.previousBlock != nil {
+			if err := cmd.clean(); err != nil {
+				panic(err)
+			}
+		}
+
+		if err := cmd.try(i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (cmd *BenchCommand) clean() error {
+	if err := cmd.local.Storage().CleanByHeight(cmd.previousBlock.Height()); err != nil {
+		return err
+	}
+
+	if err := cmd.local.BlockFS().CleanByHeight(cmd.previousBlock.Height()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *BenchCommand) try(i int) error {
 	if err := cmd.elapsed("process", cmd.process); err != nil {
 		return xerrors.Errorf("failed to process: %w", err)
 	}
 
 	if err := cmd.elapsed("check-result", cmd.checkProcess); err != nil {
 		return xerrors.Errorf("failed to check result: %w", err)
+	}
+
+	if !cmd.previousBlock.Hash().Equal(cmd.block.Hash()) {
+		cmd.log.Error().Int("try", i).
+			Dict("previous_block", logging.Dict().
+				Hinted("hash", cmd.previousBlock.Hash()).
+				Hinted("states", cmd.previousBlock.StatesHash()).
+				Hinted("operations", cmd.previousBlock.OperationsHash()),
+			).
+			Dict("block", logging.Dict().
+				Hinted("hash", cmd.block.Hash()).
+				Hinted("states", cmd.block.StatesHash()).
+				Hinted("operations", cmd.block.OperationsHash()),
+			).
+			Msg("block hash does not matched")
+
+		return xerrors.Errorf("block hash does not match; %v != %v", cmd.previousBlock.Hash(), cmd.block.Hash())
+	} else {
+		cmd.log.Debug().Int("try", i).
+			Hinted("previous_block", cmd.previousBlock.Hash()).
+			Hinted("new_block", cmd.block.Hash()).
+			Msg("block hash matched")
 	}
 
 	cmd.log.Debug().Msg("checked")
@@ -197,7 +251,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	}
 	cmd.log.Debug().Msg("genesis account generated")
 
-	_, _ = local.Policy().SetMaxOperationsInProposal(cmd.Operations)
+	_, _ = local.Policy().SetMaxOperationsInProposal(cmd.Operations + 10)
 
 	switch m, found, err := cmd.storage.LastManifest(); {
 	case err != nil:
@@ -268,13 +322,13 @@ func (cmd *BenchCommand) prepareAccounts() error {
 	}()
 
 	go func() {
-		for i := 0; i < int(cmd.Operations); i++ {
+		for i := 0; i < int(cmd.Operations)+1; i++ {
 			wk.NewJob(i)
 		}
 		wk.Done(true)
 	}()
 
-	acs := make([]*account, int(cmd.Operations))
+	acs := make([]*account, int(cmd.Operations)+1)
 	var i int
 	for err := range errchan {
 		if err == nil {
@@ -349,7 +403,7 @@ func (cmd *BenchCommand) prepareOperations() error {
 
 	cmd.log.Debug().Uint("number_of_operations", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
 
-	errchan := make(chan error)
+	errchan := make(chan error, cmd.Operations)
 	wk := util.NewDistributeWorker(n, errchan)
 
 	go func() {
@@ -373,7 +427,6 @@ func (cmd *BenchCommand) prepareOperations() error {
 				return acerr{err: err, ac: op}
 			},
 		)
-
 		close(errchan)
 	}()
 
@@ -392,16 +445,33 @@ func (cmd *BenchCommand) prepareOperations() error {
 		}
 
 		ops[i] = err.(acerr).ac.(operation.Operation)
-		if i == int(cmd.Operations)-1 {
-			break
-		}
 
 		i++
+	}
+
+	if err := cmd.prepareExcludeOperations(); err != nil {
+		return err
 	}
 
 	cmd.ops = ops
 
 	return cmd.elapsed("generate-seals", cmd.generateSeals)
+}
+
+func (cmd *BenchCommand) prepareExcludeOperations() error {
+	excludes := make([]operation.Operation, 2)
+	for i := range cmd.accounts[:2] {
+		op, err := cmd.newOperation(cmd.accounts[i], cmd.accounts[i+1], currency.NewAmount(1))
+		if err != nil {
+			return err
+		}
+
+		excludes[i] = op
+	}
+
+	cmd.opsExclude = excludes
+
+	return nil
 }
 
 func (cmd *BenchCommand) generateSeals() error {
@@ -424,7 +494,7 @@ func (cmd *BenchCommand) generateSeals() error {
 		}
 	}
 
-	return nil
+	return cmd.generateSeal(cmd.opsExclude)
 }
 
 func (cmd *BenchCommand) generateSeal(ops []operation.Operation) error {
@@ -571,10 +641,8 @@ func (cmd *BenchCommand) process() error {
 
 	acceptFact := ballot.NewACCEPTBallotV0(
 		nil,
-		cmd.ivp.Height(),
-		cmd.ivp.Round(),
-		cmd.proposal.Hash(),
-		blk.Hash(),
+		cmd.ivp.Height(), cmd.ivp.Round(),
+		cmd.proposal.Hash(), blk.Hash(),
 		nil,
 	).Fact()
 
@@ -601,7 +669,13 @@ func (cmd *BenchCommand) process() error {
 	}
 	cmd.log.Debug().Msg("committed")
 
+	if cmd.block == nil {
+		cmd.previousBlock = blk
+	}
+
 	cmd.block = blk
+
+	cmd.log.Debug().Hinted("height", blk.Height()).Hinted("block", blk.Hash()).Msg("new block")
 
 	return nil
 }
@@ -620,19 +694,63 @@ func (cmd *BenchCommand) commit(bs storage.BlockStorage) error {
 }
 
 func (cmd *BenchCommand) checkProcess() error {
-	var ops int
-	_ = cmd.block.Operations().Traverse(func(tree.Node) (bool, error) {
-		ops++
+	cmd.log.Debug().Int("operations", len(cmd.block.Operations())).Int("states", len(cmd.block.States())).
+		Msg("block processed")
+
+	facts := map[string]valuehash.Hash{}
+	for i := range cmd.ops {
+		fh := cmd.ops[i].Fact().Hash()
+		facts[fh.String()] = fh
+	}
+
+	excludes := map[string]valuehash.Hash{}
+	for i := range cmd.opsExclude {
+		fh := cmd.opsExclude[i].Fact().Hash()
+		facts[fh.String()] = fh
+		excludes[fh.String()] = fh
+	}
+
+	var notFounds, notInStates, inStates []valuehash.Hash
+	_ = cmd.block.OperationsTree().Traverse(func(i int, key, _, v []byte) (bool, error) {
+		fh := valuehash.NewBytes(key)
+
+		if _, found := facts[fh.String()]; !found {
+			notFounds = append(notFounds, fh)
+			cmd.log.Error().Hinted("fact", fh).Msg("fact not found in operation tree")
+		}
+		_, inExcludes := excludes[fh.String()]
+
+		switch mod, err := base.BytesToFactMode(v); {
+		case err != nil:
+			cmd.log.Error().Err(err).Hinted("fact", fh).Bytes("mod", v).Msg("invalid FactMode found")
+		case mod&base.FInStates == 0:
+			if !inExcludes {
+				notInStates = append(notInStates, fh)
+				cmd.log.Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact not found in states tree")
+			}
+		case inExcludes:
+			inStates = append(inStates, fh)
+			cmd.log.Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact should not found in states tree")
+		}
+
 		return true, nil
 	})
 
-	var sts int
-	_ = cmd.block.States().Traverse(func(tree.Node) (bool, error) {
-		sts++
-		return true, nil
-	})
+	if n := len(notFounds); n > 0 {
+		cmd.log.Error().Int("not_founds", n).Msg("found not in OperationsTree")
+	}
+	if n := len(notInStates); n > 0 {
+		cmd.log.Error().Int("not_in_states", n).Msg("found not in states")
+	}
+	if n := len(inStates); n > 0 {
+		cmd.log.Error().Int("in_states", n).Msg("found in states")
+	}
 
-	cmd.log.Debug().Int("operations", ops).Int("states", sts).Msg("block processed")
+	if len(notFounds) > 0 || len(notInStates) > 0 || len(inStates) > 0 {
+		return xerrors.Errorf("failed to process")
+	}
+
+	cmd.log.Info().Msg("all operations in states")
 
 	return nil
 }

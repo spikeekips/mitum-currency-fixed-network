@@ -319,5 +319,5 @@ func (tf *TransfersProcessor) Process(
 
 	sts[len(sts)-1] = tf.sb.Sub(fact.Amount())
 
-	return setState(tf.Hash(), sts...)
+	return setState(fact.Hash(), sts...)
 }

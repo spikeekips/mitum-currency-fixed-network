@@ -341,5 +341,5 @@ func (ca *CreateAccountsProcessor) Process(
 
 	sts[len(sts)-1] = ca.sb.Sub(fact.Amount())
 
-	return setState(ca.Hash(), sts...)
+	return setState(fact.Hash(), sts...)
 }

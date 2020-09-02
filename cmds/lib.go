@@ -59,6 +59,10 @@ func init() {
 }
 
 func SetupLogging(logs []string, flags *contestlib.LogFlags) (logging.Logger, error) {
+	if len(logs) < 1 {
+		logs = append(logs, "/dev/stderr")
+	}
+
 	var outputs []io.Writer
 	for _, l := range logs {
 		if o, err := contestlib.SetupLoggingOutput(l, flags.LogFormat, flags.LogColor, os.Stderr); err != nil {
@@ -70,8 +74,6 @@ func SetupLogging(logs []string, flags *contestlib.LogFlags) (logging.Logger, er
 
 	var output io.Writer
 	switch n := len(outputs); {
-	case n == 0:
-		output = os.Stderr
 	case n == 1:
 		output = outputs[0]
 	default:

@@ -171,5 +171,5 @@ func (ga GenesisAccount) Process(
 		nb = st
 	}
 
-	return setState(ga.Hash(), ns, nb)
+	return setState(fact.Hash(), ns, nb)
 }
