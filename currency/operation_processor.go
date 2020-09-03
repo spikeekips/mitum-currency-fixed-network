@@ -5,10 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type OperationProcessor struct {
 	sync.RWMutex
+	*logging.Logging
 	pool             *isaac.Statepool
 	amountPool       map[string]AmountState
 	processedSenders map[string]struct{}
@@ -16,6 +18,9 @@ type OperationProcessor struct {
 
 func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
 	return &OperationProcessor{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "mitum-currency-operations-processor")
+		}),
 		pool:             pool,
 		amountPool:       map[string]AmountState{},
 		processedSenders: map[string]struct{}{},
