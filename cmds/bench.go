@@ -39,7 +39,6 @@ type BenchCommand struct {
 	genesisPriv    key.Privatekey
 	genesisAddress base.Address
 	lastHeight     base.Height
-	lastBlock      valuehash.Hash
 	local          *isaac.Localstate
 	suffrage       base.Suffrage
 	accounts       []*account
@@ -260,7 +259,6 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 		return nil, xerrors.Errorf("last block not found")
 	default:
 		cmd.lastHeight = m.Height()
-		cmd.lastBlock = m.Hash()
 	}
 
 	return local, nil
@@ -363,13 +361,13 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 	{
 		key := currency.StateKeyKeys(ac.Address)
 		value, _ := state.NewHintedValue(ac.Keys)
-		if st, err := state.NewStateV0Updater(key, value, nil); err != nil {
+		if st, err := state.NewStateV0Updater(key, value, base.NilHeight); err != nil {
 			return nil, nil, err
 		} else if err := st.SetHash(st.GenerateHash()); err != nil {
 			return nil, nil, err
 		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
 			return nil, nil, err
-		} else if err := st.SetCurrentBlock(cmd.lastHeight, cmd.lastBlock); err != nil {
+		} else if err := st.SetHeight(cmd.lastHeight); err != nil {
 			return nil, nil, err
 		} else {
 			sts[0] = st.State()
@@ -379,13 +377,13 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 	{
 		key := currency.StateKeyBalance(ac.Address)
 		value, _ := state.NewStringValue(amount.String())
-		if st, err := state.NewStateV0Updater(key, value, nil); err != nil {
+		if st, err := state.NewStateV0Updater(key, value, base.NilHeight); err != nil {
 			return nil, nil, err
 		} else if err := st.SetHash(st.GenerateHash()); err != nil {
 			return nil, nil, err
 		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
 			return nil, nil, err
-		} else if err := st.SetCurrentBlock(cmd.lastHeight, cmd.lastBlock); err != nil {
+		} else if err := st.SetHeight(cmd.lastHeight); err != nil {
 			return nil, nil, err
 		} else {
 			sts[1] = st.State()

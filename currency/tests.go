@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -103,7 +102,7 @@ func (t *baseTestOperationProcessor) newAccount(exists bool, amount Amount) (*ac
 func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amount) state.StateUpdater {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
-	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
+	su, err := state.NewStateV0Updater(key, value, base.NilHeight)
 	t.NoError(err)
 
 	return su
@@ -112,7 +111,7 @@ func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amou
 func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) state.StateUpdater {
 	key := StateKeyKeys(a)
 	value, _ := state.NewHintedValue(keys)
-	su, err := state.NewStateV0Updater(key, value, valuehash.RandomSHA256())
+	su, err := state.NewStateV0Updater(key, value, base.NilHeight)
 	t.NoError(err)
 
 	return su
