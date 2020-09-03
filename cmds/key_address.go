@@ -8,8 +8,8 @@ import (
 
 type KeyAddressCommand struct {
 	printCommand
-	Keys      []KeyFlag `arg:"" name:"key" help:"key for address (ex: \"<public key>,<weight>\")" sep:"@" optional:""`
 	Threshold uint      `arg:"" name:"threshold" help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
+	Keys      []KeyFlag `arg:"" name:"key" help:"key for address (ex: \"<public key>,<weight>\")" sep:"@" optional:""`
 }
 
 func (cmd *KeyAddressCommand) Run(log logging.Logger) error {

@@ -86,10 +86,10 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 }
 
 type KeyDesign struct {
-	encs             *encoder.Encoders
-	PrivatekeyString string `yaml:"privatekey"`
-	Weight           uint
-	Key              Key `yaml:"-"`
+	encs            *encoder.Encoders
+	PublickeyString string `yaml:"publickey"`
+	Weight          uint
+	Key             Key `yaml:"-"`
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
@@ -100,10 +100,10 @@ func (kd *KeyDesign) IsValid([]byte) error {
 		je = e
 	}
 
-	if pk, err := key.DecodePrivatekey(je, kd.PrivatekeyString); err != nil {
+	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
 		return err
 	} else {
-		k := NewKey(pk.Publickey(), kd.Weight)
+		k := NewKey(pub, kd.Weight)
 		if err := k.IsValid(nil); err != nil {
 			return err
 		}
