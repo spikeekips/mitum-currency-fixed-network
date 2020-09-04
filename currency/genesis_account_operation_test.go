@@ -45,7 +45,7 @@ func (t *testGenesisAccountOperation) newOperaton(keys Keys, amount Amount) Gene
 
 func (t *testGenesisAccountOperation) TestNew() {
 	pk := key.MustNewBTCPrivatekey()
-	keys, _ := NewKeys([]Key{NewKey(pk.Publickey(), 100)}, 100)
+	keys, _ := NewKeys([]Key{t.newKey(pk.Publickey(), 100)}, 100)
 	amount := NewAmount(3333333333333)
 
 	op := t.newOperaton(keys, amount)
@@ -83,7 +83,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 func (t *testGenesisAccountOperation) TestMultipleTarget() {
 	pk0 := key.MustNewBTCPrivatekey()
 	pk1 := key.MustNewBTCPrivatekey()
-	keys, _ := NewKeys([]Key{NewKey(pk0.Publickey(), 30), NewKey(pk1.Publickey(), 30)}, 50)
+	keys, _ := NewKeys([]Key{t.newKey(pk0.Publickey(), 30), t.newKey(pk1.Publickey(), 30)}, 50)
 	amount := NewAmount(1333333333333)
 
 	op := t.newOperaton(keys, amount)

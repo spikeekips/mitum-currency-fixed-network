@@ -23,8 +23,10 @@ func (t *testCreateAccounts) TestNew() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey := NewKey(spk.Publickey(), 50)
-	rkey := NewKey(rpk.Publickey(), 50)
+	skey, err := NewKey(spk.Publickey(), 50)
+	t.NoError(err)
+	rkey, err := NewKey(rpk.Publickey(), 50)
+	t.NoError(err)
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
@@ -59,8 +61,10 @@ func (t *testCreateAccounts) TestZeroAmount() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey := NewKey(spk.Publickey(), 50)
-	rkey := NewKey(rpk.Publickey(), 50)
+	skey, err := NewKey(spk.Publickey(), 50)
+	t.NoError(err)
+	rkey, err := NewKey(rpk.Publickey(), 50)
+	t.NoError(err)
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
@@ -71,7 +75,7 @@ func (t *testCreateAccounts) TestZeroAmount() {
 	token := util.UUID().Bytes()
 
 	item := NewCreateAccountItem(skeys, NewAmount(0))
-	err := item.IsValid(nil)
+	err = item.IsValid(nil)
 	t.Contains(err.Error(), "amount should be over zero")
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountItem{item})
@@ -96,8 +100,10 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 	var items []CreateAccountItem
 	{
 		pk := key.MustNewBTCPrivatekey()
-		key := NewKey(pk.Publickey(), 100)
-		keys, _ := NewKeys([]Key{key}, 100)
+		key, err := NewKey(pk.Publickey(), 100)
+		t.NoError(err)
+		keys, err := NewKeys([]Key{key}, 100)
+		t.NoError(err)
 
 		items = append(items, NewCreateAccountItem(keys, NewAmount(10)))
 		items = append(items, NewCreateAccountItem(keys, NewAmount(30)))
@@ -105,7 +111,8 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 
 	token := util.UUID().Bytes()
 	pk := key.MustNewBTCPrivatekey()
-	key := NewKey(pk.Publickey(), 100)
+	key, err := NewKey(pk.Publickey(), 100)
+	t.NoError(err)
 
 	keys, _ := NewKeys([]Key{key}, 100)
 	sender, _ := NewAddressFromKeys(keys)
@@ -124,8 +131,10 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 
 func (t *testCreateAccounts) TestSameWithSender() {
 	pk := key.MustNewBTCPrivatekey()
-	key := NewKey(pk.Publickey(), 100)
-	keys, _ := NewKeys([]Key{key}, 100)
+	key, err := NewKey(pk.Publickey(), 100)
+	t.NoError(err)
+	keys, err := NewKeys([]Key{key}, 100)
+	t.NoError(err)
 
 	items := []CreateAccountItem{NewCreateAccountItem(keys, NewAmount(10))}
 
@@ -148,9 +157,12 @@ func (t *testCreateAccounts) TestOverSizeMemo() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey := NewKey(spk.Publickey(), 50)
-	rkey := NewKey(rpk.Publickey(), 50)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skey, err := NewKey(spk.Publickey(), 50)
+	t.NoError(err)
+	rkey, err := NewKey(rpk.Publickey(), 50)
+	t.NoError(err)
+	skeys, err := NewKeys([]Key{skey, rkey}, 100)
+	t.NoError(err)
 
 	pks := []key.Privatekey{spk, rpk}
 	sender, _ := NewAddressFromKeys(skeys)
@@ -189,8 +201,12 @@ func testCreateAccountsEncode(enc encoder.Encoder) suite.TestingSuite {
 		spk := key.MustNewBTCPrivatekey()
 		rpk := key.MustNewBTCPrivatekey()
 
-		skey := NewKey(spk.Publickey(), 50)
-		skeys, _ := NewKeys([]Key{skey, NewKey(rpk.Publickey(), 50)}, 100)
+		skey, err := NewKey(spk.Publickey(), 50)
+		t.NoError(err)
+		rkey, err := NewKey(rpk.Publickey(), 50)
+		t.NoError(err)
+		skeys, err := NewKeys([]Key{skey, rkey}, 100)
+		t.NoError(err)
 
 		pks := []key.Privatekey{spk, rpk}
 		sender, _ := NewAddressFromKeys(skeys)

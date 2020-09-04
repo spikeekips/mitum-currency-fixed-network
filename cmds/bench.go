@@ -30,24 +30,23 @@ import (
 var genesisAmountString = "99999999999999999999999999"
 
 type BenchCommand struct {
-	StorageURI     *url.URL `name:"storage" help:"mongodb storage uri (default:mongodb://localhost:27017)" default:"mongodb://localhost:27017"` // nolint
-	Operations     uint     `arg:"" name:"operations" help:"number of operations (default:10)" default:"10"`
-	log            logging.Logger
-	priv           key.Privatekey
-	networkID      base.NetworkID
-	storage        storage.Storage
-	genesisPriv    key.Privatekey
-	genesisAddress base.Address
-	lastHeight     base.Height
-	local          *isaac.Localstate
-	suffrage       base.Suffrage
-	accounts       []*account
-	ops            []operation.Operation
-	opsExclude     []operation.Operation
-	ivp            base.Voteproof
-	proposal       ballot.Proposal
-	block          block.Block
-	previousBlock  block.Block
+	StorageURI    *url.URL `name:"storage" help:"mongodb storage uri (default:mongodb://localhost:27017)" default:"mongodb://localhost:27017"` // nolint
+	Operations    uint     `arg:"" name:"operations" help:"number of operations (default:10)" default:"10"`
+	log           logging.Logger
+	priv          key.Privatekey
+	networkID     base.NetworkID
+	storage       storage.Storage
+	genesis       *account
+	lastHeight    base.Height
+	local         *isaac.Localstate
+	suffrage      base.Suffrage
+	accounts      []*account
+	ops           []operation.Operation
+	opsExclude    []operation.Operation
+	ivp           base.Voteproof
+	proposal      ballot.Proposal
+	block         block.Block
+	previousBlock block.Block
 }
 
 func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
@@ -69,6 +68,7 @@ func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
 	log.Info().Msg("trying to benchmark")
 
 	cmd.log = log
+	cmd.genesis = newAccount()
 
 	return cmd.run()
 }
@@ -229,19 +229,13 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	}
 	cmd.log.Debug().Msg("localstate created")
 
-	cmd.genesisPriv = key.MustNewBTCPrivatekey()
-
-	ks := []currency.Key{currency.NewKey(cmd.genesisPriv.Publickey(), 100)}
-	keys, _ := currency.NewKeys(ks, 100)
-	cmd.genesisAddress, _ = currency.NewAddressFromKeys(keys)
-
 	amount, _ := currency.NewAmountFromString(genesisAmountString)
 	cmd.log.Debug().
 		Str("amount", amount.String()).
-		Str("privatekey", cmd.genesisPriv.String()).
-		Str("address", cmd.genesisAddress.String()).
+		Str("privatekey", cmd.genesis.Priv.String()).
+		Str("address", cmd.genesis.Address.String()).
 		Msg("trying to create genesis account")
-	if ga, err := currency.NewGenesisAccount(cmd.genesisPriv, keys, amount, cmd.networkID); err != nil {
+	if ga, err := currency.NewGenesisAccount(cmd.genesis.Priv, cmd.genesis.Keys, amount, cmd.networkID); err != nil {
 		return nil, err
 	} else if genesis, err := isaac.NewGenesisBlockV0Generator(local, []operation.Operation{ga}); err != nil {
 		return nil, err
@@ -272,14 +266,19 @@ type account struct {
 
 func newAccount() *account {
 	priv := key.MustNewBTCPrivatekey()
-	ks := []currency.Key{currency.NewKey(priv.Publickey(), 100)}
-	keys, _ := currency.NewKeys(ks, 100)
-	address, _ := currency.NewAddressFromKeys(keys)
 
-	return &account{
-		Priv:    priv,
-		Address: address,
-		Keys:    keys,
+	if k, err := currency.NewKey(priv.Publickey(), 100); err != nil {
+		panic(err)
+	} else if keys, err := currency.NewKeys([]currency.Key{k}, 100); err != nil {
+		panic(err)
+	} else {
+		address, _ := currency.NewAddressFromKeys(keys)
+
+		return &account{
+			Priv:    priv,
+			Address: address,
+			Keys:    keys,
+		}
 	}
 }
 

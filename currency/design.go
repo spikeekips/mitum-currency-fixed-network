@@ -102,12 +102,9 @@ func (kd *KeyDesign) IsValid([]byte) error {
 
 	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
 		return err
+	} else if k, err := NewKey(pub, kd.Weight); err != nil {
+		return err
 	} else {
-		k := NewKey(pub, kd.Weight)
-		if err := k.IsValid(nil); err != nil {
-			return err
-		}
-
 		kd.Key = k
 	}
 

@@ -25,8 +25,10 @@ type Key struct {
 	w uint
 }
 
-func NewKey(k key.Publickey, w uint) Key {
-	return Key{k: k, w: w}
+func NewKey(k key.Publickey, w uint) (Key, error) {
+	key := Key{k: k, w: w}
+
+	return key, key.IsValid(nil)
 }
 
 func (ky Key) IsValid([]byte) error {
@@ -57,6 +59,18 @@ func (ky Key) Bytes() []byte {
 	return util.ConcatBytesSlice([]byte(ky.k.String()), util.UintToBytes(ky.w))
 }
 
+func (ky Key) Equal(b Key) bool {
+	if ky.w != b.w {
+		return false
+	}
+
+	if !ky.k.Equal(b.k) {
+		return false
+	}
+
+	return true
+}
+
 type Keys struct {
 	h         valuehash.Hash
 	keys      []Key
@@ -71,7 +85,7 @@ func NewKeys(keys []Key, threshold uint) (Keys, error) {
 		ks.h = h
 	}
 
-	return ks, nil
+	return ks, ks.IsValid(nil)
 }
 
 func (ks Keys) Hint() hint.Hint {
@@ -90,17 +104,14 @@ func (ks Keys) Bytes() []byte {
 	bs := make([][]byte, len(ks.keys)+1)
 
 	// NOTE sorted by Key.Key()
-	keys := make([]Key, len(ks.keys))
-	copy(keys, ks.keys)
-
-	sort.Slice(keys, func(i, j int) bool {
+	sort.Slice(ks.keys, func(i, j int) bool {
 		return bytes.Compare(ks.keys[i].Key().Bytes(), ks.keys[j].Key().Bytes()) < 0
 	})
-	for i := range keys {
-		bs[i] = keys[i].Bytes()
+	for i := range ks.keys {
+		bs[i] = ks.keys[i].Bytes()
 	}
 
-	bs[len(keys)] = util.UintToBytes(ks.threshold)
+	bs[len(ks.keys)] = util.UintToBytes(ks.threshold)
 
 	return util.ConcatBytesSlice(bs...)
 }
@@ -139,8 +150,6 @@ func (ks Keys) IsValid([]byte) error {
 
 	if totalWeight < ks.threshold {
 		return xerrors.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
-	} else if totalWeight > 100 {
-		return xerrors.Errorf("sum of weight over 100, %d", totalWeight)
 	}
 
 	if h, err := ks.GenerateHash(); err != nil {
@@ -169,6 +178,31 @@ func (ks Keys) Key(k key.Publickey) (Key, bool) {
 	}
 
 	return Key{}, false
+}
+
+func (ks Keys) Equal(b Keys) bool {
+	if ks.threshold != b.threshold {
+		return false
+	}
+
+	if len(ks.keys) != len(b.keys) {
+		return false
+	}
+
+	sort.Slice(ks.keys, func(i, j int) bool {
+		return bytes.Compare(ks.keys[i].Key().Bytes(), ks.keys[j].Key().Bytes()) < 0
+	})
+	sort.Slice(b.keys, func(i, j int) bool {
+		return bytes.Compare(b.keys[i].Key().Bytes(), b.keys[j].Key().Bytes()) < 0
+	})
+
+	for i := range ks.keys {
+		if !ks.keys[i].Equal(b.keys[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func checkThreshold(fs []operation.FactSign, keys Keys) error {

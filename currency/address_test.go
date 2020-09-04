@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testAddress struct {
@@ -13,7 +14,12 @@ type testAddress struct {
 }
 
 func (t *testAddress) newKey(weight uint) Key {
-	return NewKey(key.MustNewBTCPrivatekey().Publickey(), weight)
+	k, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), weight)
+	if err != nil {
+		panic(err)
+	}
+
+	return k
 }
 
 func (t *testAddress) TestSingleKey() {
@@ -31,11 +37,13 @@ func (t *testAddress) TestSingleKey() {
 }
 
 func (t *testAddress) TestWrongKey() {
-	k := t.newKey(101)
-	keys, err := NewKeys([]Key{k}, 100)
-	t.NoError(err)
+	keys := Keys{
+		keys:      []Key{Key{k: key.MustNewBTCPrivatekey().Publickey(), w: 101}},
+		threshold: 100,
+		h:         valuehash.RandomSHA256(),
+	}
 
-	_, err = NewAddressFromKeys(keys)
+	_, err := NewAddressFromKeys(keys)
 	t.Contains(err.Error(), "invalid key")
 }
 

@@ -30,7 +30,10 @@ func (ac *account) Keys() Keys {
 func generateAccount() *account { // nolint: unused
 	priv := key.MustNewBTCPrivatekey()
 
-	key := NewKey(priv.Publickey(), 100)
+	key, err := NewKey(priv.Publickey(), 100)
+	if err != nil {
+		panic(err)
+	}
 
 	keys, err := NewKeys([]Key{key}, 100)
 	if err != nil {
@@ -115,4 +118,13 @@ func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) sta
 	t.NoError(err)
 
 	return su
+}
+
+func (t *baseTestOperationProcessor) newKey(pub key.Publickey, w uint) Key {
+	k, err := NewKey(pub, w)
+	if err != nil {
+		panic(err)
+	}
+
+	return k
 }

@@ -130,8 +130,8 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey := NewKey(spk.Publickey(), 50)
-	rkey := NewKey(rpk.Publickey(), 50)
+	skey := t.newKey(spk.Publickey(), 50)
+	rkey := t.newKey(rpk.Publickey(), 50)
 	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
 	rkeys, _ := NewKeys([]Key{rkey}, 50)
 

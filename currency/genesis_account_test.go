@@ -21,7 +21,8 @@ type testGenesisAccount struct {
 func (t *testGenesisAccount) TestNew() {
 	nodeKey := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
-	rkey := NewKey(rpk.Publickey(), 100)
+	rkey, err := NewKey(rpk.Publickey(), 100)
+	t.NoError(err)
 	keys, _ := NewKeys([]Key{rkey}, 100)
 	networkID := util.UUID().Bytes()
 	amount := NewAmount(1000)
@@ -46,7 +47,8 @@ func testGenesisAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 	t.newOperation = func() operation.Operation {
 		nodeKey := key.MustNewBTCPrivatekey()
 		rpk := key.MustNewBTCPrivatekey()
-		rkey := NewKey(rpk.Publickey(), 100)
+		rkey, err := NewKey(rpk.Publickey(), 100)
+		t.NoError(err)
 		keys, _ := NewKeys([]Key{rkey}, 100)
 		networkID := util.UUID().Bytes()
 		amount := NewAmount(1000)

@@ -94,7 +94,7 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 	spk := key.MustNewBTCPrivatekey()
 
-	skey := NewKey(spk.Publickey(), 100)
+	skey := t.newKey(spk.Publickey(), 100)
 	skeys, _ := NewKeys([]Key{skey}, 100)
 
 	keys, err := NewKeys([]Key{skey}, 100)

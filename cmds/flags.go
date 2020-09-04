@@ -61,8 +61,9 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 		weight = uint(i)
 	}
 
-	k := currency.NewKey(pk, weight)
-	if err := k.IsValid(nil); err != nil {
+	if k, err := currency.NewKey(pk, weight); err != nil {
+		return err
+	} else if err := k.IsValid(nil); err != nil {
 		return xerrors.Errorf("invalid key string: %w", err)
 	} else {
 		v.Key = k

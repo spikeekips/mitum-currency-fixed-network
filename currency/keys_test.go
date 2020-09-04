@@ -16,24 +16,24 @@ type testKey struct {
 }
 
 func (t *testKey) TestNew() {
-	k := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	k, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	t.NoError(err)
 	t.NoError(k.IsValid(nil))
 }
 
 func (t *testKey) TestZeroWeight() {
-	k := NewKey(key.MustNewBTCPrivatekey().Publickey(), 0)
-	err := k.IsValid(nil)
+	_, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 0)
 	t.Contains(err.Error(), "invalid key weight")
 }
 
 func (t *testKey) Test100Weight() {
-	k := NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)
+	k, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)
+	t.NoError(err)
 	t.NoError(k.IsValid(nil))
 }
 
 func (t *testKey) TestOver100Weight() {
-	k := NewKey(key.MustNewBTCPrivatekey().Publickey(), 101)
-	err := k.IsValid(nil)
+	_, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 101)
 	t.Contains(err.Error(), "invalid key weight")
 }
 
@@ -45,10 +45,19 @@ type testKeys struct {
 	suite.Suite
 }
 
+func (t *testKeys) newKey(pub key.Publickey, w uint) Key {
+	k, err := NewKey(pub, w)
+	if err != nil {
+		panic(err)
+	}
+
+	return k
+}
+
 func (t *testKeys) TestNew() {
 	keys := []Key{
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
 	}
 
 	ks, err := NewKeys(keys, 100)
@@ -59,8 +68,8 @@ func (t *testKeys) TestNew() {
 }
 
 func (t *testKeys) TestSorting() {
-	k0 := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
-	k1 := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	k0 := t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	k1 := t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50)
 
 	ks0, _ := NewKeys([]Key{k0, k1}, 100)
 	ks1, _ := NewKeys([]Key{k1, k0}, 100)
@@ -70,42 +79,32 @@ func (t *testKeys) TestSorting() {
 
 func (t *testKeys) TestWeightOver100() {
 	keys := []Key{
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 30),
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 30),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
 	}
 
-	ks, err := NewKeys(keys, 100)
+	_, err := NewKeys(keys, 100)
 	t.NoError(err)
-
-	err = ks.IsValid(nil)
-	t.Contains(err.Error(), "over 100")
 }
 
 func (t *testKeys) TestKeysOver100() {
 	keys := make([]Key, 101)
 	for i := 0; i < 101; i++ {
-		keys[i] = NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+		keys[i] = t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50)
 	}
 
-	ks, err := NewKeys(keys, 100)
-	t.NoError(err)
-
-	err = ks.IsValid(nil)
+	_, err := NewKeys(keys, 100)
 	t.Contains(err.Error(), "keys over 100")
 }
 
 func (t *testKeys) TestBadThreshold() {
-	keys := []Key{NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)}
+	keys := []Key{t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50)}
 
-	ks, err := NewKeys(keys, 101)
-	t.NoError(err)
-	err = ks.IsValid(nil)
+	_, err := NewKeys(keys, 101)
 	t.Contains(err.Error(), "invalid threshold")
 
-	ks, err = NewKeys(keys, 0)
-	t.NoError(err)
-	err = ks.IsValid(nil)
+	_, err = NewKeys(keys, 0)
 	t.Contains(err.Error(), "invalid threshold")
 }
 
@@ -113,8 +112,8 @@ func (t *testKeys) TestCheckSigning() {
 	pk := key.MustNewBTCPrivatekey()
 
 	keys := []Key{
-		NewKey(pk.Publickey(), 23),
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 77),
+		t.newKey(pk.Publickey(), 23),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 77),
 	}
 
 	ks, err := NewKeys(keys, 100)
@@ -125,13 +124,49 @@ func (t *testKeys) TestCheckSigning() {
 func (t *testKeys) TestSingleKeyUnderThreshold() {
 	pk := key.MustNewBTCPrivatekey()
 
-	keys := []Key{NewKey(pk.Publickey(), 23)}
+	keys := []Key{t.newKey(pk.Publickey(), 23)}
 
-	ks, err := NewKeys(keys, 100)
-	t.NoError(err)
-
-	err = ks.IsValid(nil)
+	_, err := NewKeys(keys, 100)
 	t.Contains(err.Error(), "sum of weight under threshold")
+}
+
+func (t *testKeys) TestEqual() {
+	keys0 := []Key{
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+	}
+
+	ks0, err := NewKeys(keys0, 100)
+	t.NoError(err)
+	t.NotNil(ks0.Hash())
+	t.NoError(ks0.IsValid(nil))
+
+	ks1, err := NewKeys(keys0, 100)
+	t.NoError(err)
+	t.NotNil(ks1.Hash())
+	t.NoError(ks1.IsValid(nil))
+
+	t.True(ks0.Equal(ks1))
+
+	// different []Key
+	keys2 := []Key{
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+		t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50),
+	}
+	ks2, err := NewKeys(keys2, ks0.Threshold())
+	t.NoError(err)
+	t.NotNil(ks2.Hash())
+	t.NoError(ks2.IsValid(nil))
+
+	t.False(ks0.Equal(ks2))
+
+	// different threshold
+	ks3, err := NewKeys(keys0, 99)
+	t.NoError(err)
+	t.NotNil(ks3.Hash())
+	t.NoError(ks3.IsValid(nil))
+
+	t.False(ks0.Equal(ks3))
 }
 
 func TestKeys(t *testing.T) {
@@ -153,10 +188,11 @@ func (t *testKeysEncode) SetupSuite() {
 }
 
 func (t *testKeysEncode) TestMarshal() {
-	keys := []Key{
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
-		NewKey(key.MustNewBTCPrivatekey().Publickey(), 50),
-	}
+	ak, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	t.NoError(err)
+	bk, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 50)
+	t.NoError(err)
+	keys := []Key{ak, bk}
 
 	ks, err := NewKeys(keys, 100)
 	t.NoError(err)
