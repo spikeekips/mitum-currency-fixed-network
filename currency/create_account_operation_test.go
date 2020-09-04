@@ -24,15 +24,22 @@ func (t *testCreateAccountsOperation) newOperation(sender base.Address, items []
 	var fs []operation.FactSign
 	for _, pk := range pks {
 		sig, err := operation.NewFactSignature(pk, fact, nil)
-		t.NoError(err)
+		if err != nil {
+			panic(err)
+		}
 
 		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
-	t.NoError(err)
+	if err != nil {
+		panic(err)
+	}
 
-	t.NoError(ca.IsValid(nil))
+	err = ca.IsValid(nil)
+	if err != nil {
+		panic(err)
+	}
 
 	return ca
 }
@@ -187,6 +194,35 @@ func (t *testCreateAccountsOperation) TestSameSenders() {
 
 	err := opr.Process(ca1)
 	t.Contains(err.Error(), "violates only one sender")
+}
+
+func (t *testCreateAccountsOperation) TestSameAddress() {
+	sa, _ := t.newAccount(true, NewAmount(3))
+	na0, _ := t.newAccount(false, NilAmount)
+
+	it0 := NewCreateAccountItem(na0.Keys(), NewAmount(1))
+	it1 := NewCreateAccountItem(na0.Keys(), NewAmount(1))
+	items := []CreateAccountItem{it0, it1}
+
+	t.Panicsf(func() { t.newOperation(sa.Address, items, sa.Privs()) }, "duplicated acocunt Keys found")
+}
+
+func (t *testCreateAccountsOperation) TestSameAddressMultipleOperations() {
+	sa, sta := t.newAccount(true, NewAmount(3))
+	sb, stb := t.newAccount(true, NewAmount(3))
+	na0, _ := t.newAccount(false, NilAmount)
+
+	_, opr := t.statepool(sta, stb)
+
+	items := []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}
+	ca0 := t.newOperation(sa.Address, items, sa.Privs())
+	t.NoError(opr.Process(ca0))
+
+	items = []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}
+	ca1 := t.newOperation(sb.Address, items, sb.Privs())
+
+	err := opr.Process(ca1)
+	t.Contains(err.Error(), "new address already processed")
 }
 
 func TestCreateAccountsOperation(t *testing.T) {

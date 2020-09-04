@@ -67,6 +67,10 @@ func (cai CreateAccountItem) Amount() Amount {
 	return cai.amount
 }
 
+func (cai CreateAccountItem) Address() (base.Address, error) {
+	return NewAddressFromKeys(cai.keys)
+}
+
 type CreateAccountsFact struct {
 	h      valuehash.Hash
 	token  []byte
@@ -134,7 +138,7 @@ func (caf CreateAccountsFact) IsValid([]byte) error {
 			return xerrors.Errorf("duplicated acocunt Keys found, %s", k)
 		}
 
-		switch a, err := NewAddressFromKeys(it.keys); {
+		switch a, err := it.Address(); {
 		case err != nil:
 			return err
 		case caf.sender.Equal(a):
@@ -166,6 +170,19 @@ func (caf CreateAccountsFact) Amount() Amount {
 	}
 
 	return a
+}
+
+func (caf CreateAccountsFact) Addresses() ([]base.Address, error) {
+	as := make([]base.Address, len(caf.items))
+	for i := range caf.items {
+		if a, err := caf.items[i].Address(); err != nil {
+			return nil, err
+		} else {
+			as[i] = a
+		}
+	}
+
+	return as, nil
 }
 
 type CreateAccounts struct {
@@ -244,7 +261,7 @@ func (ca *CreateAccountItemProcessor) PreProcess(
 		return xerrors.Errorf("amount should be over minimum balance, %v", MinAccountBalance)
 	}
 
-	if a, err := NewAddressFromKeys(ca.fact.keys); err != nil {
+	if a, err := ca.fact.Address(); err != nil {
 		return err
 	} else if st, err := notExistsAccountState(StateKeyKeys(a), "keys of target", getState); err != nil {
 		return err

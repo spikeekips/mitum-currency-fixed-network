@@ -3,6 +3,7 @@ package currency
 import (
 	"sync"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util/logging"
@@ -11,9 +12,10 @@ import (
 type OperationProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	pool             *isaac.Statepool
-	amountPool       map[string]AmountState
-	processedSenders map[string]struct{}
+	pool                *isaac.Statepool
+	amountPool          map[string]AmountState
+	processedSenders    map[string]struct{}
+	processedNewAddress map[string]struct{}
 }
 
 func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
@@ -21,9 +23,10 @@ func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcess
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
-		pool:             pool,
-		amountPool:       map[string]AmountState{},
-		processedSenders: map[string]struct{}{},
+		pool:                pool,
+		amountPool:          map[string]AmountState{},
+		processedSenders:    map[string]struct{}{},
+		processedNewAddress: map[string]struct{}{},
 	}
 }
 
@@ -54,9 +57,17 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		sp = &TransfersProcessor{Transfers: t}
 		sender = t.Fact().(TransfersFact).Sender().String()
 	case CreateAccounts:
+		fact := t.Fact().(CreateAccountsFact)
+
+		if as, err := fact.Addresses(); err != nil {
+			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
+		} else if opr.checkNewAddresses(as) {
+			return nil, state.IgnoreOperationProcessingError.Errorf("new address already processed")
+		}
+
 		get = opr.getState
 		sp = &CreateAccountsProcessor{CreateAccounts: t}
-		sender = t.Fact().(CreateAccountsFact).Sender().String()
+		sender = fact.Sender().String()
 	default:
 		return op, nil
 	}
@@ -114,4 +125,21 @@ func (opr *OperationProcessor) process(op state.Processor) error {
 	}
 
 	return sp.Process(get, opr.pool.Set)
+}
+
+func (opr *OperationProcessor) checkNewAddresses(as []base.Address) bool {
+	opr.Lock()
+	defer opr.Unlock()
+
+	for i := range as {
+		if _, found := opr.processedNewAddress[as[i].String()]; found {
+			return true
+		}
+	}
+
+	for i := range as {
+		opr.processedNewAddress[as[i].String()] = struct{}{}
+	}
+
+	return false
 }
