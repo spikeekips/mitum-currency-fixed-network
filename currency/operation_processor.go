@@ -57,19 +57,18 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		sp = &TransfersProcessor{Transfers: t}
 		sender = t.Fact().(TransfersFact).Sender().String()
 	case CreateAccounts:
-		fact := t.Fact().(CreateAccountsFact)
-
-		if as, err := fact.Addresses(); err != nil {
-			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
-		} else if opr.checkNewAddresses(as) {
-			return nil, state.IgnoreOperationProcessingError.Errorf("new address already processed")
-		}
-
 		get = opr.getState
 		sp = &CreateAccountsProcessor{CreateAccounts: t}
-		sender = fact.Sender().String()
+		sender = t.Fact().(CreateAccountsFact).Sender().String()
 	default:
 		return op, nil
+	}
+
+	var pop state.Processor
+	if pr, err := sp.(state.PreProcessor).PreProcess(get, opr.pool.Set); err != nil {
+		return nil, err
+	} else {
+		pop = pr
 	}
 
 	if func() bool {
@@ -83,15 +82,20 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		return nil, state.IgnoreOperationProcessingError.Errorf("violates only one sender in proposal")
 	}
 
-	if pr, err := sp.(state.PreProcessor).PreProcess(get, opr.pool.Set); err != nil {
-		return nil, err
-	} else {
-		opr.Lock()
-		opr.processedSenders[sender] = struct{}{}
-		opr.Unlock()
-
-		return pr, nil
+	if t, ok := op.(CreateAccounts); ok {
+		fact := t.Fact().(CreateAccountsFact)
+		if as, err := fact.Addresses(); err != nil {
+			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
+		} else if opr.checkNewAddresses(as) {
+			return nil, state.IgnoreOperationProcessingError.Errorf("new address already processed")
+		}
 	}
+
+	opr.Lock()
+	opr.processedSenders[sender] = struct{}{}
+	opr.Unlock()
+
+	return pop, nil
 }
 
 func (opr *OperationProcessor) Process(op state.Processor) error {

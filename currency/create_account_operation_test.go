@@ -196,6 +196,34 @@ func (t *testCreateAccountsOperation) TestSameSenders() {
 	t.Contains(err.Error(), "violates only one sender")
 }
 
+func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
+	sa, st := t.newAccount(true, NewAmount(3))
+	na0, _ := t.newAccount(false, NilAmount)
+
+	_, opr := t.statepool(st)
+
+	// insert invalid operation, under threshold signing. It can not be counted
+	// to sender checking.
+	{
+		na, _ := t.newAccount(false, NilAmount)
+		items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), NewAmount(1))}
+		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.MustNewBTCPrivatekey()})
+		err := opr.Process(ca)
+		t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	}
+
+	items := []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}
+	ca0 := t.newOperation(sa.Address, items, sa.Privs())
+	t.NoError(opr.Process(ca0))
+
+	na1, _ := t.newAccount(false, NilAmount)
+	items = []CreateAccountItem{NewCreateAccountItem(na1.Keys(), NewAmount(1))}
+	ca1 := t.newOperation(sa.Address, items, sa.Privs())
+
+	err := opr.Process(ca1)
+	t.Contains(err.Error(), "violates only one sender")
+}
+
 func (t *testCreateAccountsOperation) TestSameAddress() {
 	sa, _ := t.newAccount(true, NewAmount(3))
 	na0, _ := t.newAccount(false, NilAmount)
