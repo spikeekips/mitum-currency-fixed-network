@@ -36,6 +36,12 @@ func (cmd *KeyUpdaterCommand) Run() error {
 		op = o
 	}
 
+	if len(cmd.Seal.Bytes()) < 1 {
+		cmd.pretty(cmd.Pretty, op)
+
+		return nil
+	}
+
 	if sl, err := loadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,

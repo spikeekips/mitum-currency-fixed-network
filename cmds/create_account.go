@@ -37,6 +37,10 @@ func (cmd *CreateAccountCommand) Run() error {
 		op = o
 	}
 
+	if len(cmd.Seal.Bytes()) < 1 {
+		cmd.pretty(cmd.Pretty, op)
+	}
+
 	if sl, err := loadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
