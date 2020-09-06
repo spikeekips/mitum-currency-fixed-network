@@ -46,6 +46,8 @@ func init() {
 		currency.CreateAccountsFact{},
 		currency.Transfers{},
 		currency.TransfersFact{},
+		currency.KeyUpdater{},
+		currency.KeyUpdaterFact{},
 	)
 
 	if es, err := loadEncoders(); err != nil {
@@ -225,18 +227,7 @@ func loadSealAndAddOperation(
 	networkID base.NetworkID,
 	op operation.Operation,
 ) (operation.Seal, error) {
-	var sl operation.Seal
-	if b != nil {
-		if s, err := loadSeal(b, networkID); err != nil {
-			return nil, err
-		} else if so, ok := s.(operation.Seal); !ok {
-			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
-		} else if _, ok := so.(operation.SealUpdater); !ok {
-			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
-		} else {
-			sl = so
-		}
-	} else {
+	if b == nil {
 		if bs, err := operation.NewBaseSeal(
 			privatekey,
 			[]operation.Operation{op},
@@ -244,8 +235,19 @@ func loadSealAndAddOperation(
 		); err != nil {
 			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
 		} else {
-			sl = bs
+			return bs, nil
 		}
+	}
+
+	var sl operation.Seal
+	if s, err := loadSeal(b, networkID); err != nil {
+		return nil, err
+	} else if so, ok := s.(operation.Seal); !ok {
+		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+	} else if _, ok := so.(operation.SealUpdater); !ok {
+		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+	} else {
+		sl = so
 	}
 
 	// NOTE add operation to existing seal

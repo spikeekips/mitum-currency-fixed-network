@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -20,7 +19,7 @@ type GenesisAccountFactJSONPacker struct {
 }
 
 func (gaf GenesisAccountFact) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(GenesisAccountFactJSONPacker{
+	return jsonenc.Marshal(GenesisAccountFactJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(gaf.Hint()),
 		H:          gaf.h,
 		TK:         gaf.token,
@@ -40,7 +39,7 @@ type GenesisAccountFactJSONUnpacker struct {
 
 func (gaf *GenesisAccountFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uca GenesisAccountFactJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &uca); err != nil {
+	if err := jsonenc.Unmarshal(b, &uca); err != nil {
 		return err
 	}
 
@@ -48,7 +47,7 @@ func (gaf *GenesisAccountFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error 
 }
 
 func (ga GenesisAccount) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(ga.BaseOperation)
+	return jsonenc.Marshal(ga.BaseOperation)
 }
 
 func (ga *GenesisAccount) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

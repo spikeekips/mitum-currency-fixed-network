@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -16,7 +15,7 @@ type TransferItemJSONPacker struct {
 }
 
 func (tff TransferItem) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(TransferItemJSONPacker{
+	return jsonenc.Marshal(TransferItemJSONPacker{
 		RC: tff.receiver,
 		AM: tff.amount,
 	})
@@ -29,7 +28,7 @@ type TransferItemJSONUnpacker struct {
 
 func (tff *TransferItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var utff TransferItemJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &utff); err != nil {
+	if err := jsonenc.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
@@ -45,7 +44,7 @@ type TransferFactJSONPacker struct {
 }
 
 func (tff TransfersFact) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(TransferFactJSONPacker{
+	return jsonenc.Marshal(TransferFactJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(tff.Hint()),
 		H:          tff.h,
 		TK:         tff.token,
@@ -63,7 +62,7 @@ type TransferFactJSONUnpacker struct {
 
 func (tff *TransfersFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var utff TransferFactJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &utff); err != nil {
+	if err := jsonenc.Unmarshal(b, &utff); err != nil {
 		return err
 	}
 
@@ -91,7 +90,7 @@ func (tf Transfers) MarshalJSON() ([]byte, error) {
 	m := tf.BaseOperation.JSONM()
 	m["memo"] = tf.Memo
 
-	return util.JSON.Marshal(m)
+	return jsonenc.Marshal(m)
 }
 
 func (tf *Transfers) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

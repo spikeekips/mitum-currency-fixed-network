@@ -60,6 +60,8 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(Address(""))
 	_ = t.Encs.AddHinter(CreateAccounts{})
 	_ = t.Encs.AddHinter(Transfers{})
+	_ = t.Encs.AddHinter(KeyUpdaterFact{})
+	_ = t.Encs.AddHinter(KeyUpdater{})
 }
 
 func (t *baseTest) newAccount() *account {

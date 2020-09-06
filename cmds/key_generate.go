@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type GenerateKeyCommand struct {
@@ -38,11 +39,11 @@ func (cmd *GenerateKeyCommand) Run() error {
 		cmd.pretty(cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
 				"hint": priv.Hint(),
-				"key":  priv.String(),
+				"key":  hint.HintedString(priv.Hint(), priv.String()),
 			},
 			"publickey": map[string]interface{}{
 				"hint": priv.Publickey().Hint(),
-				"key":  priv.Publickey().String(),
+				"key":  hint.HintedString(priv.Publickey().Hint(), priv.Publickey().String()),
 			},
 		})
 	} else {

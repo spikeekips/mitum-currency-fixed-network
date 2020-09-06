@@ -34,6 +34,8 @@ func (t *baseTestOperationEncode) SetupSuite() {
 	t.encs.AddHinter(CreateAccounts{})
 	t.encs.AddHinter(GenesisAccountFact{})
 	t.encs.AddHinter(GenesisAccount{})
+	t.encs.AddHinter(KeyUpdaterFact{})
+	t.encs.AddHinter(KeyUpdater{})
 }
 
 func (t *baseTestOperationEncode) TestEncode() {

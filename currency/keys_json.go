@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -16,7 +15,7 @@ type KeyJSONPacker struct {
 }
 
 func (ky Key) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(KeyJSONPacker{
+	return jsonenc.Marshal(KeyJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(ky.Hint()),
 		W:          ky.w,
 		K:          ky.k,
@@ -30,7 +29,7 @@ type KeyJSONUnpacker struct {
 
 func (ky *Key) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uk KeyJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &uk); err != nil {
+	if err := jsonenc.Unmarshal(b, &uk); err != nil {
 		return err
 	}
 
@@ -45,7 +44,7 @@ type KeysJSONPacker struct {
 }
 
 func (ks Keys) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(KeysJSONPacker{
+	return jsonenc.Marshal(KeysJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(ks.Hint()),
 		H:          ks.h,
 		KS:         ks.keys,
@@ -61,7 +60,7 @@ type KeysJSONUnpacker struct {
 
 func (ks *Keys) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uks KeysJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &uks); err != nil {
+	if err := jsonenc.Unmarshal(b, &uks); err != nil {
 		return err
 	}
 

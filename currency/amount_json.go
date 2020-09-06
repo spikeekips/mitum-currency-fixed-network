@@ -1,16 +1,14 @@
 package currency
 
-import (
-	"github.com/spikeekips/mitum/util"
-)
+import jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 
 func (a Amount) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(a.String())
+	return jsonenc.Marshal(a.String())
 }
 
 func (a *Amount) UnmarshalJSON(b []byte) error {
 	var s string
-	if err := util.JSON.Unmarshal(b, &s); err != nil {
+	if err := jsonenc.Unmarshal(b, &s); err != nil {
 		return err
 	}
 

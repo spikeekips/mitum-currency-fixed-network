@@ -1,0 +1,112 @@
+package currency
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+)
+
+type testKeyUpdater struct {
+	baseTest
+}
+
+func (t *testKeyUpdater) TestNew() {
+	spk := key.MustNewBTCPrivatekey()
+	skey, err := NewKey(spk.Publickey(), 100)
+	t.NoError(err)
+	skeys, err := NewKeys([]Key{skey}, 100)
+	t.NoError(err)
+	sender, err := NewAddressFromKeys(skeys)
+	t.NoError(err)
+
+	npk := key.MustNewBTCPrivatekey()
+	nkey, err := NewKey(npk.Publickey(), 100)
+	t.NoError(err)
+	nkeys, err := NewKeys([]Key{nkey}, 100)
+	t.NoError(err)
+
+	token := util.UUID().Bytes()
+
+	fact := NewKeyUpdaterFact(token, sender, nkeys)
+	sig, err := operation.NewFactSignature(spk, fact, nil)
+	t.NoError(err)
+	fs := []operation.FactSign{operation.NewBaseFactSign(spk.Publickey(), sig)}
+
+	op, err := NewKeyUpdater(fact, fs, "")
+	t.NoError(err)
+
+	t.NoError(op.IsValid(nil))
+
+	t.Implements((*base.Fact)(nil), op.Fact())
+	t.Implements((*operation.Operation)(nil), op)
+}
+
+func TestKeyUpdater(t *testing.T) {
+	suite.Run(t, new(testKeyUpdater))
+}
+
+func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
+	t := new(baseTestOperationEncode)
+
+	t.enc = enc
+	t.newOperation = func() operation.Operation {
+		spk := key.MustNewBTCPrivatekey()
+		skey, err := NewKey(spk.Publickey(), 100)
+		t.NoError(err)
+		skeys, err := NewKeys([]Key{skey}, 100)
+		t.NoError(err)
+		sender, err := NewAddressFromKeys(skeys)
+		t.NoError(err)
+
+		npk := key.MustNewBTCPrivatekey()
+		nkey, err := NewKey(npk.Publickey(), 100)
+		t.NoError(err)
+		nkeys, err := NewKeys([]Key{nkey}, 100)
+		t.NoError(err)
+
+		token := util.UUID().Bytes()
+
+		fact := NewKeyUpdaterFact(token, sender, nkeys)
+		sig, err := operation.NewFactSignature(spk, fact, nil)
+		t.NoError(err)
+		fs := []operation.FactSign{operation.NewBaseFactSign(spk.Publickey(), sig)}
+
+		op, err := NewKeyUpdater(fact, fs, "")
+		t.NoError(err)
+
+		t.NoError(op.IsValid(nil))
+
+		return op
+	}
+
+	t.compare = func(a, b operation.Operation) {
+		ca := a.(KeyUpdater)
+		cb := b.(KeyUpdater)
+
+		t.Equal(ca.Memo, cb.Memo)
+
+		fact := a.Fact().(KeyUpdaterFact)
+		ufact := b.Fact().(KeyUpdaterFact)
+
+		t.True(fact.target.Equal(ufact.target))
+		t.True(fact.Keys().Equal(ufact.Keys()))
+	}
+
+	return t
+}
+
+func TestKeyUpdaterEncodeJSON(t *testing.T) {
+	suite.Run(t, testKeyUpdaterEncode(jsonenc.NewEncoder()))
+}
+
+func TestKeyUpdaterEncodeBSON(t *testing.T) {
+	suite.Run(t, testKeyUpdaterEncode(bsonenc.NewEncoder()))
+}

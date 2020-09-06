@@ -60,6 +60,10 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		get = opr.getState
 		sp = &CreateAccountsProcessor{CreateAccounts: t}
 		sender = t.Fact().(CreateAccountsFact).Sender().String()
+	case KeyUpdater:
+		get = opr.pool.Get
+		sp = &KeyUpdaterProcessor{KeyUpdater: t}
+		sender = t.Fact().(KeyUpdaterFact).Target().String()
 	default:
 		return op, nil
 	}
@@ -100,9 +104,9 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 
 func (opr *OperationProcessor) Process(op state.Processor) error {
 	switch op.(type) {
-	case *TransfersProcessor, *CreateAccountsProcessor:
+	case *TransfersProcessor, *CreateAccountsProcessor, *KeyUpdaterProcessor:
 		return opr.process(op)
-	case Transfers, CreateAccounts:
+	case Transfers, CreateAccounts, KeyUpdater:
 		if pr, err := opr.PreProcess(op); err != nil {
 			return err
 		} else {
@@ -123,6 +127,8 @@ func (opr *OperationProcessor) process(op state.Processor) error {
 		sp = t
 	case *CreateAccountsProcessor:
 		get = opr.getState
+		sp = t
+	case *KeyUpdaterProcessor:
 		sp = t
 	default:
 		return op.Process(opr.pool.Get, opr.pool.Set)

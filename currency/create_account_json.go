@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -16,7 +15,7 @@ type CreateAccountItemJSONPacker struct {
 }
 
 func (cai CreateAccountItem) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(CreateAccountItemJSONPacker{
+	return jsonenc.Marshal(CreateAccountItemJSONPacker{
 		KS: cai.keys,
 		AM: cai.amount,
 	})
@@ -29,7 +28,7 @@ type CreateAccountItemJSONUnpacker struct {
 
 func (cai *CreateAccountItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uca CreateAccountItemJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &uca); err != nil {
+	if err := jsonenc.Unmarshal(b, &uca); err != nil {
 		return err
 	}
 
@@ -45,7 +44,7 @@ type CreateAccountFactJSONPacker struct {
 }
 
 func (caf CreateAccountsFact) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(CreateAccountFactJSONPacker{
+	return jsonenc.Marshal(CreateAccountFactJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(caf.Hint()),
 		H:          caf.h,
 		TK:         caf.token,
@@ -63,7 +62,7 @@ type CreateAccountFactJSONUnpacker struct {
 
 func (caf *CreateAccountsFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uca CreateAccountFactJSONUnpacker
-	if err := util.JSON.Unmarshal(b, &uca); err != nil {
+	if err := jsonenc.Unmarshal(b, &uca); err != nil {
 		return err
 	}
 
@@ -84,7 +83,7 @@ func (ca CreateAccounts) MarshalJSON() ([]byte, error) {
 	m := ca.BaseOperation.JSONM()
 	m["memo"] = ca.Memo
 
-	return util.JSON.Marshal(m)
+	return jsonenc.Marshal(m)
 }
 
 func (ca *CreateAccounts) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
