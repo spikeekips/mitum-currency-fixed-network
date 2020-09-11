@@ -35,21 +35,23 @@ func (cmd *GenerateKeyCommand) Run() error {
 		priv = key.MustNewStellarPrivatekey()
 	}
 
+	spriv := hint.HintedString(priv.Hint(), priv.String())
+	spub := hint.HintedString(priv.Publickey().Hint(), priv.Publickey().String())
 	if cmd.JSON {
 		cmd.pretty(cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
 				"hint": priv.Hint(),
-				"key":  hint.HintedString(priv.Hint(), priv.String()),
+				"key":  spriv,
 			},
 			"publickey": map[string]interface{}{
 				"hint": priv.Publickey().Hint(),
-				"key":  hint.HintedString(priv.Publickey().Hint(), priv.Publickey().String()),
+				"key":  spub,
 			},
 		})
 	} else {
 		cmd.print("      hint: %s", priv.Hint().Verbose())
-		cmd.print("privatekey: %s", priv.String())
-		cmd.print(" publickey: %s", priv.Publickey().String())
+		cmd.print("privatekey: %s", spriv)
+		cmd.print(" publickey: %s", spub)
 	}
 
 	return nil

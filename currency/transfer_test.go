@@ -159,7 +159,7 @@ func testTransfersEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
-	t.newOperation = func() operation.Operation {
+	t.newObject = func() interface{} {
 		s := MustAddress(util.UUID().String())
 		r := MustAddress(util.UUID().String())
 
@@ -186,14 +186,14 @@ func testTransfersEncode(enc encoder.Encoder) suite.TestingSuite {
 		return tf
 	}
 
-	t.compare = func(a, b operation.Operation) {
+	t.compare = func(a, b interface{}) {
 		ta := a.(Transfers)
 		tb := b.(Transfers)
 
 		t.Equal(ta.Memo, tb.Memo)
 
-		fact := a.Fact().(TransfersFact)
-		ufact := b.Fact().(TransfersFact)
+		fact := ta.Fact().(TransfersFact)
+		ufact := tb.Fact().(TransfersFact)
 
 		t.True(fact.sender.Equal(ufact.sender))
 		t.Equal(len(fact.Items()), len(ufact.Items()))

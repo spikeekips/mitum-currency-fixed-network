@@ -57,7 +57,7 @@ func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
-	t.newOperation = func() operation.Operation {
+	t.newObject = func() interface{} {
 		spk := key.MustNewBTCPrivatekey()
 		skey, err := NewKey(spk.Publickey(), 100)
 		t.NoError(err)
@@ -87,14 +87,14 @@ func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 		return op
 	}
 
-	t.compare = func(a, b operation.Operation) {
+	t.compare = func(a, b interface{}) {
 		ca := a.(KeyUpdater)
 		cb := b.(KeyUpdater)
 
 		t.Equal(ca.Memo, cb.Memo)
 
-		fact := a.Fact().(KeyUpdaterFact)
-		ufact := b.Fact().(KeyUpdaterFact)
+		fact := ca.Fact().(KeyUpdaterFact)
+		ufact := cb.Fact().(KeyUpdaterFact)
 
 		t.True(fact.target.Equal(ufact.target))
 		t.True(fact.Keys().Equal(ufact.Keys()))

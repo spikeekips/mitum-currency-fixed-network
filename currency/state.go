@@ -2,50 +2,22 @@ package currency
 
 import (
 	"fmt"
+	"strings"
 
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/storage"
 )
 
-type AmountState struct {
-	state.State
-	add    Amount
-	exists bool
+func StateKeyAccount(a base.Address) string {
+	return fmt.Sprintf("%s:account", a.String())
 }
 
-func NewAmountState(st state.State, exists bool) AmountState {
-	return AmountState{State: st, add: ZeroAmount, exists: exists}
-}
-
-func (am AmountState) Amount() (Amount, error) {
-	return StateAmountValue(am)
-}
-
-func (am AmountState) Add(a Amount) AmountState {
-	am.add = am.add.Add(a)
-
-	return am
-}
-
-func (am AmountState) Sub(a Amount) AmountState {
-	am.add = am.add.Sub(a)
-
-	return am
-}
-
-func (am AmountState) Merge(source state.State) (state.State, error) {
-	if base, err := StateAmountValue(source); err != nil {
-		return nil, err
-	} else {
-		return SetStateAmountValue(am.State, base.Add(am.add))
-	}
-}
-
-func StateKeyKeys(a base.Address) string {
-	return fmt.Sprintf("%s:keys", a.String())
+func IsStateAccountKey(key string) bool {
+	return strings.HasSuffix(key, ":account")
 }
 
 func StateKeyBalance(a base.Address) string {
@@ -65,14 +37,27 @@ func StateAmountValue(st state.State) (Amount, error) {
 }
 
 func StateKeysValue(st state.State) (Keys, error) {
-	if s, ok := st.Value().Interface().(Keys); !ok {
-		return Keys{}, xerrors.Errorf("invalid Keys value found, %T", st.Value().Interface())
+	if ac, err := LoadStateAccountValue(st); err != nil {
+		return Keys{}, err
+	} else {
+		return ac.Keys(), nil
+	}
+}
+
+func LoadStateAccountValue(st state.State) (Account, error) {
+	v := st.Value()
+	if v == nil {
+		return Account{}, storage.NotFoundError.Errorf("account not found in State")
+	}
+
+	if s, ok := v.Interface().(Account); !ok {
+		return Account{}, xerrors.Errorf("invalid account value found, %T", v.Interface())
 	} else {
 		return s, nil
 	}
 }
 
-func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
+func SetStateAccountValue(st state.State, v Account) (state.State, error) {
 	if uv, err := state.NewHintedValue(v); err != nil {
 		return nil, err
 	} else {
@@ -80,7 +65,36 @@ func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 	}
 }
 
+func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
+	var ac Account
+	if a, err := LoadStateAccountValue(st); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return nil, err
+		}
+
+		if n, err := NewAccountFromKeys(v); err != nil {
+			return nil, err
+		} else {
+			ac = n
+		}
+	} else {
+		ac = a
+	}
+
+	if uac, err := ac.SetKeys(v); err != nil {
+		return nil, err
+	} else if uv, err := state.NewHintedValue(uac); err != nil {
+		return nil, err
+	} else {
+		return st.SetValue(uv)
+	}
+}
+
 func SetStateAmountValue(st state.State, v Amount) (state.State, error) {
+	if v.Compare(ZeroAmount) < 0 {
+		return nil, xerrors.Errorf("under zero Amount, %v", v)
+	}
+
 	if uv, err := state.NewStringValue(v); err != nil {
 		return nil, err
 	} else {
@@ -94,7 +108,7 @@ func checkFactSignsByState(
 	getState func(key string) (state.State, bool, error),
 ) error {
 	var keys Keys
-	if st, err := existsAccountState(StateKeyKeys(address), "keys of account", getState); err != nil {
+	if st, err := existsAccountState(StateKeyAccount(address), "keys of account", getState); err != nil {
 		return err
 	} else {
 		if ks, err := StateKeysValue(st); err != nil {

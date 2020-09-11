@@ -51,6 +51,10 @@ func (t *testCreateAccountsOperation) TestSufficientBalance() {
 
 	pool, opr := t.statepool(st)
 
+	fee := NewAmount(1)
+	fa := NewFixedFeeAmount(fee)
+	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
 	amount := NewAmount(3)
 	items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), amount)}
 	ca := t.newOperation(sa.Address, items, sa.Privs())
@@ -62,24 +66,122 @@ func (t *testCreateAccountsOperation) TestSufficientBalance() {
 	var sb, ns, nb state.State
 	for _, st := range pool.Updates() {
 		if st.Key() == StateKeyBalance(sa.Address) {
-			sb = st
-		} else if st.Key() == StateKeyKeys(na.Address) {
-			ns = st
+			sb = st.GetState()
+		} else if st.Key() == StateKeyAccount(na.Address) {
+			ns = st.GetState()
 		} else if st.Key() == StateKeyBalance(na.Address) {
-			nb = st
+			nb = st.GetState()
 		}
 	}
 
-	t.Equal(sb.Value().Interface(), saBalance.Sub(amount).String())
+	t.Equal(sb.Value().Interface(), saBalance.Sub(amount.Add(fee)).String())
 	t.Equal(nb.Value().Interface(), amount.String())
+	t.Equal(fee, sb.(AmountState).Fee())
 
-	ukeys := ns.Value().Interface().(Keys)
+	address, err := NewAddressFromKeys(na.Keys())
+	uac := ns.Value().Interface().(Account)
+	t.True(address.Equal(uac.Address()))
+
+	ukeys := uac.Keys()
+
 	t.Equal(len(na.Keys().Keys()), len(ukeys.Keys()))
 	t.Equal(na.Keys().Threshold(), ukeys.Threshold())
 	for i := range na.Keys().Keys() {
 		t.Equal(na.Keys().Keys()[i].Weight(), ukeys.Keys()[i].Weight())
 		t.True(na.Keys().Keys()[i].Key().Equal(ukeys.Keys()[i].Key()))
 	}
+}
+
+func (t *testCreateAccountsOperation) TestMultipleItemsWithFee() {
+	saBalance := NewAmount(33)
+	sa, st := t.newAccount(true, saBalance)
+	na0, _ := t.newAccount(false, NilAmount)
+	na1, _ := t.newAccount(false, NilAmount)
+
+	pool, opr := t.statepool(st)
+
+	fee := NewAmount(1)
+	fa := NewFixedFeeAmount(fee)
+	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	amount := NewAmount(3)
+	items := []CreateAccountItem{
+		NewCreateAccountItem(na0.Keys(), amount),
+		NewCreateAccountItem(na1.Keys(), amount),
+	}
+	ca := t.newOperation(sa.Address, items, sa.Privs())
+
+	err := opr.Process(ca)
+	t.NoError(err)
+
+	var sb, ns0, nb0, ns1, nb1 state.State
+	for _, st := range pool.Updates() {
+		if st.Key() == StateKeyBalance(sa.Address) {
+			sb = st.GetState()
+		} else if st.Key() == StateKeyAccount(na0.Address) {
+			ns0 = st.GetState()
+		} else if st.Key() == StateKeyBalance(na0.Address) {
+			nb0 = st.GetState()
+		} else if st.Key() == StateKeyAccount(na1.Address) {
+			ns1 = st.GetState()
+		} else if st.Key() == StateKeyBalance(na1.Address) {
+			nb1 = st.GetState()
+		}
+	}
+
+	totalFee := fee.MulInt64(2)
+	totalAmount := amount.MulInt64(2).Add(totalFee)
+
+	t.Equal(saBalance.Sub(totalAmount).String(), sb.Value().Interface())
+	t.Equal(nb0.Value().Interface(), amount.String())
+	t.Equal(nb1.Value().Interface(), amount.String())
+
+	address0, err := NewAddressFromKeys(na0.Keys())
+	uac0 := ns0.Value().Interface().(Account)
+	t.True(address0.Equal(uac0.Address()))
+
+	ukeys0 := uac0.Keys()
+
+	t.Equal(len(na0.Keys().Keys()), len(ukeys0.Keys()))
+	t.Equal(na0.Keys().Threshold(), ukeys0.Threshold())
+	for i := range na0.Keys().Keys() {
+		t.Equal(na0.Keys().Keys()[i].Weight(), ukeys0.Keys()[i].Weight())
+		t.True(na0.Keys().Keys()[i].Key().Equal(ukeys0.Keys()[i].Key()))
+	}
+
+	address1, err := NewAddressFromKeys(na1.Keys())
+	uac1 := ns1.Value().Interface().(Account)
+	t.True(address1.Equal(uac1.Address()))
+
+	ukeys1 := uac1.Keys()
+	t.Equal(len(na1.Keys().Keys()), len(ukeys1.Keys()))
+	t.Equal(na1.Keys().Threshold(), ukeys1.Threshold())
+	for i := range na1.Keys().Keys() {
+		t.Equal(na1.Keys().Keys()[i].Weight(), ukeys1.Keys()[i].Weight())
+		t.True(na1.Keys().Keys()[i].Key().Equal(ukeys1.Keys()[i].Key()))
+	}
+
+	t.Equal(totalFee, sb.(AmountState).Fee())
+}
+
+func (t *testCreateAccountsOperation) TestInSufficientBalanceWithFee() {
+	saBalance := NewAmount(33)
+	sa, st := t.newAccount(true, saBalance)
+	na, _ := t.newAccount(false, NilAmount)
+
+	pool, opr := t.statepool(st)
+
+	fee := NewAmount(4)
+	fa := NewFixedFeeAmount(fee)
+	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	amount := NewAmount(30)
+	items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), amount)}
+	ca := t.newOperation(sa.Address, items, sa.Privs())
+
+	err := opr.Process(ca)
+	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.Contains(err.Error(), "insufficient balance")
 }
 
 func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
@@ -129,7 +231,8 @@ func (t *testCreateAccountsOperation) TestReceiverExists() {
 	sa, st0 := t.newAccount(true, senderBalance)
 	na, st1 := t.newAccount(true, NewAmount(3))
 
-	_, opr := t.statepool(st0, st1)
+	pool, _ := t.statepool(st0, st1)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	amount := NewAmount(10)
 
@@ -147,7 +250,8 @@ func (t *testCreateAccountsOperation) TestInsufficientBalance() {
 	sa, st := t.newAccount(true, senderBalance)
 	na, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), amount)}
 	ca := t.newOperation(sa.Address, items, sa.Privs())
@@ -166,7 +270,8 @@ func (t *testCreateAccountsOperation) TestInsufficientBalanceMultipleItems() {
 	na0, _ := t.newAccount(false, NilAmount)
 	na1, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	items := []CreateAccountItem{
 		NewCreateAccountItem(na0.Keys(), amount),
@@ -182,7 +287,8 @@ func (t *testCreateAccountsOperation) TestSameSenders() {
 	sa, st := t.newAccount(true, NewAmount(3))
 	na0, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	items := []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}
 	ca0 := t.newOperation(sa.Address, items, sa.Privs())
@@ -200,7 +306,9 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 	sa, st := t.newAccount(true, NewAmount(3))
 	na0, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
+
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	// insert invalid operation, under threshold signing. It can not be counted
 	// to sender checking.
@@ -240,7 +348,8 @@ func (t *testCreateAccountsOperation) TestSameAddressMultipleOperations() {
 	sb, stb := t.newAccount(true, NewAmount(3))
 	na0, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(sta, stb)
+	pool, _ := t.statepool(sta, stb)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	items := []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}
 	ca0 := t.newOperation(sa.Address, items, sa.Privs())

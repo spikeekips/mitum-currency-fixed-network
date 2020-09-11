@@ -39,6 +39,35 @@ func MustAmountFromString(s string) Amount {
 	}
 }
 
+func NewAmountFromInterface(a interface{}) (Amount, error) {
+	switch t := a.(type) {
+	case int:
+		return NewAmount(int64(t)), nil
+	case int8:
+		return NewAmount(int64(t)), nil
+	case int32:
+		return NewAmount(int64(t)), nil
+	case int64:
+		return NewAmount(t), nil
+	case uint:
+		return NewAmount(int64(t)), nil
+	case uint8:
+		return NewAmount(int64(t)), nil
+	case uint32:
+		return NewAmount(int64(t)), nil
+	case uint64:
+		return NewAmount(int64(t)), nil
+	case string:
+		if n, err := NewAmountFromString(t); err != nil {
+			return NilAmount, xerrors.Errorf("invalid amount value, %q", t)
+		} else {
+			return n, nil
+		}
+	default:
+		return NilAmount, xerrors.Errorf("unknown type of amount value, %T", a)
+	}
+}
+
 func (a Amount) IsZero() bool {
 	return a.Int.Cmp(ZeroAmount.Int) == 0
 }
@@ -67,8 +96,19 @@ func (a Amount) Sub(b Amount) Amount {
 	return NewAmountFromBigInt((new(big.Int)).Sub(a.Int, b.Int))
 }
 
-func (a Amount) Mul(b Amount) Amount {
-	return NewAmountFromBigInt((new(big.Int)).Mul(a.Int, b.Int))
+func (a Amount) MulInt64(b int64) Amount {
+	i := big.NewInt(b)
+	return NewAmountFromBigInt((new(big.Int)).Mul(a.Int, i))
+}
+
+func (a Amount) MulFloat64(b float64) Amount {
+	af, _ := new(big.Float).SetString(a.Int.String())
+	bf := big.NewFloat(b)
+
+	c := new(big.Int)
+	_, _ = new(big.Float).Mul(af, bf).Int(c)
+
+	return NewAmountFromBigInt(c)
 }
 
 func (a Amount) Div(b Amount) Amount {

@@ -9,16 +9,16 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-type baseTestOperationEncode struct {
+type baseTestEncode struct {
 	suite.Suite
 
-	enc          encoder.Encoder
-	encs         *encoder.Encoders
-	newOperation func() operation.Operation
-	compare      func(operation.Operation, operation.Operation)
+	enc       encoder.Encoder
+	encs      *encoder.Encoders
+	newObject func() interface{}
+	compare   func(interface{}, interface{})
 }
 
-func (t *baseTestOperationEncode) SetupSuite() {
+func (t *baseTestEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	t.encs.AddEncoder(t.enc)
 
@@ -36,10 +36,31 @@ func (t *baseTestOperationEncode) SetupSuite() {
 	t.encs.AddHinter(GenesisAccount{})
 	t.encs.AddHinter(KeyUpdaterFact{})
 	t.encs.AddHinter(KeyUpdater{})
+	t.encs.AddHinter(FeeOperationFact{})
+	t.encs.AddHinter(FeeOperation{})
+	t.encs.AddHinter(Account{})
+}
+
+func (t *baseTestEncode) TestEncode() {
+	i := t.newObject()
+
+	b, err := t.enc.Marshal(i)
+	t.NoError(err)
+
+	hinter, err := t.enc.DecodeByHint(b)
+	t.NoError(err)
+
+	t.compare(i, hinter)
+}
+
+type baseTestOperationEncode struct {
+	baseTestEncode
 }
 
 func (t *baseTestOperationEncode) TestEncode() {
-	op := t.newOperation()
+	i := t.newObject()
+	op, ok := i.(operation.Operation)
+	t.True(ok)
 
 	b, err := t.enc.Marshal(op)
 	t.NoError(err)

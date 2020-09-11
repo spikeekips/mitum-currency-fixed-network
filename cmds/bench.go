@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -24,7 +26,6 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var genesisAmountString = "99999999999999999999999999"
@@ -47,6 +48,7 @@ type BenchCommand struct {
 	proposal      ballot.Proposal
 	block         block.Block
 	previousBlock block.Block
+	fa            currency.FeeAmount
 }
 
 func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
@@ -358,34 +360,49 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 	sts := make([]state.State, 2)
 
 	{
-		key := currency.StateKeyKeys(ac.Address)
+		key := currency.StateKeyAccount(ac.Address)
 		value, _ := state.NewHintedValue(ac.Keys)
-		if st, err := state.NewStateV0Updater(key, value, base.NilHeight); err != nil {
-			return nil, nil, err
-		} else if err := st.SetHash(st.GenerateHash()); err != nil {
-			return nil, nil, err
-		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
-			return nil, nil, err
-		} else if err := st.SetHeight(cmd.lastHeight); err != nil {
+
+		var stu *state.StateUpdater
+		if st, err := state.NewStateV0(key, value, base.NilHeight); err != nil {
 			return nil, nil, err
 		} else {
-			sts[0] = st.State()
+			stu = state.NewStateUpdater(st)
+		}
+
+		if err := stu.AddOperation(valuehash.RandomSHA256()); err != nil {
+			return nil, nil, err
+		} else {
+			stu = stu.SetHeight(cmd.lastHeight)
+			if err := stu.SetHash(stu.GenerateHash()); err != nil {
+				return nil, nil, err
+			}
+
+			sts[0] = stu.GetState()
 		}
 	}
 
 	{
 		key := currency.StateKeyBalance(ac.Address)
 		value, _ := state.NewStringValue(amount.String())
-		if st, err := state.NewStateV0Updater(key, value, base.NilHeight); err != nil {
-			return nil, nil, err
-		} else if err := st.SetHash(st.GenerateHash()); err != nil {
-			return nil, nil, err
-		} else if err := st.AddOperation(valuehash.RandomSHA256()); err != nil {
-			return nil, nil, err
-		} else if err := st.SetHeight(cmd.lastHeight); err != nil {
+
+		var stu *state.StateUpdater
+		if st, err := state.NewStateV0(key, value, base.NilHeight); err != nil {
 			return nil, nil, err
 		} else {
-			sts[1] = st.State()
+			stu = state.NewStateUpdater(st)
+		}
+
+		if err := stu.SetHash(stu.GenerateHash()); err != nil {
+			return nil, nil, err
+		} else if err := stu.AddOperation(valuehash.RandomSHA256()); err != nil {
+			return nil, nil, err
+		} else {
+			stu = stu.SetHeight(cmd.lastHeight)
+			if err := stu.SetHash(stu.GenerateHash()); err != nil {
+				return nil, nil, err
+			}
+			sts[1] = stu.GetState()
 		}
 	}
 
@@ -549,6 +566,8 @@ func (cmd *BenchCommand) prepareProcessor() error {
 
 	cmd.log.Debug().Int("facts", len(cmd.proposal.Facts())).Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
 
+	cmd.fa = currency.NewFixedFeeAmount(currency.NewAmount(1))
+
 	return nil
 }
 
@@ -614,14 +633,29 @@ func (cmd *BenchCommand) newINITBallot() ballot.INITBallotV0 {
 	return ib
 }
 
-func (cmd *BenchCommand) process() error {
+func (cmd *BenchCommand) dp() (*isaac.DefaultProposalProcessor, error) {
 	dp := isaac.NewDefaultProposalProcessor(cmd.local, cmd.suffrage)
 	_ = dp.SetLogger(cmd.log)
 
-	if _, err := dp.AddOperationProcessor(currency.Transfers{}, &currency.OperationProcessor{}); err != nil {
+	opr := currency.NewOperationProcessor(cmd.fa, func() (base.Address, error) {
+		return cmd.accounts[0].Address, nil
+	})
+
+	if _, err := dp.AddOperationProcessor(currency.Transfers{}, opr); err != nil {
+		return nil, err
+	} else if _, err := dp.AddOperationProcessor(currency.CreateAccounts{}, opr); err != nil {
+		return nil, err
+	}
+
+	return dp, nil
+}
+
+func (cmd *BenchCommand) process() error {
+	var dp *isaac.DefaultProposalProcessor
+	if d, err := cmd.dp(); err != nil {
 		return err
-	} else if _, err := dp.AddOperationProcessor(currency.CreateAccounts{}, &currency.OperationProcessor{}); err != nil {
-		return err
+	} else {
+		dp = d
 	}
 
 	started := time.Now()
@@ -691,9 +725,6 @@ func (cmd *BenchCommand) commit(bs storage.BlockStorage) error {
 }
 
 func (cmd *BenchCommand) checkProcess() error {
-	cmd.log.Debug().Int("operations", len(cmd.block.Operations())).Int("states", len(cmd.block.States())).
-		Msg("block processed")
-
 	facts := map[string]valuehash.Hash{}
 	for i := range cmd.ops {
 		fh := cmd.ops[i].Fact().Hash()
@@ -707,6 +738,7 @@ func (cmd *BenchCommand) checkProcess() error {
 		excludes[fh.String()] = fh
 	}
 
+	var founds int
 	var notFounds, notInStates, inStates []valuehash.Hash
 	_ = cmd.block.OperationsTree().Traverse(func(i int, key, _, v []byte) (bool, error) {
 		fh := valuehash.NewBytes(key)
@@ -714,6 +746,8 @@ func (cmd *BenchCommand) checkProcess() error {
 		if _, found := facts[fh.String()]; !found {
 			notFounds = append(notFounds, fh)
 			cmd.log.Error().Hinted("fact", fh).Msg("fact not found in operation tree")
+		} else {
+			founds++
 		}
 		_, inExcludes := excludes[fh.String()]
 
@@ -729,7 +763,6 @@ func (cmd *BenchCommand) checkProcess() error {
 			inStates = append(inStates, fh)
 			cmd.log.Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact should not found in states tree")
 		}
-
 		return true, nil
 	})
 
@@ -743,8 +776,10 @@ func (cmd *BenchCommand) checkProcess() error {
 		cmd.log.Error().Int("in_states", n).Msg("found in states")
 	}
 
-	if len(notFounds) > 0 || len(notInStates) > 0 || len(inStates) > 0 {
-		return xerrors.Errorf("failed to process")
+	if founds != len(facts) {
+		if len(notFounds) > 0 || len(notInStates) > 0 || len(inStates) > 0 {
+			return xerrors.Errorf("failed to process")
+		}
 	}
 
 	cmd.log.Info().Msg("all operations in states")

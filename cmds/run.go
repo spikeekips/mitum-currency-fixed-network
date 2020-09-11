@@ -8,6 +8,8 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spikeekips/mitum/base"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
@@ -48,6 +50,8 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 
 	if err := nr.Initialize(); err != nil {
 		return xerrors.Errorf("failed to generate node from design: %w", err)
+	} else if err := cmd.prepareProposalProcessor(nr); err != nil {
+		return err
 	}
 
 	contestlib.ConnectSignal()
@@ -72,4 +76,49 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 
 		return nil
 	}
+}
+
+func (cmd *RunCommand) prepareProposalProcessor(nr *currency.Launcher) error {
+	var fa currency.FeeAmount
+	var feeReceiverFunc func() (base.Address, error)
+	if nr.Design().FeeAmount == nil {
+		fa = currency.NewNilFeeAmount()
+
+		log.Debug().Msg("fee not applied")
+	} else {
+		fa = nr.Design().FeeAmount
+
+		var to base.Address
+		if nr.Design().FeeReceiver != nil {
+			to = nr.Design().FeeReceiver
+
+			switch _, found, err := nr.Storage().State(currency.StateKeyAccount(to)); {
+			case err != nil:
+				return xerrors.Errorf("failed to find fee receiver, %v: %w", to, err)
+			case !found:
+				return xerrors.Errorf("fee receiver, %v does not exist", to)
+			}
+		} else {
+			if ac, err := loadGenesisAccountInfo(nr.Storage()); err != nil {
+				return err
+			} else {
+				to = ac.Address()
+			}
+		}
+
+		if to == nil {
+			return xerrors.Errorf("fee receiver not found")
+		}
+
+		feeReceiverFunc = func() (base.Address, error) {
+			return to, nil
+		}
+
+		log.Debug().Str("fee_amount", nr.Design().FeeAmount.Verbose()).Str("fee_receiver", to.String()).Msg("fee applied")
+	}
+
+	return initlaizeProposalProcessor(
+		nr.ProposalProcessor(),
+		currency.NewOperationProcessor(fa, feeReceiverFunc),
+	)
 }

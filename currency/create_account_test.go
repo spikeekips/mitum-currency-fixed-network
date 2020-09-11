@@ -197,7 +197,7 @@ func testCreateAccountsEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
-	t.newOperation = func() operation.Operation {
+	t.newObject = func() interface{} {
 		spk := key.MustNewBTCPrivatekey()
 		rpk := key.MustNewBTCPrivatekey()
 
@@ -229,14 +229,14 @@ func testCreateAccountsEncode(enc encoder.Encoder) suite.TestingSuite {
 		return ca
 	}
 
-	t.compare = func(a, b operation.Operation) {
+	t.compare = func(a, b interface{}) {
 		ca := a.(CreateAccounts)
 		cb := b.(CreateAccounts)
 
 		t.Equal(ca.Memo, cb.Memo)
 
-		fact := a.Fact().(CreateAccountsFact)
-		ufact := b.Fact().(CreateAccountsFact)
+		fact := ca.Fact().(CreateAccountsFact)
+		ufact := cb.Fact().(CreateAccountsFact)
 
 		t.True(fact.sender.Equal(ufact.sender))
 		t.Equal(fact.Amount(), ufact.Amount())

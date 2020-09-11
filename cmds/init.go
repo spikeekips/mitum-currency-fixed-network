@@ -57,6 +57,8 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	if err := nr.Initialize(); err != nil {
 		return xerrors.Errorf("failed to generate node from design: %w", err)
+	} else if err := cmd.prepareProposalProcessor(nr); err != nil {
+		return err
 	}
 
 	log.Debug().Msg("checking existing blocks")
@@ -65,7 +67,6 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		return err
 	}
 
-	log.Debug().Msg("trying to create genesis block")
 	var ops []operation.Operation
 	if o, err := cmd.loadInitOperations(nr); err != nil {
 		return err
@@ -75,6 +76,8 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 
+	log.Debug().Msg("trying to create genesis block")
+	var genesisBlock block.Block
 	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
@@ -83,12 +86,14 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		log.Info().
 			Dict("block", logging.Dict().Hinted("height", blk.Height()).Hinted("hash", blk.Hash())).
 			Msg("genesis block created")
+
+		genesisBlock = blk
 	}
 
 	log.Info().Msg("genesis block created")
 	log.Info().Msg("iniialized")
 
-	return nil
+	return cmd.saveGenesisAccount(nr, genesisBlock)
 }
 
 func (cmd *InitCommand) checkExisting(nr *currency.Launcher, log logging.Logger) error {
@@ -126,5 +131,47 @@ func (cmd *InitCommand) loadInitOperations(nr *currency.Launcher) ([]operation.O
 		ops = append(ops, o...)
 	}
 
+	var genesisOpFound bool
+	for _, op := range ops {
+		if _, ok := op.(currency.GenesisAccount); ok {
+			genesisOpFound = true
+
+			break
+		}
+	}
+
+	if !genesisOpFound {
+		return nil, xerrors.Errorf("GenesisAccount operation is missing")
+	}
+
 	return ops, nil
+}
+
+func (cmd *InitCommand) saveGenesisAccount(nr *currency.Launcher, genesisBlock block.Block) error {
+	var gac currency.Account
+	for i := range genesisBlock.States() {
+		st := genesisBlock.States()[i]
+		if currency.IsStateAccountKey(st.Key()) {
+			if ac, err := currency.LoadStateAccountValue(st); err != nil {
+				return err
+			} else {
+				gac = ac
+			}
+			break
+		}
+	}
+
+	if gac.IsEmpty() {
+		return xerrors.Errorf("failed to find genesis account")
+	}
+
+	return saveGenesisAccountInfo(nr.Storage(), gac)
+}
+
+func (cmd *InitCommand) prepareProposalProcessor(nr *currency.Launcher) error {
+	return initlaizeProposalProcessor(
+		// NOTE NilFeeAmount will be applied whatever design defined
+		nr.ProposalProcessor(),
+		currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil),
+	)
 }

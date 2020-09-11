@@ -48,7 +48,8 @@ func (t *testTransfersOperations) TestSenderNotExist() {
 
 	tf := t.newTransfer(sa.Address, ra.Address, NewAmount(10), sa.Privs())
 
-	_, opr := t.statepool()
+	pool, _ := t.statepool()
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	err := opr.Process(tf)
 	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
@@ -59,7 +60,8 @@ func (t *testTransfersOperations) TestReceiverNotExist() {
 	sa, sts := t.newAccount(true, NewAmount(10))
 	ra, _ := t.newAccount(false, NilAmount)
 
-	_, opr := t.statepool(sts)
+	pool, _ := t.statepool(sts)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	tf := t.newTransfer(sa.Address, ra.Address, NewAmount(3), sa.Privs())
 
@@ -73,7 +75,8 @@ func (t *testTransfersOperations) TestInsufficientBalance() {
 	sa, st0 := t.newAccount(true, saBalance)
 	ra, st1 := t.newAccount(true, NewAmount(1))
 
-	_, opr := t.statepool(st0, st1)
+	pool, _ := t.statepool(st0, st1)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	tf := t.newTransfer(sa.Address, ra.Address, saBalance.Add(NewAmount(1)), sa.Privs())
 
@@ -83,39 +86,154 @@ func (t *testTransfersOperations) TestInsufficientBalance() {
 }
 
 func (t *testTransfersOperations) TestSufficientBalance() {
+	faBalance := NewAmount(22)
 	saBalance := NewAmount(33)
 	raBalance := NewAmount(1)
-	sa, st0 := t.newAccount(true, saBalance)
-	ra, st1 := t.newAccount(true, NewAmount(1))
+	fa, st0 := t.newAccount(true, faBalance)
+	sa, st1 := t.newAccount(true, saBalance)
+	ra, st2 := t.newAccount(true, NewAmount(1))
 
-	pool, opr := t.statepool(st0, st1)
+	pool, _ := t.statepool(st0, st1, st2)
+
+	fee := NewAmount(2)
+	opr := NewOperationProcessor(NewFixedFeeAmount(fee), func() (base.Address, error) { return fa.Address, nil }).New(pool)
 
 	sent := saBalance.Sub(NewAmount(10))
 
 	tf := t.newTransfer(sa.Address, ra.Address, sent, sa.Privs())
 
-	err := opr.Process(tf)
-	t.NoError(err)
+	t.NoError(opr.Process(tf))
+	t.NoError(opr.Close())
 
-	var sst, rst state.State
+	var sst, rst, fst state.State
 	for _, st := range pool.Updates() {
 		if st.Key() == StateKeyBalance(sa.Address) {
-			sst = st
+			sst = st.GetState()
 		} else if st.Key() == StateKeyBalance(ra.Address) {
-			rst = st
+			rst = st.GetState()
+		} else if st.Key() == StateKeyBalance(fa.Address) {
+			fst = st.GetState()
 		}
 	}
 
 	// checking value
-	t.Equal(sst.Value().Interface(), saBalance.Sub(sent).String())
+	t.Equal(sst.Value().Interface(), saBalance.Sub(sent).Sub(fee).String())
 	t.Equal(rst.Value().Interface(), raBalance.Add(sent).String())
+	t.Equal(fst.Value().Interface(), faBalance.Add(fee).String())
+
+	// check fee operation
+
+	t.True(len(pool.AddedOperations()) > 0)
+	var fo FeeOperation
+	for _, op := range pool.AddedOperations() {
+		if err := op.Hint().IsCompatible(FeeOperationHint); err == nil {
+			fo = op.(FeeOperation)
+		}
+	}
+
+	fof := fo.Fact().(FeeOperationFact)
+	t.Equal(fee, fof.Fee())
+}
+
+func (t *testTransfersOperations) TestMultipleItemsWithFee() {
+	saBalance := NewAmount(33)
+	sa, st0 := t.newAccount(true, saBalance)
+	ra0, rst0 := t.newAccount(true, NewAmount(0))
+	ra1, rst1 := t.newAccount(true, NewAmount(0))
+
+	pool, _ := t.statepool(st0, rst0, rst1)
+
+	fee := NewAmount(2)
+	opr := NewOperationProcessor(NewFixedFeeAmount(fee), func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	sent := NewAmount(10)
+
+	token := util.UUID().Bytes()
+	items := []TransferItem{
+		NewTransferItem(ra0.Address, sent),
+		NewTransferItem(ra1.Address, sent),
+	}
+	fact := NewTransfersFact(token, sa.Address, items)
+	sig, err := operation.NewFactSignature(sa.Privs()[0], fact, nil)
+	t.NoError(err)
+	fs := []operation.FactSign{operation.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
+	tf, err := NewTransfers(fact, fs, "")
+	t.NoError(err)
+
+	err = opr.Process(tf)
+	t.NoError(err)
+
+	var nst, nrst0, nrst1 state.State
+	for _, st := range pool.Updates() {
+		if st.Key() == StateKeyBalance(sa.Address) {
+			nst = st.GetState()
+		} else if st.Key() == StateKeyBalance(ra0.Address) {
+			nrst0 = st.GetState()
+		} else if st.Key() == StateKeyBalance(ra1.Address) {
+			nrst1 = st.GetState()
+		}
+	}
+
+	t.Equal(saBalance.Sub(sent.MulInt64(2)).Sub(fee.MulInt64(2)).String(), nst.Value().Interface())
+	t.Equal(sent.String(), nrst0.Value().Interface())
+	t.Equal(sent.String(), nrst1.Value().Interface())
+	t.Equal(fee.MulInt64(2), nst.(AmountState).Fee())
+}
+
+func (t *testTransfersOperations) TestInsufficientMultipleItemsWithFee() {
+	saBalance := NewAmount(33)
+	sa, st0 := t.newAccount(true, saBalance)
+	ra0, rst0 := t.newAccount(true, NewAmount(0))
+	ra1, rst1 := t.newAccount(true, NewAmount(0))
+
+	pool, _ := t.statepool(st0, rst0, rst1)
+
+	fee := NewAmount(2)
+	opr := NewOperationProcessor(NewFixedFeeAmount(fee), func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	sent := NewAmount(15)
+
+	token := util.UUID().Bytes()
+	items := []TransferItem{
+		NewTransferItem(ra0.Address, sent),
+		NewTransferItem(ra1.Address, sent),
+	}
+	fact := NewTransfersFact(token, sa.Address, items)
+	sig, err := operation.NewFactSignature(sa.Privs()[0], fact, nil)
+	t.NoError(err)
+	fs := []operation.FactSign{operation.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
+	tf, err := NewTransfers(fact, fs, "")
+	t.NoError(err)
+
+	err = opr.Process(tf)
+	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.Contains(err.Error(), "insufficient balance")
+}
+
+func (t *testTransfersOperations) TestInSufficientBalanceWithFee() {
+	saBalance := NewAmount(33)
+	sa, st0 := t.newAccount(true, saBalance)
+	ra, st1 := t.newAccount(true, NewAmount(1))
+
+	pool, _ := t.statepool(st0, st1)
+
+	fee := NewAmount(3)
+	opr := NewOperationProcessor(NewFixedFeeAmount(fee), func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	sent := NewAmount(31)
+	tf := t.newTransfer(sa.Address, ra.Address, sent, sa.Privs())
+
+	err := opr.Process(tf)
+	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.Contains(err.Error(), "insufficient balance")
 }
 
 func (t *testTransfersOperations) TestSameSenders() {
 	sa, st0 := t.newAccount(true, NewAmount(3))
 	ra, st1 := t.newAccount(true, NewAmount(1))
 
-	_, opr := t.statepool(st0, st1)
+	pool, _ := t.statepool(st0, st1)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	tf0 := t.newTransfer(sa.Address, ra.Address, NewAmount(1), sa.Privs())
 
@@ -151,7 +269,8 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 		t.newStateKeys(receiver, skeys),
 	)
 
-	_, opr := t.statepool(sts)
+	pool, _ := t.statepool(sts)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sender, nil }).New(pool)
 
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
@@ -164,7 +283,8 @@ func (t *testTransfersOperations) TestUnknownKey() {
 	sa, st0 := t.newAccount(true, NewAmount(1))
 	ra, st1 := t.newAccount(true, NewAmount(1))
 
-	_, opr := t.statepool(st0, st1)
+	pool, _ := t.statepool(st0, st1)
+	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	tf := t.newTransfer(sa.Address, ra.Address, NewAmount(1), []key.Privatekey{sa.Priv, key.MustNewBTCPrivatekey()})
 
@@ -288,8 +408,14 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	}
 	t.T().Log("operations created:", len(ops), "elapsed:", time.Since(started))
 
+	fee := NewAmount(1)
+	nopr := NewOperationProcessor(
+		NewFixedFeeAmount(fee),
+		func() (base.Address, error) { return acs[0].Address, nil }, // NOTE 1st account will get all fee
+	)
+
 	oppHintSet := hint.NewHintmap()
-	t.NoError(oppHintSet.Add(Transfers{}, &OperationProcessor{}))
+	t.NoError(oppHintSet.Add(Transfers{}, nopr))
 
 	pool, _ := t.statepool(sts...)
 
@@ -318,7 +444,7 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 
 	result := map[string]state.State{}
 	for _, st := range pool.Updates() {
-		result[st.Key()] = st
+		result[st.Key()] = st.GetState()
 	}
 
 	for i, ac := range acs {
@@ -331,7 +457,7 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 		if i == 0 || i == half {
 			expected = NewAmount(int64(size)).Add(NewAmount(int64(half) - 1))
 		} else {
-			expected = NewAmount(int64(size)).Sub(NewAmount(1))
+			expected = NewAmount(int64(size)).Sub(NewAmount(1)).Sub(fee)
 		}
 
 		t.Equal(expected, a, i)

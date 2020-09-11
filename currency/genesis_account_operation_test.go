@@ -30,6 +30,7 @@ func (t *testGenesisAccountOperation) SetupSuite() {
 	t.Encs.AddHinter(Address(""))
 	t.Encs.AddHinter(GenesisAccountFact{})
 	t.Encs.AddHinter(GenesisAccount{})
+	t.Encs.AddHinter(Account{})
 
 	t.pk = key.MustNewBTCPrivatekey()
 	t.networkID = util.UUID().Bytes()
@@ -60,16 +61,17 @@ func (t *testGenesisAccountOperation) TestNew() {
 	t.NoError(err)
 	t.Equal(2, len(sp.Updates()))
 
-	var ns, nb state.StateUpdater
+	var ns, nb state.State
 	for _, st := range sp.Updates() {
-		if key := st.Key(); key == StateKeyKeys(newAddress) {
-			ns = st
+		if key := st.Key(); key == StateKeyAccount(newAddress) {
+			ns = st.GetState()
 		} else if key == StateKeyBalance(newAddress) {
-			nb = st
+			nb = st.GetState()
 		}
 	}
 
-	ukeys := ns.Value().Interface().(Keys)
+	ac := ns.Value().Interface().(Account)
+	ukeys := ac.Keys()
 	t.Equal(len(keys.Keys()), len(ukeys.Keys()))
 	t.Equal(keys.Threshold(), ukeys.Threshold())
 	for i := range keys.Keys() {
@@ -97,16 +99,17 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 	newAddress, err := NewAddressFromKeys(keys)
 	t.NoError(err)
 
-	var ns, nb state.StateUpdater
+	var ns, nb state.State
 	for _, st := range sp.Updates() {
-		if key := st.Key(); key == StateKeyKeys(newAddress) {
-			ns = st
+		if key := st.Key(); key == StateKeyAccount(newAddress) {
+			ns = st.GetState()
 		} else if key == StateKeyBalance(newAddress) {
-			nb = st
+			nb = st.GetState()
 		}
 	}
 
-	ukeys := ns.Value().Interface().(Keys)
+	ac := ns.Value().Interface().(Account)
+	ukeys := ac.Keys()
 	t.Equal(len(keys.Keys()), len(ukeys.Keys()))
 	t.Equal(keys.Threshold(), ukeys.Threshold())
 	for i := range keys.Keys() {

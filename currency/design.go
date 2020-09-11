@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/policy"
@@ -14,7 +15,129 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func LoadPolicyOperation(design *launcher.NodeDesign) ([]operation.Operation, error) {
+type NodeDesign struct {
+	*launcher.NodeDesign
+	FeeAmount   FeeAmount
+	FeeReceiver base.Address
+}
+
+func (nd *NodeDesign) IsValid(b []byte) error {
+	if err := nd.NodeDesign.IsValid(b); err != nil {
+		return err
+	}
+
+	if err := nd.loadFeeAmount(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (nd *NodeDesign) loadFeeAmount() error {
+	var c map[string]interface{}
+	if nd.Component.Others() != nil {
+		for k, v := range nd.Component.Others() {
+			if k != "fee-amount" {
+				continue
+			}
+
+			if v == nil {
+				continue
+			} else if m, ok := v.(map[string]interface{}); !ok {
+				return xerrors.Errorf("bad formatted fee-amount design")
+			} else {
+				c = m
+			}
+		}
+	}
+
+	if c == nil {
+		return nil
+	}
+
+	if i, found := c["to"]; found {
+		if s, ok := i.(string); !ok {
+			return xerrors.Errorf("invalid type, %T of to of fee-amount", i)
+		} else if a, err := base.DecodeAddressFromString(nd.JSONEncoder(), strings.TrimSpace(s)); err != nil {
+			return err
+		} else if err := a.IsValid(nil); err != nil {
+			return err
+		} else {
+			nd.FeeReceiver = a
+		}
+	}
+
+	var fa FeeAmount
+	switch t := c["type"]; {
+	case t == "fixed":
+		if f, err := nd.loadFixedFeeAmount(c); err != nil {
+			return err
+		} else {
+			fa = f
+		}
+	case t == "ratio":
+		if f, err := nd.loadRatioFeeAmount(c); err != nil {
+			return err
+		} else {
+			fa = f
+		}
+	default:
+		return xerrors.Errorf("unknown type of fee-amount, %v", t)
+	}
+
+	nd.FeeAmount = fa
+
+	return nil
+}
+
+func (nd *NodeDesign) loadFixedFeeAmount(c map[string]interface{}) (FeeAmount, error) {
+	if a, found := c["amount"]; !found {
+		return nil, xerrors.Errorf("fixed fee-amount needs `amount`")
+	} else {
+		if n, err := NewAmountFromInterface(a); err != nil {
+			return nil, xerrors.Errorf("invalid amount value, %v of fee-amount: %w", a, err)
+		} else {
+			return NewFixedFeeAmount(n), nil
+		}
+	}
+}
+
+func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (FeeAmount, error) {
+	var ratio float64
+	if a, found := c["ratio"]; !found {
+		return nil, xerrors.Errorf("ratio fee-amount needs `ratio`")
+	} else if f, ok := a.(float64); !ok {
+		return nil, xerrors.Errorf("invalid ratio value type, %T of fee-amount; should be float64", a)
+	} else {
+		ratio = f
+	}
+
+	var min Amount
+	if a, found := c["min"]; !found {
+		return nil, xerrors.Errorf("ratio fee-amount needs `min`")
+	} else if n, err := NewAmountFromInterface(a); err != nil {
+		return nil, xerrors.Errorf("invalid min value, %v of fee-amount: %w", a, err)
+	} else {
+		min = n
+	}
+
+	return NewRatioFeeAmount(ratio, min)
+}
+
+func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
+	if d, err := launcher.LoadNodeDesign(b, encs); err != nil {
+		return nil, err
+	} else {
+		nd := &NodeDesign{NodeDesign: d}
+		if err := nd.IsValid(nil); err != nil {
+			return nil, err
+		}
+
+		return nd, nil
+	}
+}
+
+func LoadPolicyOperation(design *NodeDesign) ([]operation.Operation, error) {
 	if op, err := policy.NewSetPolicyV0(
 		design.GenesisPolicy.Policy().(policy.PolicyV0),
 		design.NetworkID(), // NOTE token

@@ -18,7 +18,7 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 	parser, err := kong.New(cli)
 	t.NoError(err)
 
-	_, err = parser.Parse([]string{"KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1", "-d"})
+	_, err = parser.Parse([]string{"KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1"})
 	t.NoError(err)
 
 	var buf bytes.Buffer

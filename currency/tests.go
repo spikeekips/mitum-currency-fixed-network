@@ -62,6 +62,9 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(Transfers{})
 	_ = t.Encs.AddHinter(KeyUpdaterFact{})
 	_ = t.Encs.AddHinter(KeyUpdater{})
+	_ = t.Encs.AddHinter(FeeOperationFact{})
+	_ = t.Encs.AddHinter(FeeOperation{})
+	_ = t.Encs.AddHinter(Account{})
 }
 
 func (t *baseTest) newAccount() *account {
@@ -104,19 +107,23 @@ func (t *baseTestOperationProcessor) newAccount(exists bool, amount Amount) (*ac
 	return ac, st
 }
 
-func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amount) state.StateUpdater {
+func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amount) state.State {
 	key := StateKeyBalance(a)
 	value, _ := state.NewStringValue(amount.String())
-	su, err := state.NewStateV0Updater(key, value, base.NilHeight)
+	su, err := state.NewStateV0(key, value, base.NilHeight)
 	t.NoError(err)
 
 	return su
 }
 
-func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) state.StateUpdater {
-	key := StateKeyKeys(a)
-	value, _ := state.NewHintedValue(keys)
-	su, err := state.NewStateV0Updater(key, value, base.NilHeight)
+func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) state.State {
+	key := StateKeyAccount(a)
+
+	ac, err := NewAccount(a, keys)
+	t.NoError(err)
+
+	value, _ := state.NewHintedValue(ac)
+	su, err := state.NewStateV0(key, value, base.NilHeight)
 	t.NoError(err)
 
 	return su

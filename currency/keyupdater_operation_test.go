@@ -45,9 +45,13 @@ func (t *testKeyUpdaterOperation) newOperation(target base.Address, keys Keys, p
 }
 
 func (t *testKeyUpdaterOperation) TestNew() {
-	sa, st := t.newAccount(true, NewAmount(3))
+	balance := NewAmount(3)
+	sa, st := t.newAccount(true, balance)
 
-	pool, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
+
+	fee := NewAmount(1)
+	opr := NewOperationProcessor(NewFixedFeeAmount(fee), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	npk := key.MustNewBTCPrivatekey()
 	nkey, err := NewKey(npk.Publickey(), 100)
@@ -60,15 +64,41 @@ func (t *testKeyUpdaterOperation) TestNew() {
 	t.NoError(opr.Process(op))
 
 	// checking value
-	var ns state.State
+	var ns, nb state.State
 	for _, st := range pool.Updates() {
-		if st.Key() == StateKeyKeys(sa.Address) {
-			ns = st
+		if st.Key() == StateKeyAccount(sa.Address) {
+			ns = st.GetState()
+		} else if st.Key() == StateKeyBalance(sa.Address) {
+			nb = st.GetState()
 		}
 	}
 
-	ukeys := ns.Value().Interface().(Keys)
+	ac := ns.Value().Interface().(Account)
+	ukeys := ac.Keys()
 	t.True(nkeys.Equal(ukeys))
+
+	t.Equal(balance.Sub(fee).String(), nb.Value().Interface())
+
+	t.NoError(opr.Close())
+}
+
+func (t *testKeyUpdaterOperation) TestEmptyBalance() {
+	sa, st := t.newAccount(true, NewAmount(0))
+
+	pool, _ := t.statepool(st)
+	opr := NewOperationProcessor(NewFixedFeeAmount(NewAmount(1)), func() (base.Address, error) { return sa.Address, nil }).New(pool)
+
+	npk := key.MustNewBTCPrivatekey()
+	nkey, err := NewKey(npk.Publickey(), 100)
+	t.NoError(err)
+	nkeys, err := NewKeys([]Key{nkey}, 100)
+	t.NoError(err)
+
+	op := t.newOperation(sa.Address, nkeys, sa.Privs())
+
+	err = opr.Process(op)
+	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.Contains(err.Error(), "insufficient balance")
 }
 
 func (t *testKeyUpdaterOperation) TestTargetNotExist() {

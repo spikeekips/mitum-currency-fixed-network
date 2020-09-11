@@ -1,23 +1,34 @@
 address: mc-node-010a:0.0.1
 privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
-storage: mongodb://localhost:27017/mc
-network-id: contest-network-id
-
+blockfs: /tmp/mc-blockfs
+storage: mongodb://127.0.0.1:27017/mc
+network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
     bind: 0.0.0.0:54321
-    publish: quic://localhost:54321
-
-init-operations:
-    - name: genesis-account
-      account-keys:
-          threshold: 70
-          keys:
-              - privatekey: L5GTSKkRs9NPsXwYgACZdodNUJqCAWjz2BccuR4cAgxJumEZWjok-0112:0.0.1
-                weight: 100
-      balance: "99999999999999999999"
+    publish: quic://127.0.0.1:54321
 
 genesis-policy:
     threshold: 67
     number-of-acting-suffrage-nodes: 1
-    max-operations-in-seal: 100
+    max-operations-in-seal: 10
     max-operations-in-proposal: 100
+
+init-operations:
+    - name: genesis-account
+      account-keys:
+        keys:
+            - publickey: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7-0115:0.0.1
+              # privatekey: c741259e1444ce46e08c2489f3112fb8f0b9f85cb11c84ced9d948cef259ce74-0114:0.0.1
+              weight: 100
+        threshold: 100
+      balance: "99999999999999999999"
+
+config:
+    is-dev: true
+    timeout-waiting-proposal: 5s
+    interval-broadcasting-init-ballot: 1s
+    interval-broadcasting-proposal: 1s
+    wait-broadcasting-accept-ballot: 1s
+    interval-broadcasting-accept-ballot: 1s
+    timespan-valid-ballot: 1m0s
+    timeout-process-proposal: 10s

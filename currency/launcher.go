@@ -4,24 +4,27 @@ import (
 	"fmt"
 	"net/url"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
+
+var GenesisAccountKey = "genesis_account"
 
 type Launcher struct {
 	*logging.Logging
 	*launcher.Launcher
-	design *launcher.NodeDesign
+	design *NodeDesign
 }
 
-func NewLauncherFromDesign(design *launcher.NodeDesign, version util.Version) (*Launcher, error) {
+func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
 	nr := &Launcher{design: design}
 
-	if bn, err := launcher.NewLauncher(design, version); err != nil {
+	if bn, err := launcher.NewLauncher(design.NodeDesign, version); err != nil {
 		return nil, err
 	} else {
 		nr.Launcher = bn
@@ -40,7 +43,7 @@ func (nr *Launcher) SetLogger(l logging.Logger) logging.Logger {
 	return nr.Log()
 }
 
-func (nr *Launcher) Design() *launcher.NodeDesign {
+func (nr *Launcher) Design() *NodeDesign {
 	return nr.design
 }
 
@@ -159,12 +162,12 @@ func (nr *Launcher) attachSuffrage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if sf, err := nr.design.Component.Suffrage.New(nr.Localstate(), nr.Encoders()); err != nil {
+	if sf, err := nr.design.Component.Suffrage().New(nr.Localstate(), nr.Encoders()); err != nil {
 		return xerrors.Errorf("failed to create new suffrage component: %w", err)
 	} else {
 		l.Debug().
-			Str("type", nr.design.Component.Suffrage.Type).
-			Interface("info", nr.design.Component.Suffrage.Info).
+			Str("type", nr.design.Component.Suffrage().Type).
+			Interface("info", nr.design.Component.Suffrage().Info).
 			Msg("suffrage loaded")
 
 		_ = nr.SetSuffrage(sf)
@@ -181,19 +184,12 @@ func (nr *Launcher) attachProposalProcessor() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if pp, err := nr.design.Component.ProposalProcessor.New(nr.Localstate(), nr.Suffrage()); err != nil {
+	if pp, err := nr.design.Component.ProposalProcessor().New(nr.Localstate(), nr.Suffrage()); err != nil {
 		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
 	} else {
-		if _, err := pp.AddOperationProcessor(Transfers{}, &OperationProcessor{}); err != nil {
-			return err
-		}
-		if _, err := pp.AddOperationProcessor(CreateAccounts{}, &OperationProcessor{}); err != nil {
-			return err
-		}
-
 		l.Debug().
-			Str("type", nr.design.Component.ProposalProcessor.Type).
-			Interface("info", nr.design.Component.ProposalProcessor.Info).
+			Str("type", nr.design.Component.ProposalProcessor().Type).
+			Interface("info", nr.design.Component.ProposalProcessor().Info).
 			Msg("proposal processor loaded")
 
 		_ = nr.SetProposalProcessor(pp)

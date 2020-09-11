@@ -232,16 +232,14 @@ func (tf *TransferProcessor) PreProcess(
 	getState func(key string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) error {
-	if _, err := existsAccountState(StateKeyKeys(tf.fact.receiver), "keys of receiver", getState); err != nil {
+	if _, err := existsAccountState(StateKeyAccount(tf.fact.receiver), "keys of receiver", getState); err != nil {
 		return err
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(tf.fact.receiver), "balance of receiver", getState); err != nil {
 		return err
-	} else if ast, ok := st.(AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
-		tf.rb = ast
+		tf.rb = NewAmountState(st)
 	}
 
 	return nil
@@ -256,9 +254,25 @@ func (tf *TransferProcessor) Process(
 
 type TransfersProcessor struct {
 	Transfers
+	fa  FeeAmount
+	sb  AmountState
+	rb  []*TransferProcessor
+	fee Amount
+}
 
-	sb AmountState
-	rb []*TransferProcessor
+func (tf *TransfersProcessor) calculateFee() (Amount, error) {
+	fact := tf.Fact().(TransfersFact)
+
+	sum := NewAmount(0)
+	for i := range fact.items {
+		if fee, err := tf.fa.Fee(fact.items[i].Amount()); err != nil {
+			return NilAmount, err
+		} else {
+			sum = sum.Add(fee)
+		}
+	}
+
+	return sum, nil
 }
 
 func (tf *TransfersProcessor) PreProcess(
@@ -267,20 +281,24 @@ func (tf *TransfersProcessor) PreProcess(
 ) (state.Processor, error) {
 	fact := tf.Fact().(TransfersFact)
 
-	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
+	if err := checkExistsAccountState(StateKeyAccount(fact.sender), getState); err != nil {
 		return nil, err
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
 		return nil, err
-	} else if b, err := StateAmountValue(st); err != nil {
+	} else if fee, err := tf.calculateFee(); err != nil {
 		return nil, state.IgnoreOperationProcessingError.Wrap(err)
-	} else if b.Compare(fact.Amount()) < 0 {
-		return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
-	} else if ast, ok := st.(AmountState); !ok {
-		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
-		tf.sb = ast
+		switch b, err := StateAmountValue(st); {
+		case err != nil:
+			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		case b.Compare(fact.Amount().Add(fee)) < 0:
+			return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+		default:
+			tf.sb = NewAmountState(st)
+			tf.fee = fee
+		}
 	}
 
 	rb := make([]*TransferProcessor, len(fact.items))
@@ -317,7 +335,7 @@ func (tf *TransfersProcessor) Process(
 		}
 	}
 
-	sts[len(sts)-1] = tf.sb.Sub(fact.Amount())
+	sts[len(sts)-1] = tf.sb.Sub(fact.Amount().Add(tf.fee)).AddFee(tf.fee)
 
 	return setState(fact.Hash(), sts...)
 }

@@ -147,7 +147,7 @@ func (ga GenesisAccount) Process(
 	}
 
 	var ns, nb state.State
-	if st, err := notExistsAccountState(StateKeyKeys(newAddress), "key of genesis", getState); err != nil {
+	if st, err := notExistsAccountState(StateKeyAccount(newAddress), "key of genesis", getState); err != nil {
 		return err
 	} else {
 		ns = st
@@ -159,7 +159,14 @@ func (ga GenesisAccount) Process(
 		nb = st
 	}
 
-	if st, err := SetStateKeysValue(ns, fact.keys); err != nil {
+	var nac Account
+	if ac, err := NewAccountFromKeys(fact.keys); err != nil {
+		return err
+	} else {
+		nac = ac
+	}
+
+	if st, err := SetStateAccountValue(ns, nac); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		ns = st

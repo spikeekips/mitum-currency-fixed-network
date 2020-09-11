@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -162,25 +163,43 @@ func (t *testAmount) TestMul() {
 	cases := []struct {
 		name   string
 		a      string
-		b      string
+		b      interface{}
 		result string
 	}{
 		{
 			name:   "3*7",
 			a:      "3",
-			b:      "7",
+			b:      int64(7),
 			result: "21",
 		},
 		{
 			name:   "3*(-7)",
 			a:      "3",
-			b:      "-7",
+			b:      int64(-7),
 			result: "-21",
+		},
+		{
+			name:   "3*(-0.5)",
+			a:      "3",
+			b:      float64(-0.5),
+			result: "-1",
+		},
+		{
+			name:   "10*(0.5)",
+			a:      "10",
+			b:      float64(0.5),
+			result: "5",
+		},
+		{
+			name:   "10*(0.33)",
+			a:      "10",
+			b:      float64(0.33),
+			result: "3",
 		},
 		{
 			name:   "over max uint64",
 			a:      "922337203685477580792233720368547758079223372036854775817",
-			b:      "10",
+			b:      int64(10),
 			result: "9223372036854775807922337203685477580792233720368547758170",
 		},
 	}
@@ -192,8 +211,16 @@ func (t *testAmount) TestMul() {
 			c.name,
 			func() {
 				a := MustAmountFromString(c.a)
-				b := MustAmountFromString(c.b)
-				result := a.Mul(b)
+
+				var result Amount
+				switch reflect.TypeOf(c.b).Kind() {
+				case reflect.Int64:
+					result = a.MulInt64(c.b.(int64))
+				case reflect.Float64:
+					result = a.MulFloat64(c.b.(float64))
+				default:
+					t.NoError(xerrors.Errorf("unsupported type"))
+				}
 
 				t.Equal(c.result, result.String(), "%d: %v; %v != %v", i, c.name, c.result, result.String())
 			},

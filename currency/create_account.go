@@ -263,15 +263,13 @@ func (ca *CreateAccountItemProcessor) PreProcess(
 
 	if a, err := ca.fact.Address(); err != nil {
 		return err
-	} else if st, err := notExistsAccountState(StateKeyKeys(a), "keys of target", getState); err != nil {
+	} else if st, err := notExistsAccountState(StateKeyAccount(a), "keys of target", getState); err != nil {
 		return err
 	} else if b, err := notExistsAccountState(StateKeyBalance(a), "balance of target", getState); err != nil {
 		return err
-	} else if ast, ok := b.(AmountState); !ok {
-		return xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
 		ca.ns = st
-		ca.nb = ast
+		ca.nb = NewAmountState(b)
 	}
 
 	return nil
@@ -281,8 +279,15 @@ func (ca *CreateAccountItemProcessor) Process(
 	_ func(key string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) ([]state.State, error) {
+	var nac Account
+	if ac, err := NewAccountFromKeys(ca.fact.keys); err != nil {
+		return nil, err
+	} else {
+		nac = ac
+	}
+
 	sts := make([]state.State, 2)
-	if st, err := SetStateKeysValue(ca.ns, ca.fact.keys); err != nil {
+	if st, err := SetStateAccountValue(ca.ns, nac); err != nil {
 		return nil, err
 	} else {
 		sts[0] = st
@@ -295,8 +300,25 @@ func (ca *CreateAccountItemProcessor) Process(
 
 type CreateAccountsProcessor struct {
 	CreateAccounts
-	sb AmountState
-	ns []*CreateAccountItemProcessor
+	fa  FeeAmount
+	sb  AmountState
+	ns  []*CreateAccountItemProcessor
+	fee Amount
+}
+
+func (ca *CreateAccountsProcessor) calculateFee() (Amount, error) {
+	fact := ca.Fact().(CreateAccountsFact)
+
+	sum := NewAmount(0)
+	for i := range fact.items {
+		if fee, err := ca.fa.Fee(fact.items[i].Amount()); err != nil {
+			return NilAmount, err
+		} else {
+			sum = sum.Add(fee)
+		}
+	}
+
+	return sum, nil
 }
 
 func (ca *CreateAccountsProcessor) PreProcess(
@@ -305,20 +327,24 @@ func (ca *CreateAccountsProcessor) PreProcess(
 ) (state.Processor, error) {
 	fact := ca.Fact().(CreateAccountsFact)
 
-	if err := checkExistsAccountState(StateKeyKeys(fact.sender), getState); err != nil {
+	if err := checkExistsAccountState(StateKeyAccount(fact.sender), getState); err != nil {
 		return nil, err
 	}
 
 	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
 		return nil, err
-	} else if b, err := StateAmountValue(st); err != nil {
+	} else if fee, err := ca.calculateFee(); err != nil {
 		return nil, state.IgnoreOperationProcessingError.Wrap(err)
-	} else if b.Compare(fact.Amount()) < 0 {
-		return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
-	} else if ast, ok := st.(AmountState); !ok {
-		return nil, xerrors.Errorf("expected AmountState, but %T", st)
 	} else {
-		ca.sb = ast
+		switch b, err := StateAmountValue(st); {
+		case err != nil:
+			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		case b.Compare(fact.Amount().Add(fee)) < 0:
+			return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+		default:
+			ca.sb = NewAmountState(st)
+			ca.fee = fee
+		}
 	}
 
 	ns := make([]*CreateAccountItemProcessor, len(fact.items))
@@ -356,7 +382,7 @@ func (ca *CreateAccountsProcessor) Process(
 		}
 	}
 
-	sts[len(sts)-1] = ca.sb.Sub(fact.Amount())
+	sts[len(sts)-1] = ca.sb.Sub(fact.Amount().Add(ca.fee)).AddFee(ca.fee)
 
 	return setState(fact.Hash(), sts...)
 }

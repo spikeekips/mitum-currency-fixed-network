@@ -44,7 +44,7 @@ func testGenesisAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 	t := new(baseTestOperationEncode)
 
 	t.enc = enc
-	t.newOperation = func() operation.Operation {
+	t.newObject = func() interface{} {
 		nodeKey := key.MustNewBTCPrivatekey()
 		rpk := key.MustNewBTCPrivatekey()
 		rkey, err := NewKey(rpk.Publickey(), 100)
@@ -59,9 +59,11 @@ func testGenesisAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 		return ga
 	}
 
-	t.compare = func(a, b operation.Operation) {
-		fact := a.Fact().(GenesisAccountFact)
-		ufact := b.Fact().(GenesisAccountFact)
+	t.compare = func(a, b interface{}) {
+		ca := a.(GenesisAccount)
+		cb := b.(GenesisAccount)
+		fact := ca.Fact().(GenesisAccountFact)
+		ufact := cb.Fact().(GenesisAccountFact)
 
 		t.True(fact.genesisNodeKey.Equal(ufact.genesisNodeKey))
 		t.Equal(fact.amount, ufact.amount)

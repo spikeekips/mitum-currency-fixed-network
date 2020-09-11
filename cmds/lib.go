@@ -17,7 +17,8 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
-	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -48,6 +49,10 @@ func init() {
 		currency.TransfersFact{},
 		currency.KeyUpdater{},
 		currency.KeyUpdaterFact{},
+		currency.AmountState{},
+		currency.FeeOperationFact{},
+		currency.FeeOperation{},
+		currency.Account{},
 	)
 
 	if es, err := loadEncoders(); err != nil {
@@ -129,10 +134,8 @@ func loadEncoders() (*encoder.Encoders, error) {
 }
 
 func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger) (*currency.Launcher, error) {
-	var design *launcher.NodeDesign
-	if d, err := launcher.LoadNodeDesign(b, encs); err != nil {
-		return nil, err
-	} else if err := d.IsValid(nil); err != nil {
+	var design *currency.NodeDesign
+	if d, err := currency.LoadNodeDesign(b, encs); err != nil {
 		return nil, err
 	} else {
 		design = d
@@ -148,6 +151,7 @@ func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger
 	}
 
 	log.Debug().Interface("design", design).Msg("load launcher from design")
+
 	_ = nr.SetLogger(log)
 
 	return nr, nil
@@ -262,4 +266,42 @@ func loadSealAndAddOperation(
 	}
 
 	return sl, nil
+}
+
+func initlaizeProposalProcessor(dp isaac.ProposalProcessor, opr isaac.OperationProcessor) error {
+	if _, err := dp.AddOperationProcessor(currency.Transfers{}, opr); err != nil {
+		return err
+	} else if _, err := dp.AddOperationProcessor(currency.CreateAccounts{}, opr); err != nil {
+		return err
+	} else if _, err := dp.AddOperationProcessor(currency.KeyUpdater{}, opr); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func saveGenesisAccountInfo(st storage.Storage, ac currency.Account) error {
+	if b, err := defaultJSONEnc.Marshal(ac); err != nil {
+		return xerrors.Errorf("failed to save genesis account: %w", err)
+	} else if err := st.SetInfo(currency.GenesisAccountKey, b); err != nil {
+		return xerrors.Errorf("failed to save genesis account: %w", err)
+	} else {
+		return nil
+	}
+}
+
+func loadGenesisAccountInfo(st storage.Storage) (currency.Account, error) {
+	switch b, found, err := st.GetInfo(currency.GenesisAccountKey); {
+	case err != nil:
+		return currency.Account{}, xerrors.Errorf("failed to get genesis account: %w", err)
+	case !found:
+		return currency.Account{}, storage.NotFoundError.Errorf("genesis account not found")
+	default:
+		var ac currency.Account
+		if err := defaultJSONEnc.Decode(b, &ac); err != nil {
+			return currency.Account{}, xerrors.Errorf("failed to load genesis account for getting fee receiver: %w", err)
+		}
+
+		return ac, nil
+	}
 }

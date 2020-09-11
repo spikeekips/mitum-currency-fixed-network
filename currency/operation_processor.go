@@ -7,15 +7,33 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type OperationProcessor struct {
 	sync.RWMutex
 	*logging.Logging
+	feeAmount           FeeAmount
+	getFeeReceiver      func() (base.Address, error)
 	pool                *isaac.Statepool
+	fee                 Amount
 	amountPool          map[string]AmountState
 	processedSenders    map[string]struct{}
 	processedNewAddress map[string]struct{}
+}
+
+func NewOperationProcessor(feeAmount FeeAmount, getFeeReceiver func() (base.Address, error)) *OperationProcessor {
+	if getFeeReceiver == nil {
+		feeAmount = NewNilFeeAmount()
+	}
+
+	return &OperationProcessor{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "mitum-currency-operations-processor")
+		}),
+		feeAmount:      feeAmount,
+		getFeeReceiver: getFeeReceiver,
+	}
 }
 
 func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
@@ -23,80 +41,81 @@ func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcess
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
+		feeAmount:           opr.feeAmount,
+		getFeeReceiver:      opr.getFeeReceiver,
 		pool:                pool,
+		fee:                 ZeroAmount,
 		amountPool:          map[string]AmountState{},
 		processedSenders:    map[string]struct{}{},
 		processedNewAddress: map[string]struct{}{},
 	}
 }
 
-func (opr *OperationProcessor) getState(key string) (state.State, bool, error) {
+func (opr *OperationProcessor) setState(op valuehash.Hash, sts ...state.State) error {
 	opr.Lock()
 	defer opr.Unlock()
 
-	if ast, found := opr.amountPool[key]; found {
-		return ast, ast.exists, nil
-	} else if st, exists, err := opr.pool.Get(key); err != nil {
-		return nil, false, err
-	} else {
-		ast := NewAmountState(st, exists)
-		opr.amountPool[key] = ast
-
-		return ast, ast.exists, nil
+	sum := NewAmount(0)
+	for i := range sts {
+		if t, ok := sts[i].(AmountState); ok {
+			if t.Fee().Compare(ZeroAmount) <= 0 {
+				continue
+			} else {
+				sum = sum.Add(t.Fee())
+			}
+		}
 	}
+
+	opr.fee = opr.fee.Add(sum)
+
+	return opr.pool.Set(op, sts...)
 }
 
 func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
 	var sp state.Processor
 	var sender string
-	var get func(string) (state.State, bool, error)
+	var addresses []base.Address
 
 	switch t := op.(type) {
 	case Transfers:
-		get = opr.getState
-		sp = &TransfersProcessor{Transfers: t}
-		sender = t.Fact().(TransfersFact).Sender().String()
+		fact := t.Fact().(TransfersFact)
+		sender = fact.Sender().String()
+		sp = &TransfersProcessor{Transfers: t, fa: opr.feeAmount}
 	case CreateAccounts:
-		get = opr.getState
-		sp = &CreateAccountsProcessor{CreateAccounts: t}
-		sender = t.Fact().(CreateAccountsFact).Sender().String()
+		fact := t.Fact().(CreateAccountsFact)
+		if as, err := fact.Addresses(); err != nil {
+			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
+		} else if err := opr.checkNewAddressDuplication(as); err != nil {
+			return nil, err
+		} else {
+			addresses = as
+		}
+
+		sender = fact.Sender().String()
+		sp = &CreateAccountsProcessor{CreateAccounts: t, fa: opr.feeAmount}
 	case KeyUpdater:
-		get = opr.pool.Get
-		sp = &KeyUpdaterProcessor{KeyUpdater: t}
 		sender = t.Fact().(KeyUpdaterFact).Target().String()
+		sp = &KeyUpdaterProcessor{KeyUpdater: t, fa: opr.feeAmount}
 	default:
 		return op, nil
 	}
 
+	if err := opr.checkSenderDuplication(sender); err != nil {
+		return nil, err
+	}
+
 	var pop state.Processor
-	if pr, err := sp.(state.PreProcessor).PreProcess(get, opr.pool.Set); err != nil {
+	if pr, err := sp.(state.PreProcessor).PreProcess(opr.pool.Get, opr.setState); err != nil {
 		return nil, err
 	} else {
 		pop = pr
 	}
 
-	if func() bool {
-		opr.RLock()
-		defer opr.RUnlock()
-
-		_, found := opr.processedSenders[sender]
-
-		return found
-	}() {
-		return nil, state.IgnoreOperationProcessingError.Errorf("violates only one sender in proposal")
-	}
-
-	if t, ok := op.(CreateAccounts); ok {
-		fact := t.Fact().(CreateAccountsFact)
-		if as, err := fact.Addresses(); err != nil {
-			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
-		} else if opr.checkNewAddresses(as) {
-			return nil, state.IgnoreOperationProcessingError.Errorf("new address already processed")
-		}
-	}
-
 	opr.Lock()
 	opr.processedSenders[sender] = struct{}{}
+	for i := range addresses {
+		opr.processedNewAddress[addresses[i].String()] = struct{}{}
+	}
 	opr.Unlock()
 
 	return pop, nil
@@ -119,14 +138,11 @@ func (opr *OperationProcessor) Process(op state.Processor) error {
 
 func (opr *OperationProcessor) process(op state.Processor) error {
 	var sp state.Processor
-	var get func(string) (state.State, bool, error)
 
 	switch t := op.(type) {
 	case *TransfersProcessor:
-		get = opr.getState
 		sp = t
 	case *CreateAccountsProcessor:
-		get = opr.getState
 		sp = t
 	case *KeyUpdaterProcessor:
 		sp = t
@@ -134,22 +150,62 @@ func (opr *OperationProcessor) process(op state.Processor) error {
 		return op.Process(opr.pool.Get, opr.pool.Set)
 	}
 
-	return sp.Process(get, opr.pool.Set)
+	return sp.Process(opr.pool.Get, opr.setState)
 }
 
-func (opr *OperationProcessor) checkNewAddresses(as []base.Address) bool {
+func (opr *OperationProcessor) checkSenderDuplication(sender string) error {
+	opr.RLock()
+	defer opr.RUnlock()
+
+	if _, found := opr.processedSenders[sender]; found {
+		return state.IgnoreOperationProcessingError.Errorf("violates only one sender in proposal")
+	}
+
+	return nil
+}
+
+func (opr *OperationProcessor) checkNewAddressDuplication(as []base.Address) error {
 	opr.Lock()
 	defer opr.Unlock()
 
 	for i := range as {
 		if _, found := opr.processedNewAddress[as[i].String()]; found {
-			return true
+			return state.IgnoreOperationProcessingError.Errorf("new address already processed")
 		}
 	}
 
-	for i := range as {
-		opr.processedNewAddress[as[i].String()] = struct{}{}
+	return nil
+}
+
+func (opr *OperationProcessor) Close() error {
+	opr.RLock()
+	defer opr.RUnlock()
+
+	if opr.getFeeReceiver != nil {
+		var feeReceiver base.Address
+		if opr.fee.Compare(ZeroAmount) < 1 {
+			return nil
+		} else if r, err := opr.getFeeReceiver(); err != nil {
+			return err
+		} else {
+			feeReceiver = r
+		}
+
+		fact := NewFeeOperationFact(opr.feeAmount, opr.pool.Height(), feeReceiver, opr.fee)
+		op := NewFeeOperation(fact)
+		if err := op.Process(opr.pool.Get, opr.pool.Set); err != nil {
+			return err
+		} else {
+			opr.pool.AddOperations(op)
+		}
 	}
 
-	return false
+	return nil
+}
+
+func (opr *OperationProcessor) Cancel() error {
+	opr.RLock()
+	defer opr.RUnlock()
+
+	return nil
 }

@@ -143,7 +143,10 @@ func (op KeyUpdater) Process(
 
 type KeyUpdaterProcessor struct {
 	KeyUpdater
-	sa state.State
+	fa  FeeAmount
+	sa  state.State
+	sb  AmountState
+	fee Amount
 }
 
 func (op *KeyUpdaterProcessor) PreProcess(
@@ -152,24 +155,40 @@ func (op *KeyUpdaterProcessor) PreProcess(
 ) (state.Processor, error) {
 	fact := op.Fact().(KeyUpdaterFact)
 
-	var sa state.State
-	if st, err := existsAccountState(StateKeyKeys(fact.target), "target keys", getState); err != nil {
+	if st, err := existsAccountState(StateKeyAccount(fact.target), "target keys", getState); err != nil {
 		return nil, err
 	} else {
-		sa = st
+		op.sa = st
+	}
+
+	if st, err := existsAccountState(StateKeyBalance(fact.target), "balance of target", getState); err != nil {
+		return nil, err
+	} else {
+		op.sb = NewAmountState(st)
 	}
 
 	if err := checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
 		return nil, state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
 	}
 
-	if ks, err := StateKeysValue(sa); err != nil {
+	if ks, err := StateKeysValue(op.sa); err != nil {
 		return nil, state.IgnoreOperationProcessingError.Wrap(err)
 	} else if ks.Equal(fact.Keys()) {
 		return nil, state.IgnoreOperationProcessingError.Errorf("same Keys with the existing")
 	}
 
-	op.sa = sa
+	if fee, err := op.fa.Fee(ZeroAmount); err != nil {
+		return nil, state.IgnoreOperationProcessingError.Wrap(err)
+	} else {
+		switch b, err := StateAmountValue(op.sb); {
+		case err != nil:
+			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		case b.Compare(fee) < 0:
+			return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance with fee")
+		default:
+			op.fee = fee
+		}
+	}
 
 	return op, nil
 }
@@ -179,9 +198,11 @@ func (op *KeyUpdaterProcessor) Process(
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := op.Fact().(KeyUpdaterFact)
+
+	op.sb = op.sb.Sub(op.fee).AddFee(op.fee)
 	if st, err := SetStateKeysValue(op.sa, fact.keys); err != nil {
 		return err
 	} else {
-		return setState(fact.Hash(), st)
+		return setState(fact.Hash(), st, op.sb)
 	}
 }
