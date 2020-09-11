@@ -564,7 +564,7 @@ func (cmd *BenchCommand) prepareProcessor() error {
 		cmd.proposal = b
 	}
 
-	cmd.log.Debug().Int("facts", len(cmd.proposal.Facts())).Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
+	cmd.log.Debug().Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
 
 	cmd.fa = currency.NewFixedFeeAmount(currency.NewAmount(1))
 
