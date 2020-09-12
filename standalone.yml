@@ -32,3 +32,8 @@ config:
     interval-broadcasting-accept-ballot: 1s
     timespan-valid-ballot: 1m0s
     timeout-process-proposal: 10s
+
+component:
+    fee-amount:
+        type: fixed
+        amount: 1
