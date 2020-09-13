@@ -10,9 +10,11 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -38,6 +40,7 @@ var (
 func init() {
 	hinters = append(hinters, contestlib.Hinters...)
 	hinters = append(hinters,
+		NodeInfo{},
 		currency.Address(""),
 		currency.Key{},
 		currency.Keys{},
@@ -133,16 +136,16 @@ func loadEncoders() (*encoder.Encoders, error) {
 	}
 }
 
-func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger) (*currency.Launcher, error) {
-	var design *currency.NodeDesign
-	if d, err := currency.LoadNodeDesign(b, encs); err != nil {
+func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger) (*Launcher, error) {
+	var design *NodeDesign
+	if d, err := LoadNodeDesign(b, encs); err != nil {
 		return nil, err
 	} else {
 		design = d
 	}
 
-	var nr *currency.Launcher
-	if n, err := currency.NewLauncherFromDesign(design, version); err != nil {
+	var nr *Launcher
+	if n, err := NewLauncherFromDesign(design, version); err != nil {
 		return nil, xerrors.Errorf("failed to create node runner: %w", err)
 	} else if err := n.AddHinters(hinters...); err != nil {
 		return nil, err
@@ -280,28 +283,80 @@ func initlaizeProposalProcessor(dp isaac.ProposalProcessor, opr isaac.OperationP
 	}
 }
 
-func saveGenesisAccountInfo(st storage.Storage, ac currency.Account) error {
-	if b, err := defaultJSONEnc.Marshal(ac); err != nil {
-		return xerrors.Errorf("failed to save genesis account: %w", err)
-	} else if err := st.SetInfo(currency.GenesisAccountKey, b); err != nil {
-		return xerrors.Errorf("failed to save genesis account: %w", err)
-	} else {
-		return nil
+func saveGenesisAccountInfo(st storage.Storage, genesisBlock block.Block) (currency.Account, currency.Amount, error) {
+	log.Debug().Msg("trying to save genesis info")
+	var gac currency.Account
+	var gbalance currency.Amount = currency.NilAmount
+	for i := range genesisBlock.States() {
+		st := genesisBlock.States()[i]
+		if currency.IsStateAccountKey(st.Key()) {
+			if ac, err := currency.LoadStateAccountValue(st); err != nil {
+				return currency.Account{}, currency.NilAmount, err
+			} else {
+				gac = ac
+			}
+		} else if currency.IsStateBalanceKey(st.Key()) {
+			if am, err := currency.StateAmountValue(st); err != nil {
+				return currency.Account{}, currency.NilAmount, err
+			} else {
+				gbalance = am
+			}
+		}
 	}
+
+	if gac.IsEmpty() {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to find genesis account")
+	}
+
+	if gbalance.Compare(currency.ZeroAmount) <= 0 {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to find genesis balance")
+	}
+
+	if b, err := defaultJSONEnc.Marshal(gac); err != nil {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis account: %w", err)
+	} else if err := st.SetInfo(GenesisAccountKey, b); err != nil {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis account: %w", err)
+	}
+
+	if b, err := defaultJSONEnc.Marshal(gbalance); err != nil {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis balance: %w", err)
+	} else if err := st.SetInfo(GenesisBalanceKey, b); err != nil {
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis balance: %w", err)
+	}
+
+	log.Debug().Msg("genesis info saved")
+	return gac, gbalance, nil
 }
 
-func loadGenesisAccountInfo(st storage.Storage) (currency.Account, error) {
-	switch b, found, err := st.GetInfo(currency.GenesisAccountKey); {
-	case err != nil:
-		return currency.Account{}, xerrors.Errorf("failed to get genesis account: %w", err)
-	case !found:
-		return currency.Account{}, storage.NotFoundError.Errorf("genesis account not found")
-	default:
-		var ac currency.Account
-		if err := defaultJSONEnc.Decode(b, &ac); err != nil {
-			return currency.Account{}, xerrors.Errorf("failed to load genesis account for getting fee receiver: %w", err)
-		}
+func loadGenesisAccountInfo(st storage.Storage) (currency.Account, currency.Amount, error) {
+	log.Debug().Msg("tryingo to load genesis info")
+	var ac currency.Account
+	var balance currency.Amount
 
-		return ac, nil
+	switch b, found, err := st.GetInfo(GenesisAccountKey); {
+	case err != nil:
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis account: %w", err)
+	case !found:
+		return currency.Account{}, currency.NilAmount, storage.NotFoundError.Errorf("genesis account not found")
+	default:
+		if err := defaultJSONEnc.Decode(b, &ac); err != nil {
+			return currency.Account{},
+				currency.NilAmount,
+				xerrors.Errorf("failed to load genesis account for getting fee receiver: %w", err)
+		}
 	}
+
+	switch b, found, err := st.GetInfo(GenesisBalanceKey); {
+	case err != nil:
+		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis balance: %w", err)
+	case !found:
+		return currency.Account{}, currency.NilAmount, storage.NotFoundError.Errorf("genesis balance not found")
+	default:
+		if err := defaultJSONEnc.Decode(b, &balance); err != nil {
+			return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to load genesis balance: %w", err)
+		}
+	}
+
+	log.Debug().Msg("genesis info loaded")
+	return ac, balance, nil
 }

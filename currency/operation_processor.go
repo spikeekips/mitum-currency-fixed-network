@@ -15,6 +15,7 @@ type OperationProcessor struct {
 	*logging.Logging
 	feeAmount           FeeAmount
 	getFeeReceiver      func() (base.Address, error)
+	feeReceiver         base.Address
 	pool                *isaac.Statepool
 	fee                 Amount
 	amountPool          map[string]AmountState
@@ -37,12 +38,19 @@ func NewOperationProcessor(feeAmount FeeAmount, getFeeReceiver func() (base.Addr
 }
 
 func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
+	var feeReceiver base.Address
+	if opr.getFeeReceiver != nil {
+		if a, err := opr.getFeeReceiver(); err == nil {
+			feeReceiver = a
+		}
+	}
+
 	return &OperationProcessor{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
 		feeAmount:           opr.feeAmount,
-		getFeeReceiver:      opr.getFeeReceiver,
+		feeReceiver:         feeReceiver,
 		pool:                pool,
 		fee:                 ZeroAmount,
 		amountPool:          map[string]AmountState{},
@@ -181,17 +189,12 @@ func (opr *OperationProcessor) Close() error {
 	opr.RLock()
 	defer opr.RUnlock()
 
-	if opr.getFeeReceiver != nil {
-		var feeReceiver base.Address
+	if opr.feeReceiver != nil {
 		if opr.fee.Compare(ZeroAmount) < 1 {
 			return nil
-		} else if r, err := opr.getFeeReceiver(); err != nil {
-			return err
-		} else {
-			feeReceiver = r
 		}
 
-		fact := NewFeeOperationFact(opr.feeAmount, opr.pool.Height(), feeReceiver, opr.fee)
+		fact := NewFeeOperationFact(opr.feeAmount, opr.pool.Height(), opr.feeReceiver, opr.fee)
 		op := NewFeeOperation(fact)
 		if err := op.Process(opr.pool.Get, opr.pool.Set); err != nil {
 			return err

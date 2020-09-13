@@ -1,4 +1,4 @@
-package currency
+package cmds
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -17,7 +18,7 @@ import (
 
 type NodeDesign struct {
 	*launcher.NodeDesign
-	FeeAmount   FeeAmount
+	FeeAmount   currency.FeeAmount
 	FeeReceiver base.Address
 }
 
@@ -67,7 +68,7 @@ func (nd *NodeDesign) loadFeeAmount() error {
 		}
 	}
 
-	var fa FeeAmount
+	var fa currency.FeeAmount
 	switch t := c["type"]; {
 	case t == "fixed":
 		if f, err := nd.loadFixedFeeAmount(c); err != nil {
@@ -90,19 +91,19 @@ func (nd *NodeDesign) loadFeeAmount() error {
 	return nil
 }
 
-func (nd *NodeDesign) loadFixedFeeAmount(c map[string]interface{}) (FeeAmount, error) {
+func (nd *NodeDesign) loadFixedFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
 	if a, found := c["amount"]; !found {
 		return nil, xerrors.Errorf("fixed fee-amount needs `amount`")
 	} else {
-		if n, err := NewAmountFromInterface(a); err != nil {
+		if n, err := currency.NewAmountFromInterface(a); err != nil {
 			return nil, xerrors.Errorf("invalid amount value, %v of fee-amount: %w", a, err)
 		} else {
-			return NewFixedFeeAmount(n), nil
+			return currency.NewFixedFeeAmount(n), nil
 		}
 	}
 }
 
-func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (FeeAmount, error) {
+func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
 	var ratio float64
 	if a, found := c["ratio"]; !found {
 		return nil, xerrors.Errorf("ratio fee-amount needs `ratio`")
@@ -112,16 +113,16 @@ func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (FeeAmount, e
 		ratio = f
 	}
 
-	var min Amount
+	var min currency.Amount
 	if a, found := c["min"]; !found {
 		return nil, xerrors.Errorf("ratio fee-amount needs `min`")
-	} else if n, err := NewAmountFromInterface(a); err != nil {
+	} else if n, err := currency.NewAmountFromInterface(a); err != nil {
 		return nil, xerrors.Errorf("invalid min value, %v of fee-amount: %w", a, err)
 	} else {
 		min = n
 	}
 
-	return NewRatioFeeAmount(ratio, min)
+	return currency.NewRatioFeeAmount(ratio, min)
 }
 
 func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
@@ -154,7 +155,7 @@ type GenesisAccountDesign struct {
 	encs          *encoder.Encoders
 	AccountKeys   *AccountKeysDesign `yaml:"account-keys"`
 	BalanceString string             `yaml:"balance"`
-	Balance       Amount             `yaml:"-"`
+	Balance       currency.Amount    `yaml:"-"`
 }
 
 func (gad *GenesisAccountDesign) IsValid([]byte) error {
@@ -163,7 +164,7 @@ func (gad *GenesisAccountDesign) IsValid([]byte) error {
 		return err
 	}
 
-	if am, err := NewAmountFromString(gad.BalanceString); err != nil {
+	if am, err := currency.NewAmountFromString(gad.BalanceString); err != nil {
 		return err
 	} else {
 		gad.Balance = am
@@ -175,13 +176,13 @@ func (gad *GenesisAccountDesign) IsValid([]byte) error {
 type AccountKeysDesign struct {
 	encs       *encoder.Encoders
 	Threshold  uint
-	KeysDesign []*KeyDesign `yaml:"keys"`
-	Keys       Keys         `yaml:"-"`
-	Address    Address      `yaml:"-"`
+	KeysDesign []*KeyDesign     `yaml:"keys"`
+	Keys       currency.Keys    `yaml:"-"`
+	Address    currency.Address `yaml:"-"`
 }
 
 func (akd *AccountKeysDesign) IsValid([]byte) error {
-	ks := make([]Key, len(akd.KeysDesign))
+	ks := make([]currency.Key, len(akd.KeysDesign))
 	for i := range akd.KeysDesign {
 		kd := akd.KeysDesign[i]
 		kd.encs = akd.encs
@@ -193,13 +194,13 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 		ks[i] = kd.Key
 	}
 
-	if keys, err := NewKeys(ks, akd.Threshold); err != nil {
+	if keys, err := currency.NewKeys(ks, akd.Threshold); err != nil {
 		return err
 	} else {
 		akd.Keys = keys
 	}
 
-	if a, err := NewAddressFromKeys(akd.Keys); err != nil {
+	if a, err := currency.NewAddressFromKeys(akd.Keys); err != nil {
 		return err
 	} else {
 		akd.Address = a
@@ -212,7 +213,7 @@ type KeyDesign struct {
 	encs            *encoder.Encoders
 	PublickeyString string `yaml:"publickey"`
 	Weight          uint
-	Key             Key `yaml:"-"`
+	Key             currency.Key `yaml:"-"`
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
@@ -225,7 +226,7 @@ func (kd *KeyDesign) IsValid([]byte) error {
 
 	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
 		return err
-	} else if k, err := NewKey(pub, kd.Weight); err != nil {
+	} else if k, err := currency.NewKey(pub, kd.Weight); err != nil {
 		return err
 	} else {
 		kd.Key = k
@@ -281,21 +282,21 @@ func LoadOtherInitOperation(nr *Launcher, name string, m map[string]interface{})
 	}
 }
 
-func LoadGenesisAccountOperation(nr *Launcher, m map[string]interface{}) (GenesisAccount, error) {
+func LoadGenesisAccountOperation(nr *Launcher, m map[string]interface{}) (currency.GenesisAccount, error) {
 	var gad *GenesisAccountDesign
 	if d, err := LoadGenesisAccountDesign(nr, m); err != nil {
-		return GenesisAccount{}, err
+		return currency.GenesisAccount{}, err
 	} else {
 		gad = d
 	}
 
-	if op, err := NewGenesisAccount(
+	if op, err := currency.NewGenesisAccount(
 		nr.Design().Privatekey(),
 		gad.AccountKeys.Keys,
 		gad.Balance,
 		nr.Design().NetworkID(),
 	); err != nil {
-		return GenesisAccount{}, err
+		return currency.GenesisAccount{}, err
 	} else {
 		return op, nil
 	}

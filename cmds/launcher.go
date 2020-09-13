@@ -1,11 +1,13 @@
-package currency
+package cmds
 
 import (
 	"fmt"
 	"net/url"
+	"sync"
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
@@ -13,12 +15,18 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var GenesisAccountKey = "genesis_account"
+var (
+	GenesisAccountKey = "genesis_account"
+	GenesisBalanceKey = "genesis_balance"
+)
 
 type Launcher struct {
+	sync.RWMutex
 	*logging.Logging
 	*launcher.Launcher
-	design *NodeDesign
+	design         *NodeDesign
+	genesisAccount currency.Account
+	genesisBalance currency.Amount
 }
 
 func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
@@ -101,6 +109,8 @@ func (nr *Launcher) attachNetwork() error {
 		return err
 	} else {
 		_ = nr.SetNetwork(qs)
+		qs.SetNodeInfoHandler(nr.nodeInfoHandler)
+
 		_ = nr.SetPublichURL(nr.design.Network.PublishURL().String())
 	}
 
@@ -122,6 +132,10 @@ func (nr *Launcher) attachNodeChannel() error {
 	if ch, err := launcher.LoadNodeChannel(nu, nr.Encoders()); err != nil {
 		return err
 	} else {
+		if l, ok := ch.(logging.SetLogger); ok {
+			_ = l.SetLogger(nr.Log())
+		}
+
 		_ = nr.SetNodeChannel(ch)
 		_ = nr.Localstate().Node().SetChannel(ch)
 	}
@@ -146,6 +160,10 @@ func (nr *Launcher) attachRemoteNodes() error {
 		if ch, err := launcher.LoadNodeChannel(r.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {
+			if l, ok := ch.(logging.SetLogger); ok {
+				_ = l.SetLogger(nr.Log())
+			}
+
 			_ = n.SetChannel(ch)
 		}
 		l.Debug().Msg("created")
@@ -198,4 +216,38 @@ func (nr *Launcher) attachProposalProcessor() error {
 	l.Debug().Msg("attached")
 
 	return nil
+}
+
+func (nr *Launcher) genesisInfo() (currency.Account, currency.Amount, bool) {
+	nr.RLock()
+	defer nr.RUnlock()
+
+	return nr.genesisAccount, nr.genesisBalance, nr.genesisBalance.Compare(currency.ZeroAmount) > 0
+}
+
+func (nr *Launcher) setGenesisInfo(ac currency.Account, balance currency.Amount) {
+	nr.Lock()
+	defer nr.Unlock()
+
+	nr.genesisAccount = ac
+	nr.genesisBalance = balance
+}
+
+func (nr *Launcher) nodeInfoHandler() (network.NodeInfo, error) {
+	var ga currency.Account
+	var gb currency.Amount
+	if ac, ba, exist := nr.genesisInfo(); !exist {
+		nr.Log().Debug().Msg("genesis info not found")
+	} else {
+		ga = ac
+		gb = ba
+	}
+
+	if i, err := nr.NodeInfo(); err != nil {
+		return nil, err
+	} else if ni, ok := i.(network.NodeInfoV0); !ok {
+		return nil, xerrors.Errorf("unsupported NodeInfo, %T", i)
+	} else {
+		return NewNodeInfo(ni, nr.Design().FeeAmount, ga, gb), nil
+	}
 }

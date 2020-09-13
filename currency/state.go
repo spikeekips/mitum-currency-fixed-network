@@ -20,6 +20,10 @@ func IsStateAccountKey(key string) bool {
 	return strings.HasSuffix(key, ":account")
 }
 
+func IsStateBalanceKey(key string) bool {
+	return strings.HasSuffix(key, ":balance")
+}
+
 func StateKeyBalance(a base.Address) string {
 	return fmt.Sprintf("%s:balance", a.String())
 }

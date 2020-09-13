@@ -38,7 +38,7 @@ func (cmd *InitCommand) Run(flags *MainFlags, version util.Version) error {
 }
 
 func (cmd *InitCommand) run(log logging.Logger) error {
-	var nr *currency.Launcher
+	var nr *Launcher
 	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, log); err != nil {
 		return err
 	} else {
@@ -93,10 +93,14 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 	log.Info().Msg("genesis block created")
 	log.Info().Msg("iniialized")
 
-	return cmd.saveGenesisAccount(nr, genesisBlock)
+	if _, _, err := saveGenesisAccountInfo(nr.Storage(), genesisBlock); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (cmd *InitCommand) checkExisting(nr *currency.Launcher, log logging.Logger) error {
+func (cmd *InitCommand) checkExisting(nr *Launcher, log logging.Logger) error {
 	log.Debug().Msg("checking existing blocks")
 
 	var manifest block.Manifest
@@ -117,15 +121,15 @@ func (cmd *InitCommand) checkExisting(nr *currency.Launcher, log logging.Logger)
 	return nil
 }
 
-func (cmd *InitCommand) loadInitOperations(nr *currency.Launcher) ([]operation.Operation, error) {
+func (cmd *InitCommand) loadInitOperations(nr *Launcher) ([]operation.Operation, error) {
 	var ops []operation.Operation
-	if o, err := currency.LoadPolicyOperation(nr.Design()); err != nil {
+	if o, err := LoadPolicyOperation(nr.Design()); err != nil {
 		return nil, err
 	} else {
 		ops = append(ops, o...)
 	}
 
-	if o, err := currency.LoadOtherInitOperations(nr); err != nil {
+	if o, err := LoadOtherInitOperations(nr); err != nil {
 		return nil, err
 	} else {
 		ops = append(ops, o...)
@@ -147,28 +151,7 @@ func (cmd *InitCommand) loadInitOperations(nr *currency.Launcher) ([]operation.O
 	return ops, nil
 }
 
-func (cmd *InitCommand) saveGenesisAccount(nr *currency.Launcher, genesisBlock block.Block) error {
-	var gac currency.Account
-	for i := range genesisBlock.States() {
-		st := genesisBlock.States()[i]
-		if currency.IsStateAccountKey(st.Key()) {
-			if ac, err := currency.LoadStateAccountValue(st); err != nil {
-				return err
-			} else {
-				gac = ac
-			}
-			break
-		}
-	}
-
-	if gac.IsEmpty() {
-		return xerrors.Errorf("failed to find genesis account")
-	}
-
-	return saveGenesisAccountInfo(nr.Storage(), gac)
-}
-
-func (cmd *InitCommand) prepareProposalProcessor(nr *currency.Launcher) error {
+func (cmd *InitCommand) prepareProposalProcessor(nr *Launcher) error {
 	return initlaizeProposalProcessor(
 		// NOTE NilFeeAmount will be applied whatever design defined
 		nr.ProposalProcessor(),

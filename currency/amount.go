@@ -69,14 +69,26 @@ func NewAmountFromInterface(a interface{}) (Amount, error) {
 }
 
 func (a Amount) IsZero() bool {
+	if a.Int == nil {
+		return true
+	}
+
 	return a.Int.Cmp(ZeroAmount.Int) == 0
 }
 
 func (a Amount) Equal(b Amount) bool {
+	if a.Int == nil {
+		return false
+	}
+
 	return a.Int.Cmp(b.Int) == 0
 }
 
 func (a Amount) Compare(b Amount) int {
+	if a.Int == nil {
+		return -1
+	}
+
 	return a.Int.Cmp(b.Int)
 }
 
