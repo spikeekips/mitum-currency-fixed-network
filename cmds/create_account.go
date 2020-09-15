@@ -3,6 +3,7 @@ package cmds
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/localtime"
 
@@ -22,12 +23,17 @@ type CreateAccountCommand struct {
 	Memo       string         `name:"memo" help:"memo"`
 	Seal       FileLoad       `help:"seal" optional:""`
 
-	keys currency.Keys
+	sender base.Address
+	keys   currency.Keys
 }
 
 func (cmd *CreateAccountCommand) Run() error {
 	if err := cmd.parseFlags(); err != nil {
 		return err
+	} else if a, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else {
+		cmd.sender = a
 	}
 
 	var op operation.Operation
@@ -82,7 +88,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 	item := currency.NewCreateAccountItem(cmd.keys, cmd.Amount.Amount)
 	fact := currency.NewCreateAccountsFact(
 		[]byte(cmd.Token),
-		cmd.Sender.Address,
+		cmd.sender,
 		[]currency.CreateAccountItem{item},
 	)
 

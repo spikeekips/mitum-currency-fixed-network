@@ -28,7 +28,7 @@ func (cmd *KeyAddressCommand) Run(log logging.Logger) error {
 	if a, err := currency.NewAddressFromKeys(keys); err != nil {
 		return err
 	} else {
-		cmd.print(a.String())
+		cmd.print(a.HintedString())
 	}
 
 	return nil

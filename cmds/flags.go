@@ -9,8 +9,11 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -73,19 +76,27 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 }
 
 type AddressFlag struct {
-	currency.Address
+	s  string
+	ad base.AddressDecoder
 }
 
 func (v *AddressFlag) UnmarshalText(b []byte) error {
-	if a, err := currency.NewAddress(string(b)); err != nil {
-		return xerrors.Errorf("invalid Address string, %q: %w", string(b), err)
-	} else if err := a.IsValid(nil); err != nil {
+	if ht, s, err := hint.ParseHintedString(string(b)); err != nil {
 		return err
 	} else {
-		*v = AddressFlag{Address: a}
-	}
+		v.s = string(b)
+		v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(ht, s)}
 
-	return nil
+		return nil
+	}
+}
+
+func (v *AddressFlag) String() string {
+	return v.s
+}
+
+func (v *AddressFlag) Encode(enc encoder.Encoder) (base.Address, error) {
+	return v.ad.Encode(enc)
 }
 
 type PrivatekeyFlag struct {

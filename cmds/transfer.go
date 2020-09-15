@@ -3,6 +3,7 @@ package cmds
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/localtime"
 
@@ -20,11 +21,21 @@ type TransferCommand struct {
 	Memo       string         `name:"memo" help:"memo"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Seal       FileLoad       `help:"seal" optional:""`
+
+	sender   base.Address
+	receiver base.Address
 }
 
 func (cmd *TransferCommand) Run() error {
 	if err := cmd.parseFlags(); err != nil {
 		return err
+	} else if sender, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else if receiver, err := cmd.Receiver.Encode(defaultJSONEnc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else {
+		cmd.sender = sender
+		cmd.receiver = receiver
 	}
 
 	var op operation.Operation
@@ -57,13 +68,13 @@ func (cmd *TransferCommand) parseFlags() error {
 }
 
 func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
-	item := currency.NewTransferItem(cmd.Receiver.Address, cmd.Amount.Amount)
+	item := currency.NewTransferItem(cmd.receiver, cmd.Amount.Amount)
 	if err := item.IsValid(nil); err != nil {
 		return nil, err
 	}
 
 	items := []currency.TransferItem{item}
-	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.Sender.Address, items)
+	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.sender, items)
 
 	var fs []operation.FactSign
 	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.Bytes()); err != nil {
