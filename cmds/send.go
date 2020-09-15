@@ -6,10 +6,12 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SendCommand struct {
+	BaseCommand
 	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
 	Seal       FileLoad       `help:"seal" optional:""`
@@ -18,7 +20,9 @@ type SendCommand struct {
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey for sign"`
 }
 
-func (cmd *SendCommand) Run(log logging.Logger) error {
+func (cmd *SendCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	var sl seal.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		return err
@@ -26,7 +30,7 @@ func (cmd *SendCommand) Run(log logging.Logger) error {
 		sl = s
 	}
 
-	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
 		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
@@ -35,7 +39,7 @@ func (cmd *SendCommand) Run(log logging.Logger) error {
 			sl = s
 		}
 
-		log.Debug().Msg("seal signed")
+		cmd.Log().Debug().Msg("seal signed")
 	}
 
 	if cmd.DryRun {
@@ -44,10 +48,10 @@ func (cmd *SendCommand) Run(log logging.Logger) error {
 		return nil
 	}
 
-	log.Debug().Msg("trying to send seal")
+	cmd.Log().Debug().Msg("trying to send seal")
 
 	if err := cmd.send(sl); err != nil {
-		log.Error().Err(err).Msg("failed to send seal")
+		cmd.Log().Error().Err(err).Msg("failed to send seal")
 
 		return err
 	}

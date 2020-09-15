@@ -5,13 +5,15 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 
 	currency "github.com/spikeekips/mitum-currency/currency"
 )
 
 type TransferCommand struct {
-	printCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Receiver   AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:""`
@@ -26,7 +28,9 @@ type TransferCommand struct {
 	receiver base.Address
 }
 
-func (cmd *TransferCommand) Run() error {
+func (cmd *TransferCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	} else if sender, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {

@@ -13,33 +13,32 @@ import (
 )
 
 type InitCommand struct {
-	Design  FileLoad `arg:"" name:"node design file" help:"node design file"`
-	Force   bool     `help:"clean the existing environment"`
-	version util.Version
+	BaseCommand
+	Design FileLoad `arg:"" name:"node design file" help:"node design file"`
+	Force  bool     `help:"clean the existing environment"`
 }
 
-func (cmd *InitCommand) Run(flags *MainFlags, version util.Version) error {
-	var log logging.Logger
+func (cmd *InitCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	if l, err := SetupLogging(flags.Log, flags.LogFlags); err != nil {
 		return err
 	} else {
-		log = l
+		cmd.log = l
 	}
 
-	log.Info().Str("version", version.String()).Msg("mitum-currency")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
-	defer log.Info().Msg("mitum-currency finished")
+	cmd.Log().Info().Str("version", version.String()).Msg("mitum-currency")
+	cmd.Log().Debug().Interface("flags", flags).Msg("flags parsed")
+	defer cmd.Log().Info().Msg("mitum-currency finished")
 
-	log.Info().Msg("trying to initialize")
+	cmd.Log().Info().Msg("trying to initialize")
 
-	cmd.version = version
-
-	return cmd.run(log)
+	return cmd.run()
 }
 
-func (cmd *InitCommand) run(log logging.Logger) error {
+func (cmd *InitCommand) run() error {
 	var nr *Launcher
-	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, log); err != nil {
+	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, cmd.Log()); err != nil {
 		return err
 	} else {
 		nr = n
@@ -61,9 +60,9 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		return err
 	}
 
-	log.Debug().Msg("checking existing blocks")
+	cmd.Log().Debug().Msg("checking existing blocks")
 
-	if err := cmd.checkExisting(nr, log); err != nil {
+	if err := cmd.checkExisting(nr); err != nil {
 		return err
 	}
 
@@ -74,34 +73,34 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		ops = o
 	}
 
-	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
+	cmd.Log().Debug().Int("operations", len(ops)).Msg("operations loaded")
 
-	log.Debug().Msg("trying to create genesis block")
+	cmd.Log().Debug().Msg("trying to create genesis block")
 	var genesisBlock block.Block
 	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return xerrors.Errorf("failed to generate genesis block: %w", err)
 	} else {
-		log.Info().
+		cmd.Log().Info().
 			Dict("block", logging.Dict().Hinted("height", blk.Height()).Hinted("hash", blk.Hash())).
 			Msg("genesis block created")
 
 		genesisBlock = blk
 	}
 
-	log.Info().Msg("genesis block created")
-	log.Info().Msg("iniialized")
+	cmd.Log().Info().Msg("genesis block created")
+	cmd.Log().Info().Msg("iniialized")
 
-	if _, _, err := saveGenesisAccountInfo(nr.Storage(), genesisBlock); err != nil {
+	if _, _, err := saveGenesisAccountInfo(nr.Storage(), genesisBlock, cmd.Log()); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (cmd *InitCommand) checkExisting(nr *Launcher, log logging.Logger) error {
-	log.Debug().Msg("checking existing blocks")
+func (cmd *InitCommand) checkExisting(nr *Launcher) error {
+	cmd.Log().Debug().Msg("checking existing blocks")
 
 	var manifest block.Manifest
 	if m, found, err := nr.Storage().LastManifest(); err != nil {
@@ -111,9 +110,9 @@ func (cmd *InitCommand) checkExisting(nr *Launcher, log logging.Logger) error {
 	}
 
 	if manifest == nil {
-		log.Debug().Msg("not found existing blocks")
+		cmd.Log().Debug().Msg("not found existing blocks")
 	} else {
-		log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
+		cmd.Log().Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
 		return xerrors.Errorf("already blocks exist, clean first")
 	}

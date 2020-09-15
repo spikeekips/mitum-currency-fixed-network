@@ -4,19 +4,22 @@ import (
 	"os"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type VerifyKeyCommand struct {
-	printCommand
+	BaseCommand
 	Key    StringLoad `arg:"" name:"key" help:"key" required:""`
 	Quite  bool       `name:"quite" short:"q" help:"keep silence"`
 	JSON   bool       `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool       `name:"pretty" help:"pretty format"`
 }
 
-func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
+func (cmd *VerifyKeyCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	var pk key.Key
 	if k, err := loadKey(cmd.Key.Bytes()); err != nil {
 		if cmd.Quite {
@@ -28,7 +31,7 @@ func (cmd *VerifyKeyCommand) Run(log logging.Logger) error {
 		pk = k
 	}
 
-	log.Debug().Interface("key", pk).Msg("key parsed")
+	cmd.Log().Debug().Interface("key", pk).Msg("key parsed")
 
 	if cmd.Quite {
 		return nil

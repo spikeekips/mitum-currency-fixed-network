@@ -4,18 +4,21 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SignFactCommand struct {
-	printCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Seal       FileLoad       `help:"seal" optional:""`
 }
 
-func (cmd *SignFactCommand) Run(log logging.Logger) error {
+func (cmd *SignFactCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	var sl operation.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		return err
@@ -27,7 +30,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 		sl = so
 	}
 
-	log.Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	nops := make([]operation.Operation, len(sl.Operations()))
 	for i := range sl.Operations() {
@@ -35,7 +38,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 
 		var fsu operation.FactSignUpdater
 		if u, ok := op.(operation.FactSignUpdater); !ok {
-			log.Debug().
+			cmd.Log().Debug().
 				Interface("operation", op).
 				Hinted("operation_type", op.Hint()).
 				Msg("not operation.FactSignUpdater")
@@ -65,7 +68,7 @@ func (cmd *SignFactCommand) Run(log logging.Logger) error {
 	} else {
 		sl = s.(operation.Seal)
 
-		log.Debug().Msg("seal signed")
+		cmd.Log().Debug().Msg("seal signed")
 	}
 
 	cmd.pretty(cmd.Pretty, sl)

@@ -31,9 +31,9 @@ import (
 var genesisAmountString = "99999999999999999999999999"
 
 type BenchCommand struct {
+	BaseCommand
 	StorageURI    *url.URL `name:"storage" help:"mongodb storage uri (default:mongodb://localhost:27017)" default:"mongodb://localhost:27017"` // nolint
 	Operations    uint     `arg:"" name:"operations" help:"number of operations (default:10)" default:"10"`
-	log           logging.Logger
 	priv          key.Privatekey
 	networkID     base.NetworkID
 	storage       storage.Storage
@@ -51,25 +51,25 @@ type BenchCommand struct {
 	fa            currency.FeeAmount
 }
 
-func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version) error {
-	var log logging.Logger
+func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version, l logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, l)
+
 	if l, err := SetupLogging(flags.Log, flags.LogFlags); err != nil {
 		return err
 	} else {
-		log = l
+		cmd.log = l
 	}
 
 	if cmd.Operations < 4 {
 		return xerrors.Errorf("operations should be over 4")
 	}
 
-	log.Info().Str("version", version.String()).Msg("mitum-currency")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
-	defer log.Info().Msg("mitum-currency finished")
+	cmd.Log().Info().Str("version", version.String()).Msg("mitum-currency")
+	cmd.Log().Debug().Interface("flags", flags).Msg("flags parsed")
+	defer cmd.Log().Info().Msg("mitum-currency finished")
 
-	log.Info().Msg("trying to benchmark")
+	cmd.Log().Info().Msg("trying to benchmark")
 
-	cmd.log = log
 	cmd.genesis = newAccount()
 
 	return cmd.run()
@@ -90,39 +90,39 @@ func (cmd *BenchCommand) run() error {
 
 		cmd.storage = st
 	}
-	cmd.log.Debug().Msg("storage prepared")
+	cmd.Log().Debug().Msg("storage prepared")
 
 	if local, err := cmd.localstate(); err != nil {
 		return xerrors.Errorf("failed to preaper localstate: %w", err)
 	} else {
 		cmd.local = local
 	}
-	cmd.log.Debug().Msg("local prepared")
+	cmd.Log().Debug().Msg("local prepared")
 
 	cmd.suffrage = base.NewFixedSuffrage(cmd.local.Node().Address(), []base.Address{cmd.local.Node().Address()})
 	if err := cmd.suffrage.Initialize(); err != nil {
 		return xerrors.Errorf("failed to initialize suffrage: %w", err)
 	}
-	cmd.log.Debug().Msg("fixed suffrage prepared")
+	cmd.Log().Debug().Msg("fixed suffrage prepared")
 
 	if err := cmd.elapsed("prepare-accounts", cmd.prepareAccounts); err != nil {
 		return xerrors.Errorf("failed to prepare accounts: %w", err)
 	}
-	cmd.log.Debug().Int("accounts", len(cmd.accounts)).Msg("accounts prepared")
+	cmd.Log().Debug().Int("accounts", len(cmd.accounts)).Msg("accounts prepared")
 
 	if err := cmd.elapsed("prepare-operations", cmd.prepareOperations); err != nil {
 		return xerrors.Errorf("failed to prepare operations: %w", err)
 	}
-	cmd.log.Debug().
+	cmd.Log().Debug().
 		Int("operations", len(cmd.ops)).Int("excluded_operations", len(cmd.opsExclude)).
 		Msg("operations prepared")
 
 	if err := cmd.elapsed("prepare-processor", cmd.prepareProcessor); err != nil {
 		return xerrors.Errorf("failed to prepare processor: %w", err)
 	}
-	cmd.log.Debug().Msg("processor prepared")
+	cmd.Log().Debug().Msg("processor prepared")
 
-	cmd.log.Debug().Msg("running again for checking block hash")
+	cmd.Log().Debug().Msg("running again for checking block hash")
 	for i := 0; i < 10; i++ {
 		if cmd.previousBlock != nil {
 			if err := cmd.clean(); err != nil {
@@ -160,7 +160,7 @@ func (cmd *BenchCommand) try(i int) error {
 	}
 
 	if !cmd.previousBlock.Hash().Equal(cmd.block.Hash()) {
-		cmd.log.Error().Int("try", i).
+		cmd.Log().Error().Int("try", i).
 			Dict("previous_block", logging.Dict().
 				Hinted("hash", cmd.previousBlock.Hash()).
 				Hinted("states", cmd.previousBlock.StatesHash()).
@@ -175,13 +175,13 @@ func (cmd *BenchCommand) try(i int) error {
 
 		return xerrors.Errorf("block hash does not match; %v != %v", cmd.previousBlock.Hash(), cmd.block.Hash())
 	} else {
-		cmd.log.Debug().Int("try", i).
+		cmd.Log().Debug().Int("try", i).
 			Hinted("previous_block", cmd.previousBlock.Hash()).
 			Hinted("new_block", cmd.block.Hash()).
 			Msg("block hash matched")
 	}
 
-	cmd.log.Debug().Msg("checked")
+	cmd.Log().Debug().Msg("checked")
 
 	return nil
 }
@@ -213,7 +213,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	}
 
 	n := isaac.NewLocalNode(address, key.MustNewBTCPrivatekey())
-	cmd.log.Debug().Msg("local node created")
+	cmd.Log().Debug().Msg("local node created")
 
 	local, err := isaac.NewLocalstate(cmd.storage, localfs.TempBlockFS(defaultJSONEnc), n, cmd.networkID)
 	if err != nil {
@@ -229,10 +229,10 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	if err := local.Initialize(); err != nil {
 		return nil, err
 	}
-	cmd.log.Debug().Msg("localstate created")
+	cmd.Log().Debug().Msg("localstate created")
 
 	amount, _ := currency.NewAmountFromString(genesisAmountString)
-	cmd.log.Debug().
+	cmd.Log().Debug().
 		Str("amount", amount.String()).
 		Str("privatekey", cmd.genesis.Priv.String()).
 		Str("address", cmd.genesis.Address.String()).
@@ -244,7 +244,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	} else if _, err := genesis.Generate(); err != nil {
 		return nil, err
 	}
-	cmd.log.Debug().Msg("genesis account generated")
+	cmd.Log().Debug().Msg("genesis account generated")
 
 	_, _ = local.Policy().SetMaxOperationsInProposal(cmd.Operations + 10)
 
@@ -300,7 +300,7 @@ func (cmd *BenchCommand) prepareAccounts() error {
 		n = cmd.Operations
 	}
 
-	cmd.log.Debug().Uint("number_of_accounts", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
+	cmd.Log().Debug().Uint("number_of_accounts", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
 
 	errchan := make(chan error)
 	wk := util.NewDistributeWorker(n, errchan)
@@ -415,7 +415,7 @@ func (cmd *BenchCommand) prepareOperations() error {
 		n = cmd.Operations
 	}
 
-	cmd.log.Debug().Uint("number_of_operations", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
+	cmd.Log().Debug().Uint("number_of_operations", cmd.Operations).Uint("workers", n).Msg("preparing to create accounts")
 
 	errchan := make(chan error, cmd.Operations)
 	wk := util.NewDistributeWorker(n, errchan)
@@ -564,7 +564,7 @@ func (cmd *BenchCommand) prepareProcessor() error {
 		cmd.proposal = b
 	}
 
-	cmd.log.Debug().Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
+	cmd.Log().Debug().Int("seals", len(cmd.proposal.Seals())).Msg("proposal created")
 
 	cmd.fa = currency.NewFixedFeeAmount(currency.NewAmount(1))
 
@@ -635,7 +635,7 @@ func (cmd *BenchCommand) newINITBallot() ballot.INITBallotV0 {
 
 func (cmd *BenchCommand) dp() (*isaac.DefaultProposalProcessor, error) {
 	dp := isaac.NewDefaultProposalProcessor(cmd.local, cmd.suffrage)
-	_ = dp.SetLogger(cmd.log)
+	_ = dp.SetLogger(cmd.Log())
 
 	opr := currency.NewOperationProcessor(cmd.fa, func() (base.Address, error) {
 		return cmd.accounts[0].Address, nil
@@ -668,7 +668,7 @@ func (cmd *BenchCommand) process() error {
 		blk = b
 	}
 
-	cmd.log.Debug().Msg("init processed")
+	cmd.Log().Debug().Msg("init processed")
 
 	acceptFact := ballot.NewACCEPTBallotV0(
 		nil,
@@ -688,17 +688,17 @@ func (cmd *BenchCommand) process() error {
 
 		bs = s
 	}
-	cmd.log.Debug().Msg("acccept processed")
+	cmd.Log().Debug().Msg("acccept processed")
 
 	for k, v := range dp.States() {
 		printCSV(cmd.Operations, "pp-"+k, v)
 	}
 
-	cmd.log.Debug().Msg("trying to commit")
+	cmd.Log().Debug().Msg("trying to commit")
 	if err := cmd.commit(bs); err != nil {
 		return xerrors.Errorf("failed to commit: %w", err)
 	}
-	cmd.log.Debug().Msg("committed")
+	cmd.Log().Debug().Msg("committed")
 
 	if cmd.block == nil {
 		cmd.previousBlock = blk
@@ -706,7 +706,7 @@ func (cmd *BenchCommand) process() error {
 
 	cmd.block = blk
 
-	cmd.log.Debug().Hinted("height", blk.Height()).Hinted("block", blk.Hash()).Msg("new block")
+	cmd.Log().Debug().Hinted("height", blk.Height()).Hinted("block", blk.Hash()).Msg("new block")
 
 	return nil
 }
@@ -745,7 +745,7 @@ func (cmd *BenchCommand) checkProcess() error {
 
 		if _, found := facts[fh.String()]; !found {
 			notFounds = append(notFounds, fh)
-			cmd.log.Error().Hinted("fact", fh).Msg("fact not found in operation tree")
+			cmd.Log().Error().Hinted("fact", fh).Msg("fact not found in operation tree")
 		} else {
 			founds++
 		}
@@ -753,27 +753,27 @@ func (cmd *BenchCommand) checkProcess() error {
 
 		switch mod, err := base.BytesToFactMode(v); {
 		case err != nil:
-			cmd.log.Error().Err(err).Hinted("fact", fh).Bytes("mod", v).Msg("invalid FactMode found")
+			cmd.Log().Error().Err(err).Hinted("fact", fh).Bytes("mod", v).Msg("invalid FactMode found")
 		case mod&base.FInStates == 0:
 			if !inExcludes {
 				notInStates = append(notInStates, fh)
-				cmd.log.Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact not found in states tree")
+				cmd.Log().Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact not found in states tree")
 			}
 		case inExcludes:
 			inStates = append(inStates, fh)
-			cmd.log.Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact should not found in states tree")
+			cmd.Log().Error().Hinted("fact", fh).Bytes("mod", v).Msg("fact should not found in states tree")
 		}
 		return true, nil
 	})
 
 	if n := len(notFounds); n > 0 {
-		cmd.log.Error().Int("not_founds", n).Msg("found not in OperationsTree")
+		cmd.Log().Error().Int("not_founds", n).Msg("found not in OperationsTree")
 	}
 	if n := len(notInStates); n > 0 {
-		cmd.log.Error().Int("not_in_states", n).Msg("found not in states")
+		cmd.Log().Error().Int("not_in_states", n).Msg("found not in states")
 	}
 	if n := len(inStates); n > 0 {
-		cmd.log.Error().Int("in_states", n).Msg("found in states")
+		cmd.Log().Error().Int("in_states", n).Msg("found in states")
 	}
 
 	if founds != len(facts) {
@@ -782,7 +782,7 @@ func (cmd *BenchCommand) checkProcess() error {
 		}
 	}
 
-	cmd.log.Info().Msg("all operations in states")
+	cmd.Log().Info().Msg("all operations in states")
 
 	return nil
 }

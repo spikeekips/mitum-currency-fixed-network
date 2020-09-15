@@ -8,7 +8,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
@@ -21,17 +20,20 @@ import (
 )
 
 type RunCommand struct {
+	BaseCommand
 	*launcher.PprofFlags
 	Design    FileLoad      `arg:"" name:"node design file" help:"node design file"`
 	ExitAfter time.Duration `help:"exit after the given duration (default: none)" default:"0s"`
 	nr        *Launcher
 }
 
-func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
-	log.Info().Msg("mitum-currency node started")
+func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, l)
+
+	cmd.Log().Info().Msg("mitum-currency node started")
 
 	_, _ = maxprocs.Set(maxprocs.Logger(func(f string, s ...interface{}) {
-		log.Debug().Msgf(f, s...)
+		cmd.Log().Debug().Msgf(f, s...)
 	}))
 
 	if cancel, err := launcher.RunPprof(cmd.PprofFlags); err != nil {
@@ -44,7 +46,7 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 		})
 	}
 
-	if n, err := createLauncherFromDesign(cmd.Design, version, log); err != nil {
+	if n, err := createLauncherFromDesign(cmd.Design, version, cmd.Log()); err != nil {
 		return xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		cmd.nr = n
@@ -72,7 +74,7 @@ func (cmd *RunCommand) Run(version util.Version, log logging.Logger) error {
 
 		return time.After(w)
 	}(cmd.ExitAfter):
-		log.Info().Str("exit-after", cmd.ExitAfter.String()).Msg("expired, exit.")
+		cmd.Log().Info().Str("exit-after", cmd.ExitAfter.String()).Msg("expired, exit.")
 
 		return nil
 	}
@@ -84,7 +86,7 @@ func (cmd *RunCommand) prepareProposalProcessor() error {
 	if cmd.nr.Design().FeeAmount == nil {
 		fa = currency.NewNilFeeAmount()
 
-		log.Debug().Msg("fee not applied")
+		cmd.Log().Debug().Msg("fee not applied")
 	} else {
 		fa = cmd.nr.Design().FeeAmount
 
@@ -116,7 +118,9 @@ func (cmd *RunCommand) prepareProposalProcessor() error {
 			}
 		}
 
-		log.Debug().Str("fee_amount", cmd.nr.Design().FeeAmount.Verbose()).Interface("fee_receiver", to).Msg("fee applied")
+		cmd.Log().Debug().
+			Str("fee_amount", cmd.nr.Design().FeeAmount.Verbose()).
+			Interface("fee_receiver", to).Msg("fee applied")
 	}
 
 	return initlaizeProposalProcessor(
@@ -143,9 +147,9 @@ func (cmd *RunCommand) whenBlockSaved(blocks []block.Block) {
 		return
 	}
 
-	log.Debug().Msg("trying to find genesis block")
-	if ga, gb, err := saveGenesisAccountInfo(cmd.nr.Storage(), genesisBlock); err != nil {
-		log.Error().Err(err).Msg("failed to save genesis account to node info")
+	cmd.Log().Debug().Msg("trying to find genesis block")
+	if ga, gb, err := saveGenesisAccountInfo(cmd.nr.Storage(), genesisBlock, cmd.Log()); err != nil {
+		cmd.Log().Error().Err(err).Msg("failed to save genesis account to node info")
 
 		cmd.nr.setGenesisInfo(currency.Account{}, currency.ZeroAmount)
 	} else {
@@ -167,8 +171,8 @@ func (cmd *RunCommand) initialize() error {
 		cs.(*isaac.StateSyncingHandler).WhenBlockSaved(cmd.whenBlockSaved)
 	}
 
-	if ac, ba, err := loadGenesisAccountInfo(cmd.nr.Storage()); err != nil {
-		log.Error().Err(err).Msg("failed to load genesis account info")
+	if ac, ba, err := loadGenesisAccountInfo(cmd.nr.Storage(), cmd.Log()); err != nil {
+		cmd.Log().Error().Err(err).Msg("failed to load genesis account info")
 	} else {
 		cmd.nr.setGenesisInfo(ac, ba) // NOTE set for NodeInfo
 	}

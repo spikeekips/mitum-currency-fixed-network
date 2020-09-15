@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kong"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/stretchr/testify/suite"
 )
@@ -24,7 +25,7 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 	var buf bytes.Buffer
 	cli.o = &buf
 
-	t.NoError(cli.Run(logging.NilLogger))
+	t.NoError(cli.Run(nil, util.Version("0.1.1"), logging.NilLogger))
 
 	t.Equal(`privatekey hint: hint{type="btc-privatekey" code="0112" version="0.0.1"}
      privatekey: KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1

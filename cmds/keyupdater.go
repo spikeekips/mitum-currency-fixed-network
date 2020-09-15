@@ -5,13 +5,15 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type KeyUpdaterCommand struct {
-	printCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"target's privatekey" required:""`
 	Target     AddressFlag    `arg:"" name:"target" help:"target address" required:""`
 	Threshold  uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
@@ -26,7 +28,9 @@ type KeyUpdaterCommand struct {
 	keys   currency.Keys
 }
 
-func (cmd *KeyUpdaterCommand) Run() error {
+func (cmd *KeyUpdaterCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error { // nolint:dupl
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	} else if a, err := cmd.Target.Encode(defaultJSONEnc); err != nil {

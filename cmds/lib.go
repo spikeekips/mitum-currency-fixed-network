@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -66,6 +65,25 @@ func init() {
 		encs = es
 		defaultJSONEnc = e.(*jsonenc.Encoder)
 	}
+}
+
+type BaseCommand struct {
+	printCommand
+	flags   *MainFlags
+	version util.Version
+	log     logging.Logger
+}
+
+func (cmd *BaseCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	cmd.flags = flags
+	cmd.version = version
+	cmd.log = log
+
+	return nil
+}
+
+func (cmd *BaseCommand) Log() logging.Logger {
+	return cmd.log
 }
 
 func SetupLogging(logs []string, flags *contestlib.LogFlags) (logging.Logger, error) {
@@ -283,7 +301,11 @@ func initlaizeProposalProcessor(dp isaac.ProposalProcessor, opr isaac.OperationP
 	}
 }
 
-func saveGenesisAccountInfo(st storage.Storage, genesisBlock block.Block) (currency.Account, currency.Amount, error) {
+func saveGenesisAccountInfo(
+	st storage.Storage,
+	genesisBlock block.Block,
+	log logging.Logger,
+) (currency.Account, currency.Amount, error) {
 	log.Debug().Msg("trying to save genesis info")
 	var gac currency.Account
 	var gbalance currency.Amount = currency.NilAmount
@@ -328,7 +350,7 @@ func saveGenesisAccountInfo(st storage.Storage, genesisBlock block.Block) (curre
 	return gac, gbalance, nil
 }
 
-func loadGenesisAccountInfo(st storage.Storage) (currency.Account, currency.Amount, error) {
+func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Account, currency.Amount, error) {
 	log.Debug().Msg("tryingo to load genesis info")
 	var ac currency.Account
 	var balance currency.Amount

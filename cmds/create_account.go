@@ -5,13 +5,15 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type CreateAccountCommand struct {
-	printCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
@@ -27,7 +29,9 @@ type CreateAccountCommand struct {
 	keys   currency.Keys
 }
 
-func (cmd *CreateAccountCommand) Run() error {
+func (cmd *CreateAccountCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error { // nolint:dupl
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	} else if a, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {

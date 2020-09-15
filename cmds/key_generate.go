@@ -4,17 +4,21 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type GenerateKeyCommand struct {
-	printCommand
+	BaseCommand
 	Type   string `name:"type" help:"key type {btc ether stellar} (default: btc)" optional:"" default:"btc"`
 	JSON   bool   `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool   `name:"pretty" help:"pretty format"`
 }
 
-func (cmd *GenerateKeyCommand) Run() error {
+func (cmd *GenerateKeyCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
+
 	if len(cmd.Type) < 1 {
 		cmd.Type = btc
 	} else {
