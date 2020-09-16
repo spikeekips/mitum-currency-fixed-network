@@ -1,10 +1,13 @@
 package cmds
 
 import (
+	"bytes"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -72,12 +75,33 @@ func (cmd *TransferCommand) parseFlags() error {
 }
 
 func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
+	var items []currency.TransferItem
+	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
+		var sl seal.Seal
+		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+			return nil, err
+		} else if so, ok := s.(operation.Seal); !ok {
+			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		} else if _, ok := so.(operation.SealUpdater); !ok {
+			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		} else {
+			sl = so
+		}
+
+		for _, op := range sl.(operation.Seal).Operations() {
+			if t, ok := op.(currency.Transfers); ok {
+				items = t.Fact().(currency.TransfersFact).Items()
+			}
+		}
+	}
+
 	item := currency.NewTransferItem(cmd.receiver, cmd.Amount.Amount)
 	if err := item.IsValid(nil); err != nil {
 		return nil, err
+	} else {
+		items = append(items, item)
 	}
 
-	items := []currency.TransferItem{item}
 	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.sender, items)
 
 	var fs []operation.FactSign
@@ -88,7 +112,7 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 	}
 
 	if op, err := currency.NewTransfers(fact, fs, cmd.Memo); err != nil {
-		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
+		return nil, xerrors.Errorf("failed to create transfers operation: %w", err)
 	} else {
 		return op, nil
 	}

@@ -276,9 +276,7 @@ func loadSealAndAddOperation(
 	}
 
 	// NOTE add operation to existing seal
-	sl = sl.(operation.SealUpdater).SetOperations(
-		append(sl.Operations(), op),
-	).(operation.Seal)
+	sl = sl.(operation.SealUpdater).SetOperations([]operation.Operation{op}).(operation.Seal)
 
 	if s, err := signSeal(sl, privatekey, networkID); err != nil {
 		return nil, err

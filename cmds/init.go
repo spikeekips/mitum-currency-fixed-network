@@ -16,6 +16,8 @@ type InitCommand struct {
 	BaseCommand
 	Design FileLoad `arg:"" name:"node design file" help:"node design file"`
 	Force  bool     `help:"clean the existing environment"`
+
+	nr *Launcher
 }
 
 func (cmd *InitCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
@@ -37,39 +39,18 @@ func (cmd *InitCommand) Run(flags *MainFlags, version util.Version, log logging.
 }
 
 func (cmd *InitCommand) run() error {
-	var nr *Launcher
-	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, cmd.Log()); err != nil {
-		return err
-	} else {
-		nr = n
-	}
-
-	if err := nr.AttachStorage(); err != nil {
-		return xerrors.Errorf("failed to attach storage: %w", err)
-	}
-
-	if cmd.Force {
-		if err := nr.Storage().Clean(); err != nil {
-			return xerrors.Errorf("failed to clean storage: %w", err)
-		} else if err := nr.Localstate().BlockFS().Clean(false); err != nil {
-			return xerrors.Errorf("failed to clean blockfs: %w", err)
-		}
-	}
-
-	if err := nr.Initialize(); err != nil {
-		return xerrors.Errorf("failed to generate node from design: %w", err)
-	} else if err := cmd.prepareProposalProcessor(nr); err != nil {
+	if err := cmd.initialize(); err != nil {
 		return err
 	}
 
 	cmd.Log().Debug().Msg("checking existing blocks")
 
-	if err := cmd.checkExisting(nr); err != nil {
+	if err := cmd.checkExisting(); err != nil {
 		return err
 	}
 
 	var ops []operation.Operation
-	if o, err := cmd.loadInitOperations(nr); err != nil {
+	if o, err := cmd.loadInitOperations(); err != nil {
 		return err
 	} else {
 		ops = o
@@ -79,7 +60,7 @@ func (cmd *InitCommand) run() error {
 
 	cmd.Log().Debug().Msg("trying to create genesis block")
 	var genesisBlock block.Block
-	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(cmd.nr.Localstate(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return xerrors.Errorf("failed to generate genesis block: %w", err)
@@ -94,18 +75,46 @@ func (cmd *InitCommand) run() error {
 	cmd.Log().Info().Msg("genesis block created")
 	cmd.Log().Info().Msg("iniialized")
 
-	if _, _, err := saveGenesisAccountInfo(nr.Storage(), genesisBlock, cmd.Log()); err != nil {
+	if _, _, err := saveGenesisAccountInfo(cmd.nr.Storage(), genesisBlock, cmd.Log()); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (cmd *InitCommand) checkExisting(nr *Launcher) error {
+func (cmd *InitCommand) initialize() error {
+	if n, err := createLauncherFromDesign(cmd.Design.Bytes(), cmd.version, cmd.Log()); err != nil {
+		return err
+	} else {
+		cmd.nr = n
+	}
+
+	if err := cmd.nr.AttachStorage(); err != nil {
+		return xerrors.Errorf("failed to attach storage: %w", err)
+	}
+
+	if cmd.Force {
+		if err := cmd.nr.Storage().Clean(); err != nil {
+			return xerrors.Errorf("failed to clean storage: %w", err)
+		} else if err := cmd.nr.Localstate().BlockFS().Clean(false); err != nil {
+			return xerrors.Errorf("failed to clean blockfs: %w", err)
+		}
+	}
+
+	if err := cmd.nr.Initialize(); err != nil {
+		return xerrors.Errorf("failed to generate node from design: %w", err)
+	} else if err := cmd.prepareProposalProcessor(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *InitCommand) checkExisting() error {
 	cmd.Log().Debug().Msg("checking existing blocks")
 
 	var manifest block.Manifest
-	if m, found, err := nr.Storage().LastManifest(); err != nil {
+	if m, found, err := cmd.nr.Storage().LastManifest(); err != nil {
 		return err
 	} else if found {
 		manifest = m
@@ -122,15 +131,15 @@ func (cmd *InitCommand) checkExisting(nr *Launcher) error {
 	return nil
 }
 
-func (cmd *InitCommand) loadInitOperations(nr *Launcher) ([]operation.Operation, error) {
+func (cmd *InitCommand) loadInitOperations() ([]operation.Operation, error) {
 	var ops []operation.Operation
-	if o, err := LoadPolicyOperation(nr.Design()); err != nil {
+	if o, err := LoadPolicyOperation(cmd.nr.Design()); err != nil {
 		return nil, err
 	} else {
 		ops = append(ops, o...)
 	}
 
-	if o, err := LoadOtherInitOperations(nr); err != nil {
+	if o, err := LoadOtherInitOperations(cmd.nr); err != nil {
 		return nil, err
 	} else {
 		ops = append(ops, o...)
@@ -152,10 +161,10 @@ func (cmd *InitCommand) loadInitOperations(nr *Launcher) ([]operation.Operation,
 	return ops, nil
 }
 
-func (cmd *InitCommand) prepareProposalProcessor(nr *Launcher) error {
+func (cmd *InitCommand) prepareProposalProcessor() error {
 	return initlaizeProposalProcessor(
 		// NOTE NilFeeAmount will be applied whatever design defined
-		nr.ProposalProcessor(),
+		cmd.nr.ProposalProcessor(),
 		currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil),
 	)
 }

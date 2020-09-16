@@ -22,7 +22,6 @@ type KeyUpdaterCommand struct {
 	Keys       []KeyFlag      `name:"key" help:"key for account (ex: \"<public key>,<weight>\")" sep:"@"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Memo       string         `name:"memo" help:"memo"`
-	Seal       FileLoad       `help:"seal" optional:""`
 
 	target base.Address
 	keys   currency.Keys
@@ -46,15 +45,14 @@ func (cmd *KeyUpdaterCommand) Run(flags *MainFlags, version util.Version, log lo
 		op = o
 	}
 
-	if sl, err := loadSealAndAddOperation(
-		cmd.Seal.Bytes(),
+	if bs, err := operation.NewBaseSeal(
 		cmd.Privatekey,
+		[]operation.Operation{op},
 		cmd.NetworkID.Bytes(),
-		op,
 	); err != nil {
-		return err
+		return xerrors.Errorf("failed to create operation.Seal: %w", err)
 	} else {
-		cmd.pretty(cmd.Pretty, sl)
+		cmd.pretty(cmd.Pretty, bs)
 	}
 
 	return nil

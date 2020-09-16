@@ -1,10 +1,13 @@
 package cmds
 
 import (
+	"bytes"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -89,12 +92,34 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 }
 
 func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) {
+	var items []currency.CreateAccountItem
+	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
+		var sl seal.Seal
+		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+			return nil, err
+		} else if so, ok := s.(operation.Seal); !ok {
+			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		} else if _, ok := so.(operation.SealUpdater); !ok {
+			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		} else {
+			sl = so
+		}
+
+		for _, op := range sl.(operation.Seal).Operations() {
+			if t, ok := op.(currency.CreateAccounts); ok {
+				items = t.Fact().(currency.CreateAccountsFact).Items()
+			}
+		}
+	}
+
 	item := currency.NewCreateAccountItem(cmd.keys, cmd.Amount.Amount)
-	fact := currency.NewCreateAccountsFact(
-		[]byte(cmd.Token),
-		cmd.sender,
-		[]currency.CreateAccountItem{item},
-	)
+	if err := item.IsValid(nil); err != nil {
+		return nil, err
+	} else {
+		items = append(items, item)
+	}
+
+	fact := currency.NewCreateAccountsFact([]byte(cmd.Token), cmd.sender, items)
 
 	var fs []operation.FactSign
 	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, []byte(cmd.NetworkID)); err != nil {
