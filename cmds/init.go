@@ -51,6 +51,8 @@ func (cmd *InitCommand) run() error {
 	if cmd.Force {
 		if err := nr.Storage().Clean(); err != nil {
 			return xerrors.Errorf("failed to clean storage: %w", err)
+		} else if err := nr.Localstate().BlockFS().Clean(false); err != nil {
+			return xerrors.Errorf("failed to clean blockfs: %w", err)
 		}
 	}
 
