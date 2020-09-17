@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -89,13 +90,13 @@ func (t *testKeys) TestWeightOver100() {
 }
 
 func (t *testKeys) TestKeysOver100() {
-	keys := make([]Key, 101)
-	for i := 0; i < 101; i++ {
+	keys := make([]Key, MaxKeyInKeys+1)
+	for i := 0; i < MaxKeyInKeys+1; i++ {
 		keys[i] = t.newKey(key.MustNewBTCPrivatekey().Publickey(), 50)
 	}
 
 	_, err := NewKeys(keys, 100)
-	t.Contains(err.Error(), "keys over 100")
+	t.Contains(err.Error(), fmt.Sprintf("keys over %d", MaxKeyInKeys))
 }
 
 func (t *testKeys) TestBadThreshold() {

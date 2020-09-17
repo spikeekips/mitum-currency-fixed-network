@@ -20,6 +20,15 @@ var (
 	KeysHint = hint.MustHint(KeysType, "0.0.1")
 )
 
+var (
+	MaxKeyInKeys int
+	maxKeyInKeys uint = 10
+)
+
+func init() {
+	MaxKeyInKeys = int(maxKeyInKeys)
+}
+
 type Key struct {
 	k key.Publickey
 	w uint
@@ -127,8 +136,8 @@ func (ks Keys) IsValid([]byte) error {
 
 	if n := len(ks.keys); n < 1 {
 		return xerrors.Errorf("empty keys")
-	} else if n > 100 {
-		return xerrors.Errorf("keys over 100, %d", n)
+	} else if n > MaxKeyInKeys {
+		return xerrors.Errorf("keys over %d, %d", MaxKeyInKeys, n)
 	}
 
 	m := map[string]struct{}{}
