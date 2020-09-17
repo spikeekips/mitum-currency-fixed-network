@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/alecthomas/kong v0.2.11
 	github.com/rs/zerolog v1.20.0
-	github.com/spikeekips/mitum v0.0.0-20200917041409-5db18362b9c1
+	github.com/spikeekips/mitum v0.0.0-20200917053614-818c9d8ae358
 	github.com/stretchr/testify v1.6.1
 	go.mongodb.org/mongo-driver v1.4.1
 	go.uber.org/automaxprocs v1.3.0
