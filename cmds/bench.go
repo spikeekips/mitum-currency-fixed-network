@@ -342,7 +342,7 @@ func (cmd *BenchCommand) prepareAccounts() error {
 		acs[i] = err.(acerr).ac.(*account)
 
 		for _, st := range err.(acerr).sts {
-			if err := cmd.storage.NewState(st); err != nil {
+			if err := cmd.storage.(storage.StateUpdater).NewState(st); err != nil {
 				return err
 			}
 		}
