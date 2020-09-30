@@ -1,6 +1,8 @@
 package currency
 
 import (
+	"time"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -139,6 +141,10 @@ func (op FeeOperation) GenerateHash() valuehash.Hash {
 
 func (op FeeOperation) AddFactSigns(...operation.FactSign) (operation.FactSignUpdater, error) {
 	return nil, nil
+}
+
+func (op FeeOperation) LastSignedAt() time.Time {
+	return time.Time{}
 }
 
 func (op FeeOperation) Process(

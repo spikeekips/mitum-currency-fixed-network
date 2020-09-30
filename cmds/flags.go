@@ -20,14 +20,15 @@ import (
 
 type MainFlags struct {
 	*contestlib.LogFlags
-	Log     []string     `help:"log file"`
-	Version struct{}     `cmd:"" help:"print version"` // TODO set ldflags
-	Init    InitCommand  `cmd:"" help:"initialize"`
-	Run     RunCommand   `cmd:"" help:"run node"`
-	Node    NodeCommand  `cmd:"" name:"node" help:"various node commands"`
-	Seal    SealCommand  `cmd:"" name:"seal" help:"generate seal"`
-	Key     KeyCommand   `cmd:"" name:"key" help:"key"`
-	Bench   BenchCommand `cmd:"" name:"bench" help:"benchmark"`
+	Log     []string      `help:"log file"`
+	Version struct{}      `cmd:"" help:"print version"` // TODO set ldflags
+	Init    InitCommand   `cmd:"" help:"initialize"`
+	Run     RunCommand    `cmd:"" help:"run node"`
+	Node    NodeCommand   `cmd:"" name:"node" help:"various node commands"`
+	Seal    SealCommand   `cmd:"" name:"seal" help:"generate seal"`
+	Key     KeyCommand    `cmd:"" name:"key" help:"key"`
+	Digest  DigestCommand `cmd:"" name:"digest" help:"run digest server"`
+	Bench   BenchCommand  `cmd:"" name:"bench" help:"benchmark"`
 }
 
 type KeyFlag struct {

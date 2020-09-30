@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	NilAmount  = NewAmount(-1)
-	ZeroAmount = NewAmount(0)
+	NilAmount       = NewAmount(-1)
+	NilAmountString = big.NewInt(-1).String()
+	ZeroAmount      = NewAmount(0)
 )
 
 type Amount struct {
@@ -65,6 +66,14 @@ func NewAmountFromInterface(a interface{}) (Amount, error) {
 		}
 	default:
 		return NilAmount, xerrors.Errorf("unknown type of amount value, %T", a)
+	}
+}
+
+func (a Amount) String() string {
+	if a.Int == nil {
+		return NilAmountString
+	} else {
+		return a.Int.String()
 	}
 }
 

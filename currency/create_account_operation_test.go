@@ -298,7 +298,16 @@ func (t *testCreateAccountsOperation) TestSameSenders() {
 	items = []CreateAccountItem{NewCreateAccountItem(na1.Keys(), NewAmount(1))}
 	ca1 := t.newOperation(sa.Address, items, sa.Privs())
 
-	err := opr.Process(ca1)
+	raddresses, err := ca1.Fact().(CreateAccountsFact).Addresses()
+	t.NoError(err)
+	t.Equal(2, len(raddresses))
+
+	addresses := []base.Address{na1.Address, sa.Address}
+	for i := range raddresses {
+		t.True(addresses[i].Equal(raddresses[i]))
+	}
+
+	err = opr.Process(ca1)
 	t.Contains(err.Error(), "violates only one sender")
 }
 

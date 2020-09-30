@@ -91,7 +91,7 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		sp = &TransfersProcessor{Transfers: t, fa: opr.feeAmount}
 	case CreateAccounts:
 		fact := t.Fact().(CreateAccountsFact)
-		if as, err := fact.Addresses(); err != nil {
+		if as, err := fact.Targets(); err != nil {
 			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
 		} else if err := opr.checkNewAddressDuplication(as); err != nil {
 			return nil, err

@@ -38,7 +38,7 @@ func (ca Address) String() string {
 }
 
 func (ca Address) HintedString() string {
-	return hint.HintedString(ca.Hint(), ca.String())
+	return AddressToHintedString(ca)
 }
 
 func (ca Address) Hint() hint.Hint {
@@ -81,4 +81,12 @@ func (ca *Address) UnmarshalText(b []byte) error {
 
 func (ca Address) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
 	return e.Str(key, ca.HintedString())
+}
+
+func AddressToHintedString(a base.Address) string {
+	return hint.HintedString(a.Hint(), a.String())
+}
+
+type Addresses interface {
+	Addresses() ([]base.Address, error)
 }

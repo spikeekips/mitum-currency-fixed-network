@@ -172,7 +172,7 @@ func (caf CreateAccountsFact) Amount() Amount {
 	return a
 }
 
-func (caf CreateAccountsFact) Addresses() ([]base.Address, error) {
+func (caf CreateAccountsFact) Targets() ([]base.Address, error) {
 	as := make([]base.Address, len(caf.items))
 	for i := range caf.items {
 		if a, err := caf.items[i].Address(); err != nil {
@@ -181,6 +181,20 @@ func (caf CreateAccountsFact) Addresses() ([]base.Address, error) {
 			as[i] = a
 		}
 	}
+
+	return as, nil
+}
+
+func (caf CreateAccountsFact) Addresses() ([]base.Address, error) {
+	as := make([]base.Address, len(caf.items)+1)
+
+	if tas, err := caf.Targets(); err != nil {
+		return nil, err
+	} else {
+		copy(as, tas)
+	}
+
+	as[len(caf.items)] = caf.Sender()
 
 	return as, nil
 }

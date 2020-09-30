@@ -154,6 +154,17 @@ func (tff TransfersFact) Amount() Amount {
 	return a
 }
 
+func (tff TransfersFact) Addresses() ([]base.Address, error) {
+	as := make([]base.Address, len(tff.items)+1)
+	for i := range tff.items {
+		as[i] = tff.items[i].Receiver()
+	}
+
+	as[len(tff.items)] = tff.Sender()
+
+	return as, nil
+}
+
 type Transfers struct {
 	operation.BaseOperation
 	Memo string

@@ -86,6 +86,18 @@ func (gaf GenesisAccountFact) Keys() Keys {
 	return gaf.keys
 }
 
+func (gaf GenesisAccountFact) Address() (base.Address, error) {
+	return NewAddressFromKeys(gaf.keys)
+}
+
+func (gaf GenesisAccountFact) Addresses() ([]base.Address, error) {
+	if a, err := gaf.Address(); err != nil {
+		return nil, err
+	} else {
+		return []base.Address{a}, nil
+	}
+}
+
 type GenesisAccount struct {
 	operation.BaseOperation
 }
@@ -139,8 +151,8 @@ func (ga GenesisAccount) Process(
 ) error {
 	fact := ga.Fact().(GenesisAccountFact)
 
-	var newAddress Address
-	if a, err := NewAddressFromKeys(fact.keys); err != nil {
+	var newAddress base.Address
+	if a, err := fact.Address(); err != nil {
 		return state.IgnoreOperationProcessingError.Wrap(err)
 	} else {
 		newAddress = a

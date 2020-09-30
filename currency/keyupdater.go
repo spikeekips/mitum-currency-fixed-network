@@ -80,6 +80,10 @@ func (ft KeyUpdaterFact) Keys() Keys {
 	return ft.keys
 }
 
+func (ft KeyUpdaterFact) Addresses() ([]base.Address, error) {
+	return []base.Address{ft.target}, nil
+}
+
 type KeyUpdater struct {
 	operation.BaseOperation
 	Memo string

@@ -23,6 +23,7 @@ import (
 	"github.com/spikeekips/mitum/storage/localfs"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -175,7 +176,7 @@ func (cmd *BenchCommand) try(i int) error {
 
 		return xerrors.Errorf("block hash does not match; %v != %v", cmd.previousBlock.Hash(), cmd.block.Hash())
 	} else {
-		cmd.Log().Debug().Int("try", i).
+		cmd.Log().Info().Int("try", i).
 			Hinted("previous_block", cmd.previousBlock.Hash()).
 			Hinted("new_block", cmd.block.Hash()).
 			Msg("block hash matched")
@@ -195,7 +196,14 @@ func (cmd *BenchCommand) prepareStorage() (storage.Storage, error) {
 		return nil, err
 	}
 
-	if st, err := mongodbstorage.NewStorage(client, encs, nil); err != nil {
+	var ca cache.Cache
+	if c, err := cache.NewGCache("lru", 100*100, time.Minute*3); err != nil {
+		return nil, err
+	} else {
+		ca = c
+	}
+
+	if st, err := mongodbstorage.NewStorage(client, encs, nil, ca); err != nil {
 		return nil, err
 	} else if err := st.Initialize(); err != nil {
 		return nil, err
@@ -361,16 +369,22 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 
 	{
 		key := currency.StateKeyAccount(ac.Address)
-		value, _ := state.NewHintedValue(ac.Keys)
-
 		var stu *state.StateUpdater
-		if st, err := state.NewStateV0(key, value, base.NilHeight); err != nil {
+		if st, err := state.NewStateV0(key, nil, base.NilHeight); err != nil {
 			return nil, nil, err
 		} else {
-			stu = state.NewStateUpdater(st)
+			if ac, err := currency.NewAccountFromKeys(ac.Keys); err != nil {
+				return nil, nil, err
+			} else if nst, err := currency.SetStateAccountValue(st, ac); err != nil {
+				return nil, nil, err
+			} else {
+				stu = state.NewStateUpdater(nst)
+			}
 		}
 
-		if err := stu.AddOperation(valuehash.RandomSHA256()); err != nil {
+		fh := valuehash.RandomSHA256()
+		cmd.log.Debug().Hinted("op", fh).Msg("op account")
+		if err := stu.AddOperation(fh); err != nil {
 			return nil, nil, err
 		} else {
 			stu = stu.SetHeight(cmd.lastHeight)
@@ -393,9 +407,11 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 			stu = state.NewStateUpdater(st)
 		}
 
+		fh := valuehash.RandomSHA256()
+		cmd.log.Debug().Hinted("op", fh).Msg("op balance")
 		if err := stu.SetHash(stu.GenerateHash()); err != nil {
 			return nil, nil, err
-		} else if err := stu.AddOperation(valuehash.RandomSHA256()); err != nil {
+		} else if err := stu.AddOperation(fh); err != nil {
 			return nil, nil, err
 		} else {
 			stu = stu.SetHeight(cmd.lastHeight)
@@ -459,7 +475,7 @@ func (cmd *BenchCommand) prepareOperations() error {
 		}
 
 		ops[i] = err.(acerr).ac.(operation.Operation)
-
+		cmd.log.Debug().Hinted("op", ops[i].Fact().Hash()).Msg("op")
 		i++
 	}
 
@@ -480,6 +496,7 @@ func (cmd *BenchCommand) prepareExcludeOperations() error {
 			return err
 		}
 
+		cmd.log.Debug().Hinted("op", op.Fact().Hash()).Msg("exclude")
 		excludes[i] = op
 	}
 
@@ -724,7 +741,7 @@ func (cmd *BenchCommand) commit(bs storage.BlockStorage) error {
 	return bs.Commit(context.Background())
 }
 
-func (cmd *BenchCommand) checkProcess() error {
+func (cmd *BenchCommand) checkProcess() error { // nolint:funlen
 	facts := map[string]valuehash.Hash{}
 	for i := range cmd.ops {
 		fh := cmd.ops[i].Fact().Hash()
@@ -738,14 +755,26 @@ func (cmd *BenchCommand) checkProcess() error {
 		excludes[fh.String()] = fh
 	}
 
+	feeOps := map[string]struct{}{}
+	for i := range cmd.block.Operations() {
+		op := cmd.block.Operations()[i]
+		if _, ok := op.(currency.FeeOperation); !ok {
+			continue
+		}
+
+		feeOps[op.Fact().Hash().String()] = struct{}{}
+	}
+
 	var founds int
 	var notFounds, notInStates, inStates []valuehash.Hash
 	_ = cmd.block.OperationsTree().Traverse(func(i int, key, _, v []byte) (bool, error) {
 		fh := valuehash.NewBytes(key)
 
 		if _, found := facts[fh.String()]; !found {
-			notFounds = append(notFounds, fh)
-			cmd.Log().Error().Hinted("fact", fh).Msg("fact not found in operation tree")
+			if _, found := feeOps[fh.String()]; !found {
+				notFounds = append(notFounds, fh)
+				cmd.Log().Error().Hinted("fact", fh).Msg("fact not found in operation tree")
+			}
 		} else {
 			founds++
 		}
@@ -767,10 +796,10 @@ func (cmd *BenchCommand) checkProcess() error {
 	})
 
 	if n := len(notFounds); n > 0 {
-		cmd.Log().Error().Int("not_founds", n).Msg("found not in OperationsTree")
+		cmd.Log().Error().Int("not_founds", n).Msg("not found in OperationsTree")
 	}
 	if n := len(notInStates); n > 0 {
-		cmd.Log().Error().Int("not_in_states", n).Msg("found not in states")
+		cmd.Log().Error().Int("not_in_states", n).Msg("not found in states")
 	}
 	if n := len(inStates); n > 0 {
 		cmd.Log().Error().Int("in_states", n).Msg("found in states")

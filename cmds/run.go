@@ -17,14 +17,18 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 type RunCommand struct {
 	BaseCommand
 	*launcher.PprofFlags
-	Design    FileLoad      `arg:"" name:"node design file" help:"node design file"`
-	ExitAfter time.Duration `help:"exit after the given duration (default: none)" default:"0s"`
-	nr        *Launcher
+	Design        FileLoad      `arg:"" name:"node design file" help:"node design file"`
+	ExitAfter     time.Duration `help:"exit after the given duration (default: none)" default:"0s"`
+	nr            *Launcher
+	design        *NodeDesign
+	digestStoarge *digest.Storage
+	di            *digest.Digester
 }
 
 func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Logger) error {
@@ -50,9 +54,14 @@ func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Log
 		return xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		cmd.nr = n
+		cmd.design = n.Design()
 	}
 
 	if err := cmd.initialize(); err != nil {
+		return err
+	}
+
+	if err := cmd.startDigester(); err != nil {
 		return err
 	}
 
@@ -83,16 +92,16 @@ func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Log
 func (cmd *RunCommand) prepareProposalProcessor() error {
 	var fa currency.FeeAmount
 	var feeReceiverFunc func() (base.Address, error)
-	if cmd.nr.Design().FeeAmount == nil {
+	if cmd.design.FeeAmount == nil {
 		fa = currency.NewNilFeeAmount()
 
 		cmd.Log().Debug().Msg("fee not applied")
 	} else {
-		fa = cmd.nr.Design().FeeAmount
+		fa = cmd.design.FeeAmount
 
 		var to base.Address
-		if cmd.nr.Design().FeeReceiver != nil {
-			to = cmd.nr.Design().FeeReceiver
+		if cmd.design.FeeReceiver != nil {
+			to = cmd.design.FeeReceiver
 
 			switch _, found, err := cmd.nr.Storage().State(currency.StateKeyAccount(to)); {
 			case err != nil:
@@ -119,7 +128,7 @@ func (cmd *RunCommand) prepareProposalProcessor() error {
 		}
 
 		cmd.Log().Debug().
-			Str("fee_amount", cmd.nr.Design().FeeAmount.Verbose()).
+			Str("fee_amount", cmd.design.FeeAmount.Verbose()).
 			Interface("fee_receiver", to).Msg("fee applied")
 	}
 
@@ -130,6 +139,14 @@ func (cmd *RunCommand) prepareProposalProcessor() error {
 }
 
 func (cmd *RunCommand) whenBlockSaved(blocks []block.Block) {
+	cmd.checkGenesisInfo(blocks)
+
+	go func() {
+		cmd.di.Digest(blocks)
+	}()
+}
+
+func (cmd *RunCommand) checkGenesisInfo(blocks []block.Block) {
 	if _, _, exists := cmd.nr.genesisInfo(); exists {
 		return
 	}
@@ -143,6 +160,7 @@ func (cmd *RunCommand) whenBlockSaved(blocks []block.Block) {
 			break
 		}
 	}
+
 	if genesisBlock == nil {
 		return
 	}
@@ -176,6 +194,131 @@ func (cmd *RunCommand) initialize() error {
 	} else {
 		cmd.nr.setGenesisInfo(ac, ba) // NOTE set for NodeInfo
 	}
+
+	if st, err := loadDigestStorage(cmd.design, cmd.nr.Storage(), false); err != nil {
+		return err
+	} else {
+		_ = st.SetLogger(cmd.log)
+		cmd.digestStoarge = st
+	}
+
+	return nil
+}
+
+func (cmd *RunCommand) startDigester() error {
+	cmd.log.Debug().Msg("start digesting")
+
+	// check current blocks
+	switch m, found, err := cmd.nr.Storage().LastManifest(); {
+	case err != nil:
+		return err
+	case !found:
+		cmd.log.Debug().Msg("last manifest not found")
+	case m.Height() > cmd.digestStoarge.LastBlock():
+		cmd.log.Info().
+			Hinted("last_manifest", m.Height()).
+			Hinted("last_block", cmd.digestStoarge.LastBlock()).
+			Msg("new blocks found to digest")
+
+		if err := cmd.digestFollowup(m.Height()); err != nil {
+			cmd.log.Error().Err(err).Msg("failed to follow up")
+
+			return err
+		} else {
+			cmd.log.Info().Msg("digested new blocks")
+		}
+	default:
+		cmd.log.Info().Msg("digested blocks is up-to-dated")
+	}
+
+	cmd.di = digest.NewDigester(cmd.digestStoarge, nil)
+	_ = cmd.di.SetLogger(cmd.log)
+
+	if err := cmd.di.Start(); err != nil {
+		return err
+	}
+
+	if cmd.design.Digest.Network == nil {
+		cmd.log.Debug().Msg("digest API disabled")
+
+		return nil
+	} else {
+		cmd.log.Debug().Msg("starting digest API")
+
+		return cmd.startDigestAPI()
+	}
+}
+
+func (cmd *RunCommand) digestFollowup(height base.Height) error {
+	if height <= cmd.digestStoarge.LastBlock() {
+		return nil
+	}
+
+	lastBlock := cmd.digestStoarge.LastBlock()
+	if lastBlock < base.PreGenesisHeight {
+		lastBlock = base.PreGenesisHeight
+	}
+
+	for i := lastBlock; i <= height; i++ {
+		if blk, err := cmd.nr.Localstate().BlockFS().Load(i); err != nil {
+			return err
+		} else if err := digest.DigestBlock(cmd.digestStoarge, blk); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (cmd *RunCommand) startDigestAPI() error {
+	var cache digest.Cache
+	if mc, err := digest.NewCacheFromURI(cmd.design.Digest.Cache); err != nil {
+		cmd.log.Error().Err(err).Str("cache", cmd.design.Digest.Cache).Msg("failed to connect cache server")
+		cmd.log.Warn().Msg("instead of remote cache server, internal mem cache can be available, `memory://`")
+
+		return err
+	} else {
+		cache = mc
+	}
+
+	cmd.log.Info().
+		Str("bind", cmd.design.Digest.Network.Bind).
+		Str("publish", cmd.design.Digest.Network.PublishURL().String()).
+		Msg("trying to start http2 server for digest API")
+	var nt *digest.HTTP2Server
+	if sv, err := digest.NewHTTP2Server(
+		cmd.design.Digest.Network.Bind,
+		cmd.design.Network.PublishURL().Host,
+		cmd.design.Digest.Network.Certs(),
+	); err != nil {
+		return err
+	} else if err := sv.Initialize(); err != nil {
+		return err
+	} else {
+		_ = sv.SetLogger(cmd.log)
+
+		nt = sv
+	}
+
+	handlers := digest.NewHandlers(defaultJSONEnc, cmd.digestStoarge, cache).
+		SetNodeInfoHandler(cmd.nr.nodeInfoHandler)
+	_ = handlers.SetLogger(cmd.log)
+
+	if err := handlers.Initialize(); err != nil {
+		return err
+	} else {
+		nt.SetHandler(handlers.Handler())
+	}
+
+	if err := nt.Start(); err != nil {
+		return err
+	}
+
+	contestlib.ExitHooks.Add(func() {
+		if err := nt.Stop(); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		}
+	})
 
 	return nil
 }

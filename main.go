@@ -25,7 +25,7 @@ var mainHelpOptions = kong.HelpOptions{
 
 var mainDefaultVars = kong.Vars{
 	"log":                      "",
-	"log_level":                "error",
+	"log_level":                "info",
 	"log_format":               "terminal",
 	"log_color":                "false",
 	"verbose":                  "false",
@@ -35,12 +35,14 @@ var mainDefaultVars = kong.Vars{
 	"cpu_prof_file":            "/tmp/mitum-currency-cpu.prof",
 	"node_url":                 "quic://localhost:54321",
 	"create_account_threshold": "100",
+	"storage":                  "mongodb://localhost:27017/mc",
 }
 
 func main() {
 	flags := &cmds.MainFlags{
 		LogFlags: &contestlib.LogFlags{},
 		Run:      cmds.RunCommand{PprofFlags: &launcher.PprofFlags{}},
+		Digest:   cmds.DigestCommand{PprofFlags: &launcher.PprofFlags{}},
 	}
 	ctx := kong.Parse(
 		flags,

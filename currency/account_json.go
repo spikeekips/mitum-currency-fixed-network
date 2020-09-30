@@ -15,13 +15,17 @@ type AccountPackerJSON struct {
 	KS Keys           `json:"keys"`
 }
 
-func (ac Account) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(AccountPackerJSON{
+func (ac Account) PackerJSON() AccountPackerJSON {
+	return AccountPackerJSON{
 		HintedHead: jsonenc.NewHintedHead(ac.Hint()),
 		H:          ac.h,
 		AD:         ac.address,
 		KS:         ac.keys,
-	})
+	}
+}
+
+func (ac Account) MarshalJSON() ([]byte, error) {
+	return jsonenc.Marshal(ac.PackerJSON())
 }
 
 type AccountJSONUnpacker struct {

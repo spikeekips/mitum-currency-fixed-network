@@ -1,6 +1,10 @@
 package cmds
 
 import (
+	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -16,10 +20,17 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
+var (
+	DefaultDigestPort        uint = 4430
+	DefaultDigestScheme           = "https"
+	DefaultDigestCacheStrign      = "memory://"
+)
+
 type NodeDesign struct {
 	*launcher.NodeDesign
 	FeeAmount   currency.FeeAmount
 	FeeReceiver base.Address
+	Digest      *DigestDesign `yaml:"-"`
 }
 
 func (nd *NodeDesign) IsValid(b []byte) error {
@@ -28,6 +39,12 @@ func (nd *NodeDesign) IsValid(b []byte) error {
 	}
 
 	if err := nd.loadFeeAmount(); err != nil {
+		return err
+	}
+
+	if err := nd.loadDigest(); err != nil {
+		return err
+	} else if err := nd.Digest.Merge(nd); err != nil {
 		return err
 	}
 
@@ -123,6 +140,44 @@ func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (currency.Fee
 	}
 
 	return currency.NewRatioFeeAmount(ratio, min)
+}
+
+func (nd *NodeDesign) loadDigest() error {
+	var c map[string]interface{}
+	if nd.Component.Others() != nil {
+		for k, v := range nd.Component.Others() {
+			if k != "digest" {
+				continue
+			}
+
+			if v == nil {
+				continue
+			} else if m, ok := v.(map[string]interface{}); !ok {
+				return xerrors.Errorf("bad formatted digest design")
+			} else {
+				c = m
+			}
+		}
+	}
+
+	if c == nil {
+		nd.Digest = new(DigestDesign)
+
+		return nil
+	}
+
+	var dd *DigestDesign
+	if b, err := yaml.Marshal(c); err != nil {
+		return err
+	} else if err := yaml.Unmarshal(b, &dd); err != nil {
+		return err
+	} else if err := dd.IsValid(nil); err != nil {
+		return err
+	} else {
+		nd.Digest = dd
+	}
+
+	return nil
 }
 
 func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
@@ -230,6 +285,87 @@ func (kd *KeyDesign) IsValid([]byte) error {
 		return err
 	} else {
 		kd.Key = k
+	}
+
+	return nil
+}
+
+type DigestDesign struct {
+	Network *launcher.BaseNetworkDesign
+	Storage string
+	Cache   string
+	Node    string
+	node    *url.URL
+}
+
+func (de *DigestDesign) IsValid([]byte) error {
+	if err := de.Network.IsValid(nil); err != nil {
+		return err
+	}
+
+	if len(de.Node) > 0 {
+		if u, err := launcher.IsvalidNetworkURL(de.Node); err != nil {
+			return err
+		} else {
+			de.node = u
+		}
+	}
+
+	return nil
+}
+
+func (de *DigestDesign) defaultPublish(publish *url.URL) (*url.URL, error) {
+	pb := new(url.URL)
+	{
+		a := publish
+		*pb = *a
+	}
+	if h, i, err := net.SplitHostPort(pb.Host); err != nil {
+		return nil, err
+	} else if p, err := strconv.ParseUint(i, 10, 64); err != nil {
+		return nil, xerrors.Errorf("invalid port in host value, '%v': %w", pb.Host, err)
+	} else {
+		port := DefaultDigestPort
+		if uint(p) == port {
+			port++
+		}
+		pb.Host = fmt.Sprintf("%s:%d", h, port)
+		pb.Scheme = DefaultDigestScheme
+
+		return pb, nil
+	}
+}
+
+func (de *DigestDesign) Merge(nd *NodeDesign) error {
+	if de.Network != nil {
+		if len(de.Network.Publish) < 1 {
+			if u, err := de.defaultPublish(nd.Network.PublishURL()); err != nil {
+				return err
+			} else {
+				de.Network.Publish = u.String()
+			}
+
+			if err := de.Network.IsValid(nil); err != nil {
+				return err
+			}
+		}
+
+		if nd.Network.Bind == de.Network.Bind {
+			de.Network.Bind = fmt.Sprintf("%s:%d", de.Network.BindHost(), de.Network.BindPort()+1)
+		}
+	}
+
+	if len(de.Storage) < 1 {
+		de.Storage = nd.Storage
+	}
+
+	if len(de.Cache) < 1 {
+		de.Cache = DefaultDigestCacheStrign
+	}
+
+	if de.node == nil {
+		de.Node = nd.Network.PublishURL().String()
+		de.node = nd.Network.PublishURL()
 	}
 
 	return nil

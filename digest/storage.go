@@ -1,0 +1,484 @@
+package digest
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/storage"
+	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/xerrors"
+)
+
+var maxLimit int64 = 50
+
+var (
+	defaultColNameAccount   = "digest_ac"
+	defaultColNameBalance   = "digest_bl"
+	defaultColNameOperation = "digest_op"
+)
+
+var DigestStorageLastBlockKey = "digest_last_block"
+
+type Storage struct {
+	sync.RWMutex
+	*logging.Logging
+	mitum     *mongodbstorage.Storage
+	storage   *mongodbstorage.Storage
+	readonly  bool
+	lastBlock base.Height
+}
+
+func NewStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storage) (*Storage, error) {
+	nst := &Storage{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "digest-mongodb-storage")
+		}),
+		mitum:     mitum,
+		storage:   st,
+		lastBlock: base.NilHeight,
+	}
+	_ = nst.SetLogger(mitum.Log())
+
+	return nst, nil
+}
+
+func NewReadonlyStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storage) (*Storage, error) {
+	if st, err := NewStorage(mitum, st); err != nil {
+		return nil, err
+	} else {
+		st.readonly = true
+
+		return st, nil
+	}
+}
+
+func (st *Storage) New() (*Storage, error) {
+	if st.readonly {
+		return nil, xerrors.Errorf("readonly mode")
+	}
+
+	if nst, err := st.storage.New(); err != nil {
+		return nil, err
+	} else {
+		return NewStorage(st.mitum, nst)
+	}
+}
+
+func (st *Storage) Close() error {
+	return st.storage.Close()
+}
+
+func (st *Storage) Initialize() error {
+	st.Lock()
+	defer st.Unlock()
+
+	switch h, found, err := loadLastBlock(st); {
+	case err != nil:
+		return xerrors.Errorf("failed to get last block for digest: %w", err)
+	case !found:
+		st.lastBlock = base.NilHeight
+		st.Log().Debug().Msg("last block for digest not found")
+	default:
+		st.lastBlock = h
+
+		if !st.readonly {
+			if err := st.createIndex(); err != nil {
+				return err
+			}
+
+			if err := st.cleanByHeight(h + 1); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (st *Storage) createIndex() error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
+	for col, models := range defaultIndexes {
+		if err := st.storage.CreateIndex(col, models, indexPrefix); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (st *Storage) BlockStorage(blk block.Block) (*BlockStorage, error) {
+	if st.readonly {
+		return nil, xerrors.Errorf("readonly mode")
+	}
+
+	return NewBlockStorage(st, blk)
+}
+
+func (st *Storage) LastBlock() base.Height {
+	st.RLock()
+	defer st.RUnlock()
+
+	return st.lastBlock
+}
+
+func (st *Storage) SetLastBlock(height base.Height) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
+	st.Lock()
+	defer st.Unlock()
+
+	if height <= st.lastBlock {
+		return nil
+	}
+
+	return st.setLastBlock(height)
+}
+
+func (st *Storage) setLastBlock(height base.Height) error {
+	if err := st.storage.SetInfo(DigestStorageLastBlockKey, height.Bytes()); err != nil {
+		st.Log().Debug().Hinted("height", height).Msg("failed to set last block")
+
+		return err
+	} else {
+		st.lastBlock = height
+		st.Log().Debug().Hinted("height", height).Msg("set last block")
+
+		return nil
+	}
+}
+
+func (st *Storage) Clean() error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
+	st.Lock()
+	defer st.Unlock()
+
+	return st.clean()
+}
+
+func (st *Storage) clean() error {
+	for _, col := range []string{
+		defaultColNameAccount,
+		defaultColNameBalance,
+		defaultColNameOperation,
+	} {
+		if err := st.storage.Client().Collection(col).Drop(context.Background()); err != nil {
+			return storage.WrapStorageError(err)
+		}
+
+		st.Log().Debug().Str("collection", col).Msg("drop collection by height")
+	}
+
+	if err := st.setLastBlock(base.NilHeight); err != nil {
+		return err
+	}
+
+	st.Log().Debug().Msg("clean digest")
+
+	return nil
+}
+
+func (st *Storage) CleanByHeight(height base.Height) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
+	st.Lock()
+	defer st.Unlock()
+
+	return st.cleanByHeight(height)
+}
+
+func (st *Storage) cleanByHeight(height base.Height) error {
+	if height <= base.PreGenesisHeight+1 {
+		return st.clean()
+	}
+
+	opts := options.BulkWrite().SetOrdered(true)
+	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
+
+	for _, col := range []string{
+		defaultColNameAccount,
+		defaultColNameBalance,
+		defaultColNameOperation,
+	} {
+		res, err := st.storage.Client().Collection(col).BulkWrite(
+			context.Background(),
+			[]mongo.WriteModel{removeByHeight},
+			opts,
+		)
+		if err != nil {
+			return storage.WrapStorageError(err)
+		}
+
+		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
+	}
+
+	return st.setLastBlock(height - 1)
+}
+
+func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
+	return st.mitum.ManifestByHeight(height)
+}
+
+func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
+	return st.mitum.Manifest(h)
+}
+
+// OperationsByAddress finds the operation.Operations, which are related with
+// the given Address. The returned valuehash.Hash is the
+// operation.Operation.Fact().Hash().
+// *    load:if true, load operation.Operation and returns it. If not, just hash will be returned
+// * reverse: order by height; if true, higher height will be returned first.
+// *  offset: returns from next of offset, usually it is combination of
+// "<height>,<fact>".
+func (st *Storage) OperationsByAddress(
+	address base.Address,
+	load,
+	reverse bool,
+	offset string,
+	limit int64,
+	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
+) error {
+	var filter bson.M
+	if f, err := buildOperationsByAddressFilter(address, offset, reverse); err != nil {
+		return err
+	} else {
+		filter = f
+	}
+
+	var sr int = 1
+	if reverse {
+		sr = -1
+	}
+
+	opt := options.Find().SetSort(
+		util.NewBSONFilter("height", sr).Add("fact", sr).D(),
+	)
+
+	switch {
+	case limit <= 0: // no limit
+	case limit > maxLimit:
+		opt = opt.SetLimit(maxLimit)
+	default:
+		opt = opt.SetLimit(limit)
+	}
+
+	if !load {
+		opt = opt.SetProjection(bson.M{"fact": 1})
+	}
+
+	return st.storage.Client().Find(
+		context.Background(),
+		defaultColNameOperation,
+		filter,
+		func(cursor *mongo.Cursor) (bool, error) {
+			if !load {
+				if h, err := loadOperationHash(cursor.Decode); err != nil {
+					return false, err
+				} else {
+					return callback(h, OperationValue{})
+				}
+			}
+
+			if va, err := loadOperation(cursor.Decode, st.storage.Encoders()); err != nil {
+				return false, err
+			} else {
+				return callback(va.Operation().Fact().Hash(), va)
+			}
+		},
+		opt,
+	)
+}
+
+// Operation returns operation.Operation. If load is false, just returns nil
+// Operation.
+func (st *Storage) Operation(
+	h valuehash.Hash, /* fact hash */
+	load bool,
+) (OperationValue, bool /* exists */, error) {
+	if !load {
+		exists, err := st.storage.Client().Exists(defaultColNameOperation, util.NewBSONFilter("fact", h).D())
+		return OperationValue{}, exists, err
+	}
+
+	var va OperationValue
+	if err := st.storage.Client().GetByFilter(
+		defaultColNameOperation,
+		util.NewBSONFilter("fact", h).D(),
+		func(res *mongo.SingleResult) error {
+			if !load {
+				return nil
+			}
+
+			if i, err := loadOperation(res.Decode, st.storage.Encoders()); err != nil {
+				return err
+			} else {
+				va = i
+
+				return nil
+			}
+		},
+	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return OperationValue{}, false, nil
+		}
+
+		return OperationValue{}, false, err
+	} else {
+		return va, true, nil
+	}
+}
+
+// Account returns AccountValue.
+func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, error) {
+	var rs AccountValue
+	if err := st.storage.Client().GetByFilter(
+		defaultColNameAccount,
+		util.NewBSONFilter("address", a.String()).D(),
+		func(res *mongo.SingleResult) error {
+			if i, err := loadAccountValue(res.Decode, st.storage.Encoders()); err != nil {
+				return err
+			} else {
+				rs = i
+
+				return nil
+			}
+		},
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
+	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return AccountValue{}, false, nil
+		}
+
+		return AccountValue{}, false, err
+	}
+
+	// NOTE load balance
+	switch am, amst, found, err := st.balance(a); {
+	case err != nil:
+		return AccountValue{}, false, err
+	case !found:
+		return AccountValue{}, false, nil
+	default:
+		rs = rs.SetBalance(am)
+
+		if amst.Height() > rs.height {
+			rs = rs.
+				SetHeight(amst.Height()).
+				SetPreviousHeight(amst.PreviousHeight())
+		}
+	}
+
+	return rs, true, nil
+}
+
+func (st *Storage) balance(a base.Address) (currency.Amount, state.State, bool /* exists */, error) {
+	var am state.State
+	if err := st.storage.Client().GetByFilter(
+		defaultColNameBalance,
+		util.NewBSONFilter("address", a.String()).D(),
+		func(res *mongo.SingleResult) error {
+			if i, err := loadBalance(res.Decode, st.storage.Encoders()); err != nil {
+				return err
+			} else {
+				am = i
+
+				return nil
+			}
+		},
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
+	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return currency.NilAmount, nil, false, nil
+		}
+
+		return currency.NilAmount, nil, false, err
+	} else if a, err := currency.StateAmountValue(am); err != nil {
+		return currency.NilAmount, nil, false, err
+	} else {
+		return a, am, true, nil
+	}
+}
+
+func loadLastBlock(st *Storage) (base.Height, bool, error) {
+	switch b, found, err := st.storage.Info(DigestStorageLastBlockKey); {
+	case err != nil:
+		return base.NilHeight, false, xerrors.Errorf("failed to get last block for digest: %w", err)
+	case !found:
+		return base.NilHeight, false, nil
+	default:
+		if h, err := base.NewHeightFromBytes(b); err != nil {
+			return base.NilHeight, false, err
+		} else {
+			return h, true, nil
+		}
+	}
+}
+
+func parseOffset(s string) (base.Height, string, error) {
+	if n := strings.SplitN(s, ",", 2); n == nil {
+		return base.NilHeight, "", xerrors.Errorf("invalid offset string: %q", s)
+	} else if h, err := base.NewHeightFromString(n[0]); err != nil {
+		return base.NilHeight, "", xerrors.Errorf("invalid height of offset: %w", err)
+	} else {
+		return h, n[1], nil
+	}
+}
+
+func buildOffset(height base.Height, fact string) string {
+	return fmt.Sprintf("%s,%s", height.String(), fact)
+}
+
+func buildOperationsByAddressFilter(address base.Address, offset string, reverse bool) (bson.M, error) {
+	filter := bson.M{"addresses": bson.M{"$in": []string{address.String()}}}
+	if len(offset) > 0 {
+		var height base.Height
+		var fact string
+		if h, f, err := parseOffset(offset); err != nil {
+			return nil, err
+		} else {
+			height = h
+			fact = f
+		}
+
+		if reverse {
+			filter["$or"] = []bson.M{
+				{"height": bson.M{"$lt": height}},
+				{"$and": []bson.M{
+					{"height": height},
+					{"fact": bson.M{"$lt": fact}},
+				}},
+			}
+		} else {
+			filter["$or"] = []bson.M{
+				{"height": bson.M{"$gt": height}},
+				{"$and": []bson.M{
+					{"height": height},
+					{"fact": bson.M{"$gt": fact}},
+				}},
+			}
+		}
+	}
+
+	return filter, nil
+}

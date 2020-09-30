@@ -42,19 +42,21 @@ func (cmd *SendCommand) Run(flags *MainFlags, version util.Version, log logging.
 		cmd.Log().Debug().Msg("seal signed")
 	}
 
-	if cmd.DryRun {
-		prettyPrint(cmd.Pretty, sl)
+	prettyPrint(cmd.Pretty, sl)
 
+	if cmd.DryRun {
 		return nil
 	}
 
-	cmd.Log().Debug().Msg("trying to send seal")
+	cmd.Log().Info().Msg("trying to send seal")
 
 	if err := cmd.send(sl); err != nil {
 		cmd.Log().Error().Err(err).Msg("failed to send seal")
 
 		return err
 	}
+
+	cmd.Log().Info().Msg("sent seal")
 
 	return nil
 }

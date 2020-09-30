@@ -12,20 +12,25 @@ import (
 	"github.com/spikeekips/mitum/storage"
 )
 
+var (
+	StateKeyAccountSuffix = ":account"
+	StateKeyBalanceSuffix = ":balance"
+)
+
 func StateKeyAccount(a base.Address) string {
-	return fmt.Sprintf("%s:account", a.String())
+	return fmt.Sprintf("%s%s", a.String(), StateKeyAccountSuffix)
 }
 
 func IsStateAccountKey(key string) bool {
-	return strings.HasSuffix(key, ":account")
-}
-
-func IsStateBalanceKey(key string) bool {
-	return strings.HasSuffix(key, ":balance")
+	return strings.HasSuffix(key, StateKeyAccountSuffix)
 }
 
 func StateKeyBalance(a base.Address) string {
-	return fmt.Sprintf("%s:balance", a.String())
+	return fmt.Sprintf("%s%s", a.String(), StateKeyBalanceSuffix)
+}
+
+func IsStateBalanceKey(key string) bool {
+	return strings.HasSuffix(key, StateKeyBalanceSuffix)
 }
 
 func StateAmountValue(st state.State) (Amount, error) {

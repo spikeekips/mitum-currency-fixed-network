@@ -19,7 +19,9 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/storage"
+	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -28,6 +30,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 var (
@@ -39,7 +42,6 @@ var (
 func init() {
 	hinters = append(hinters, contestlib.Hinters...)
 	hinters = append(hinters,
-		NodeInfo{},
 		currency.Address(""),
 		currency.Key{},
 		currency.Keys{},
@@ -55,6 +57,11 @@ func init() {
 		currency.FeeOperationFact{},
 		currency.FeeOperation{},
 		currency.Account{},
+		digest.AccountValue{},
+		digest.OperationValue{},
+		digest.Problem{},
+		digest.BaseHal{},
+		NodeInfo{},
 	)
 
 	if es, err := loadEncoders(); err != nil {
@@ -353,7 +360,7 @@ func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Ac
 	var ac currency.Account
 	var balance currency.Amount
 
-	switch b, found, err := st.GetInfo(GenesisAccountKey); {
+	switch b, found, err := st.Info(GenesisAccountKey); {
 	case err != nil:
 		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis account: %w", err)
 	case !found:
@@ -366,7 +373,7 @@ func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Ac
 		}
 	}
 
-	switch b, found, err := st.GetInfo(GenesisBalanceKey); {
+	switch b, found, err := st.Info(GenesisBalanceKey); {
 	case err != nil:
 		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis balance: %w", err)
 	case !found:
@@ -379,4 +386,44 @@ func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Ac
 
 	log.Debug().Msg("genesis info loaded")
 	return ac, balance, nil
+}
+
+func loadDigestStorage(design *NodeDesign, st storage.Storage, readonly bool) (*digest.Storage, error) {
+	var mst, dst *mongodbstorage.Storage
+	if nst, ok := st.(*mongodbstorage.Storage); !ok {
+		return nil, xerrors.Errorf("digest needs *mongodbstorage.Storage, not %T", st)
+	} else if rst, err := nst.Readonly(); err != nil {
+		return nil, err
+	} else {
+		mst = rst
+	}
+
+	if s, err := launcher.LoadStorage(design.Digest.Storage, encs, mst.Cache()); err != nil {
+		return nil, err
+	} else if st, ok := s.(*mongodbstorage.Storage); !ok {
+		return nil, xerrors.Errorf("digest needs *mongodbstorage.Storage, not %T", s)
+	} else {
+		dst = st
+	}
+
+	var nst *digest.Storage
+	if readonly {
+		if st, err := digest.NewReadonlyStorage(mst, dst); err != nil {
+			return nil, err
+		} else {
+			nst = st
+		}
+	} else {
+		if st, err := digest.NewStorage(mst, dst); err != nil {
+			return nil, err
+		} else {
+			nst = st
+		}
+	}
+
+	if err := nst.Initialize(); err != nil {
+		return nil, err
+	} else {
+		return nst, nil
+	}
 }
