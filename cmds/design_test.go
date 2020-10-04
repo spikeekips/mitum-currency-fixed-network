@@ -1,12 +1,20 @@
 package cmds
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
 	"testing"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
@@ -29,6 +37,49 @@ func (t *testDesign) SetupSuite() {
 	_ = t.Encs.AddHinter(base.StringAddress(""))
 }
 
+func (t *testDesign) createCerts() (string, string) {
+	priv, err := util.GenerateED25519Privatekey()
+	t.NoError(err)
+
+	template := x509.Certificate{SerialNumber: big.NewInt(1)}
+	template.DNSNames = append(template.DNSNames, "localhost")
+
+	certDER, err := x509.CreateCertificate(
+		rand.Reader,
+		&template,
+		&template,
+		priv.Public().(ed25519.PublicKey),
+		priv,
+	)
+	t.NoError(err)
+
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	t.NoError(err)
+
+	keyFile, err := ioutil.TempFile("/tmp", "prefix")
+	t.NoError(err)
+
+	certFile, err := ioutil.TempFile("/tmp", "prefix")
+	t.NoError(err)
+
+	t.NoError(pem.Encode(
+		keyFile,
+		&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: keyBytes,
+		},
+	))
+	t.NoError(pem.Encode(
+		certFile,
+		&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: certDER,
+		},
+	))
+
+	return keyFile.Name(), certFile.Name()
+}
+
 func (t *testDesign) TestNew() {
 	y := `
 address: mc-node-010a:0.0.1
@@ -37,7 +88,7 @@ storage: mongodb://127.0.0.1:27017/mc
 blockfs: ./blockfs
 network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
-    bind: 0.0.0.0:54321
+    bind: quic://0.0.0.0:54321
     publish: quic://127.0.0.1:54321
 component:
     fee-amount:
@@ -59,7 +110,7 @@ component:
 
 	t.Equal([]byte("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
 	t.Equal("mongodb://127.0.0.1:27017/mc", d.Storage)
-	t.Equal("0.0.0.0:54321", d.Network.Bind)
+	t.Equal("quic://0.0.0.0:54321", d.Network.Bind().String())
 	t.Equal("quic://127.0.0.1:54321", d.Network.Publish)
 
 	t.NotEmpty(d.FeeAmount)
@@ -69,7 +120,7 @@ component:
 	t.NotNil(d.Digest)
 }
 
-func (t *testDesign) TestDigest() {
+func (t *testDesign) TestDigestWithoutCertificates() {
 	y := `
 address: mc-node-010a:0.0.1
 privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
@@ -77,7 +128,7 @@ storage: mongodb://127.0.0.1:27017/mc
 blockfs: ./blockfs
 network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
-    bind: 0.0.0.0:54321
+    bind: quic://0.0.0.0:54321
     publish: quic://127.0.0.1:54321
 component:
     fee-amount:
@@ -88,11 +139,44 @@ component:
         storage: mongodb://127.0.0.1:27017/mc-digest
         cache: memory://
         network:
-            bind: 0.0.0.0:8090
+            bind: https://0.0.0.0:8090
             publish: https://showme:4430
 `
 
-	d, err := LoadNodeDesign([]byte(y), t.Encs)
+	_, err := LoadNodeDesign([]byte(y), t.Encs)
+	t.Contains(err.Error(), "missing certificates for https")
+}
+
+func (t *testDesign) TestDigest() {
+	y := `
+address: mc-node-010a:0.0.1
+privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
+storage: mongodb://127.0.0.1:27017/mc
+blockfs: ./blockfs
+network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
+network:
+    bind: quic://0.0.0.0:54321
+    publish: quic://127.0.0.1:54321
+component:
+    fee-amount:
+        type: ratio
+        min: 20
+        ratio: 0.2
+    digest:
+        storage: mongodb://127.0.0.1:27017/mc-digest
+        cache: memory://
+        network:
+            bind: https://0.0.0.0:8090
+            publish: https://showme:4430
+            cert-key: "%s"
+            cert: "%s"
+`
+
+	keyFile, certFile := t.createCerts()
+	defer os.Remove(keyFile)
+	defer os.Remove(certFile)
+
+	d, err := LoadNodeDesign([]byte(fmt.Sprintf(y, keyFile, certFile)), t.Encs)
 	t.NoError(err)
 
 	address, err := base.NewStringAddress("mc-node")
@@ -105,14 +189,14 @@ component:
 
 	t.Equal([]byte("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
 	t.Equal("mongodb://127.0.0.1:27017/mc", d.Storage)
-	t.Equal("0.0.0.0:54321", d.Network.Bind)
+	t.Equal("quic://0.0.0.0:54321", d.Network.Bind().String())
 	t.Equal("quic://127.0.0.1:54321", d.Network.Publish)
 
 	t.NotEmpty(d.FeeAmount)
 	t.IsType(currency.RatioFeeAmount{}, d.FeeAmount)
 	t.Equal(`{"type": "ratio", "ratio": 0.200000, "min": "20"}`, d.FeeAmount.Verbose())
 
-	t.Equal("0.0.0.0:8090", d.Digest.Network.Bind)
+	t.Equal("https://0.0.0.0:8090", d.Digest.Network.Bind().String())
 	t.Equal("https://showme:4430", d.Digest.Network.Publish)
 	t.Equal("mongodb://127.0.0.1:27017/mc-digest", d.Digest.Storage)
 	t.Equal("memory://", d.Digest.Cache)
@@ -126,7 +210,7 @@ storage: mongodb://127.0.0.1:27017/mc
 blockfs: ./blockfs
 network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
-    bind: 0.0.0.0:54321
+    bind: quic://0.0.0.0:54321
     publish: quic://127.0.0.1:54321
 `
 
@@ -146,18 +230,24 @@ storage: mongodb://127.0.0.1:27017/mc
 blockfs: ./blockfs
 network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
-    bind: 0.0.0.0:54321
+    bind: quic://0.0.0.0:54321
     publish: quic://127.0.0.1:54321
 component:
     digest:
         network:
-            bind: 0.0.0.0:4430
+            bind: https://0.0.0.0:4430
+            cert-key: "%s"
+            cert: "%s"
 `
 
-	d, err := LoadNodeDesign([]byte(y), t.Encs)
+	keyFile, certFile := t.createCerts()
+	defer os.Remove(keyFile)
+	defer os.Remove(certFile)
+
+	d, err := LoadNodeDesign([]byte(fmt.Sprintf(y, keyFile, certFile)), t.Encs)
 	t.NoError(err)
 
-	t.Equal(fmt.Sprintf("0.0.0.0:%d", DefaultDigestPort), d.Digest.Network.Bind)
+	t.Equal(fmt.Sprintf("https://0.0.0.0:%d", DefaultDigestPort), d.Digest.Network.Bind().String())
 	t.Equal(fmt.Sprintf("https://127.0.0.1:%d", DefaultDigestPort), d.Digest.Network.Publish)
 	t.Equal("mongodb://127.0.0.1:27017/mc", d.Digest.Storage)
 	t.Equal(DefaultDigestCacheStrign, d.Digest.Cache)

@@ -16,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -311,6 +312,21 @@ func (de *DigestDesign) IsValid([]byte) error {
 		}
 	}
 
+	if len(de.Network.Certs()) < 1 && de.Network.Bind().Scheme == "https" {
+		bind := de.Network.Bind()
+		if h := bind.Hostname(); strings.HasPrefix(h, "127.0.") || h == "localhost" {
+			if priv, err := util.GenerateED25519Privatekey(); err != nil {
+				return err
+			} else if ct, err := util.GenerateTLSCerts("localhost", priv); err != nil {
+				return err
+			} else {
+				de.Network.SetCerts(ct)
+			}
+		} else {
+			return xerrors.Errorf("missing certificates for https")
+		}
+	}
+
 	return nil
 }
 
@@ -350,8 +366,8 @@ func (de *DigestDesign) Merge(nd *NodeDesign) error {
 			}
 		}
 
-		if nd.Network.Bind == de.Network.Bind {
-			de.Network.Bind = fmt.Sprintf("%s:%d", de.Network.BindHost(), de.Network.BindPort()+1)
+		if nd.Network.BindString == de.Network.BindString {
+			return xerrors.Errorf("bind string is same with node")
 		}
 	}
 

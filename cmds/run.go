@@ -61,15 +61,13 @@ func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Log
 		return err
 	}
 
-	if err := cmd.startDigester(); err != nil {
-		return err
-	}
-
 	contestlib.ConnectSignal()
 	defer contestlib.ExitHooks.Run()
 
 	if err := cmd.nr.Start(); err != nil {
 		return xerrors.Errorf("failed to start: %w", err)
+	} else if err := cmd.startDigest(); err != nil {
+		return err
 	}
 
 	select {
@@ -195,11 +193,35 @@ func (cmd *RunCommand) initialize() error {
 		cmd.nr.setGenesisInfo(ac, ba) // NOTE set for NodeInfo
 	}
 
-	if st, err := loadDigestStorage(cmd.design, cmd.nr.Storage(), false); err != nil {
+	if len(cmd.design.Digest.Storage) < 1 {
+		cmd.log.Debug().Msg("digest storage disabled")
+	} else if st, err := loadDigestStorage(cmd.design, cmd.nr.Storage(), false); err != nil {
 		return err
 	} else {
 		_ = st.SetLogger(cmd.log)
 		cmd.digestStoarge = st
+	}
+
+	return nil
+}
+
+func (cmd *RunCommand) startDigest() error {
+	if cmd.digestStoarge == nil {
+		cmd.log.Debug().Msg("digester disabled")
+
+		return nil
+	}
+
+	if err := cmd.startDigester(); err != nil {
+		return err
+	} else {
+		cmd.log.Debug().Msg("digester started")
+	}
+
+	if err := cmd.startDigestAPI(); err != nil {
+		return err
+	} else {
+		cmd.log.Debug().Msg("digest API started")
 	}
 
 	return nil
@@ -234,19 +256,7 @@ func (cmd *RunCommand) startDigester() error {
 	cmd.di = digest.NewDigester(cmd.digestStoarge, nil)
 	_ = cmd.di.SetLogger(cmd.log)
 
-	if err := cmd.di.Start(); err != nil {
-		return err
-	}
-
-	if cmd.design.Digest.Network == nil {
-		cmd.log.Debug().Msg("digest API disabled")
-
-		return nil
-	} else {
-		cmd.log.Debug().Msg("starting digest API")
-
-		return cmd.startDigestAPI()
-	}
+	return cmd.di.Start()
 }
 
 func (cmd *RunCommand) digestFollowup(height base.Height) error {
@@ -271,6 +281,12 @@ func (cmd *RunCommand) digestFollowup(height base.Height) error {
 }
 
 func (cmd *RunCommand) startDigestAPI() error {
+	if cmd.digestStoarge == nil || cmd.design.Digest.Network == nil {
+		cmd.log.Debug().Msg("digest API disabled")
+
+		return nil
+	}
+
 	var cache digest.Cache
 	if mc, err := digest.NewCacheFromURI(cmd.design.Digest.Cache); err != nil {
 		cmd.log.Error().Err(err).Str("cache", cmd.design.Digest.Cache).Msg("failed to connect cache server")
@@ -282,12 +298,12 @@ func (cmd *RunCommand) startDigestAPI() error {
 	}
 
 	cmd.log.Info().
-		Str("bind", cmd.design.Digest.Network.Bind).
+		Str("bind", cmd.design.Digest.Network.Bind().String()).
 		Str("publish", cmd.design.Digest.Network.PublishURL().String()).
 		Msg("trying to start http2 server for digest API")
 	var nt *digest.HTTP2Server
 	if sv, err := digest.NewHTTP2Server(
-		cmd.design.Digest.Network.Bind,
+		cmd.design.Digest.Network.Bind().Host,
 		cmd.design.Network.PublishURL().Host,
 		cmd.design.Digest.Network.Certs(),
 	); err != nil {

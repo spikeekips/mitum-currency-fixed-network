@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/net/http2"
 )
 
@@ -31,20 +29,6 @@ type HTTP2Server struct {
 }
 
 func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, error) {
-	var getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error)
-
-	if len(certs) < 1 {
-		if host == "localhost" || strings.HasPrefix(host, "127.0.0.") {
-			if priv, err := util.GenerateED25519Privatekey(); err != nil {
-				return nil, err
-			} else if ct, err := util.GenerateTLSCerts("localhost", priv); err != nil {
-				return nil, err
-			} else {
-				certs = ct
-			}
-		}
-	}
-
 	idleTimeout := time.Second * 10
 	sv := &HTTP2Server{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -58,19 +42,7 @@ func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, e
 		router:           mux.NewRouter(),
 	}
 
-	if len(certs) > 0 {
-		getCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-			return &certs[0], nil
-		}
-	} else {
-		am := &autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(host),
-		}
-		getCertificate = am.GetCertificate
-	}
-
-	if srv, err := newHTTP2Server(sv, getCertificate); err != nil {
+	if srv, err := newHTTP2Server(sv, certs); err != nil {
 		return nil, err
 	} else {
 		sv.srv = srv
@@ -81,20 +53,17 @@ func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, e
 	return sv, nil
 }
 
-func newHTTP2Server(
-	sv *HTTP2Server,
-	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
-) (*http.Server, error) {
+func newHTTP2Server(sv *HTTP2Server, certs []tls.Certificate) (*http.Server, error) {
 	srv := &http.Server{
 		Addr:         sv.bind,
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Minute * 1,
 		IdleTimeout:  sv.idleTimeout,
 		TLSConfig: &tls.Config{
-			GetCertificate: getCertificate,
-			MinVersion:     tls.VersionTLS13,
+			Certificates: certs,
+			MinVersion:   tls.VersionTLS13,
 		},
-		// ErrorLog:  // TODO connect with http loggign
+		// ErrorLog:  // TODO connect with http logging
 		Handler: network.HTTPLogHandler(sv.router, sv.Log()),
 	}
 	if err := http2.ConfigureServer(srv, &http2.Server{
@@ -133,18 +102,19 @@ func (sv *HTTP2Server) start(stopchan chan struct{}) error {
 	if ln, err := net.Listen("tcp", sv.bind); err != nil {
 		return err
 	} else {
+		var listener net.Listener = tcpKeepAliveListener{
+			TCPListener:      ln.(*net.TCPListener),
+			keepAliveTimeout: sv.keepAliveTimeout,
+		}
+
+		if len(sv.srv.TLSConfig.Certificates) > 0 {
+			listener = tls.NewListener(listener, sv.srv.TLSConfig)
+		}
+
 		errchan := make(chan error)
 		sv.srv.ConnState = sv.idleTimeoutHook()
 		go func() {
-			errchan <- sv.srv.Serve(
-				tls.NewListener(
-					tcpKeepAliveListener{
-						TCPListener:      ln.(*net.TCPListener),
-						keepAliveTimeout: sv.keepAliveTimeout,
-					},
-					sv.srv.TLSConfig,
-				),
-			)
+			errchan <- sv.srv.Serve(listener)
 		}()
 
 		select {

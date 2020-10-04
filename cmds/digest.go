@@ -57,7 +57,7 @@ func (cmd *DigestCommand) Run(flags *MainFlags, version util.Version, l logging.
 	}
 
 	cmd.log.Info().
-		Str("bind", cmd.design.Digest.Network.Bind).
+		Str("bind", cmd.design.Digest.Network.BindString).
 		Str("publish", cmd.design.Digest.Network.PublishURL().String()).
 		Msg("trying to start http2 server for digest API")
 
@@ -94,7 +94,7 @@ func (cmd *DigestCommand) run() error {
 
 	var nt *digest.HTTP2Server
 	if sv, err := digest.NewHTTP2Server(
-		cmd.design.Digest.Network.Bind,
+		cmd.design.Digest.Network.Bind().Host,
 		cmd.design.Digest.Network.PublishURL().Host,
 		cmd.design.Digest.Network.Certs(),
 	); err != nil {
