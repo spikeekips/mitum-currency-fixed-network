@@ -31,7 +31,7 @@ func NewKeyUpdaterFact(token []byte, target base.Address, keys Keys) KeyUpdaterF
 		target: target,
 		keys:   keys,
 	}
-	ft.h = valuehash.NewSHA256(ft.Bytes())
+	ft.h = ft.GenerateHash()
 
 	return ft
 }
@@ -42,6 +42,10 @@ func (ft KeyUpdaterFact) Hint() hint.Hint {
 
 func (ft KeyUpdaterFact) Hash() valuehash.Hash {
 	return ft.h
+}
+
+func (ft KeyUpdaterFact) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(ft.Bytes())
 }
 
 func (ft KeyUpdaterFact) Bytes() []byte {
@@ -63,6 +67,10 @@ func (ft KeyUpdaterFact) IsValid([]byte) error {
 		ft.keys,
 	}, nil, false); err != nil {
 		return err
+	}
+
+	if !ft.h.Equal(ft.GenerateHash()) {
+		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil

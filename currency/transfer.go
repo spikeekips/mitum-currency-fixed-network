@@ -73,7 +73,7 @@ func NewTransfersFact(token []byte, sender base.Address, items []TransferItem) T
 		sender: sender,
 		items:  items,
 	}
-	tff.h = valuehash.NewSHA256(tff.Bytes())
+	tff.h = tff.GenerateHash()
 
 	return tff
 }
@@ -84,6 +84,10 @@ func (tff TransfersFact) Hint() hint.Hint {
 
 func (tff TransfersFact) Hash() valuehash.Hash {
 	return tff.h
+}
+
+func (tff TransfersFact) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(tff.Bytes())
 }
 
 func (tff TransfersFact) Token() []byte {
@@ -132,6 +136,10 @@ func (tff TransfersFact) IsValid([]byte) error {
 		default:
 			foundReceivers[k] = struct{}{}
 		}
+	}
+
+	if !tff.h.Equal(tff.GenerateHash()) {
+		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil

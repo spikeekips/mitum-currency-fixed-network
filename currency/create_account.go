@@ -84,7 +84,7 @@ func NewCreateAccountsFact(token []byte, sender base.Address, items []CreateAcco
 		sender: sender,
 		items:  items,
 	}
-	caf.h = valuehash.NewSHA256(caf.Bytes())
+	caf.h = caf.GenerateHash()
 
 	return caf
 }
@@ -95,6 +95,10 @@ func (caf CreateAccountsFact) Hint() hint.Hint {
 
 func (caf CreateAccountsFact) Hash() valuehash.Hash {
 	return caf.h
+}
+
+func (caf CreateAccountsFact) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(caf.Bytes())
 }
 
 func (caf CreateAccountsFact) Bytes() []byte {
@@ -146,6 +150,10 @@ func (caf CreateAccountsFact) IsValid([]byte) error {
 		default:
 			foundKeys[k] = struct{}{}
 		}
+	}
+
+	if !caf.h.Equal(caf.GenerateHash()) {
+		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
