@@ -3,6 +3,7 @@ package digest
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"github.com/rainycape/memcache"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
 )
@@ -107,6 +109,34 @@ func (ca DummyCache) Set(string, []byte, time.Duration) error {
 	return nil
 }
 
+type CachedHTTPHandler struct {
+	*logging.Logging
+	cache Cache
+	f     func(http.ResponseWriter, *http.Request)
+}
+
+func NewCachedHTTPHandler(cache Cache, f func(http.ResponseWriter, *http.Request)) CachedHTTPHandler {
+	return CachedHTTPHandler{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "cached-http-handler")
+		}),
+		cache: cache,
+		f:     f,
+	}
+}
+
+func (ch CachedHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	cr := NewCacheResponseWriter(ch.cache, w, r)
+
+	ch.f(cr, r)
+
+	if err := cr.Cache(); err != nil {
+		if !xerrors.Is(err, SkipCacheError) {
+			ch.Log().Verbose().Err(err).Msg("failed to cache")
+		}
+	}
+}
+
 type CacheResponseWriter struct {
 	http.ResponseWriter
 	cache     Cache
@@ -116,26 +146,23 @@ type CacheResponseWriter struct {
 	key       string
 	expire    time.Duration
 	skipCache bool
+	writer    io.Writer
 }
 
 func NewCacheResponseWriter(cache Cache, w http.ResponseWriter, r *http.Request) *CacheResponseWriter {
+	buf := &bytes.Buffer{}
 	return &CacheResponseWriter{
 		ResponseWriter: w,
 		cache:          cache,
 		r:              r,
-		buf:            &bytes.Buffer{},
+		buf:            buf,
 		status:         http.StatusOK,
+		writer:         io.MultiWriter(w, buf),
 	}
 }
 
 func (cr *CacheResponseWriter) Write(b []byte) (int, error) {
-	if n, err := cr.ResponseWriter.Write(b); err != nil {
-		return n, err
-	} else {
-		_, _ = cr.buf.Write(b)
-
-		return n, err
-	}
+	return cr.writer.Write(b)
 }
 
 func (cr *CacheResponseWriter) WriteHeader(status int) {

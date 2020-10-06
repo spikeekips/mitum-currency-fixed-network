@@ -81,26 +81,6 @@ func (hd *Handlers) Initialize() error {
 	)
 	hd.router.Use(cors)
 
-	hd.router.Use(func() mux.MiddlewareFunc {
-		return func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				cr := NewCacheResponseWriter(hd.cache, w, r)
-
-				next.ServeHTTP(cr, r)
-
-				if err := cr.Cache(); err != nil {
-					if xerrors.Is(err, SkipCacheError) {
-						hd.Log().Verbose().Msg("cache skipped")
-					} else {
-						hd.Log().Error().Err(err).Msg("failed to cache")
-					}
-				} else {
-					hd.Log().Verbose().Msg("cached")
-				}
-			})
-		}
-	}())
-
 	hd.setHandlers()
 
 	return nil
@@ -117,25 +97,35 @@ func (hd *Handlers) Handler() http.Handler {
 }
 
 func (hd *Handlers) setHandlers() {
-	_ = hd.setHandler(HandlerPathManifestByHeight, hd.handleManifestByHeight).
+	_ = hd.setHandler(HandlerPathManifestByHeight, hd.handleManifestByHeight, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathManifestByHash, hd.handleManifestByHash).
+	_ = hd.setHandler(HandlerPathManifestByHash, hd.handleManifestByHash, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathBlockByHeight, hd.handleBlock).
+	_ = hd.setHandler(HandlerPathBlockByHeight, hd.handleBlock, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathBlockByHash, hd.handleBlock).
+	_ = hd.setHandler(HandlerPathBlockByHash, hd.handleBlock, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathAccount, hd.handleAccount).
+	_ = hd.setHandler(HandlerPathAccount, hd.handleAccount, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathAccountOperations, hd.handleAccountOperations).
+	_ = hd.setHandler(HandlerPathAccountOperations, hd.handleAccountOperations, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation).
+	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation, true).
 		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathNodeInfo, hd.handleNodeInfo).
+	_ = hd.setHandler(HandlerPathNodeInfo, hd.handleNodeInfo, true).
 		Methods(http.MethodOptions, "GET")
 }
 
-func (hd *Handlers) setHandler(prefix string, handler network.HTTPHandlerFunc) *mux.Route {
+func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCache bool) *mux.Route {
+	var handler http.Handler
+	if !useCache {
+		handler = http.HandlerFunc(h)
+	} else {
+		ch := NewCachedHTTPHandler(hd.cache, hd.handleNodeInfo)
+		_ = ch.SetLogger(hd.Log())
+
+		handler = ch
+	}
+
 	var name string
 	if prefix == "" || prefix == "/" {
 		name = "root"
@@ -152,7 +142,7 @@ func (hd *Handlers) setHandler(prefix string, handler network.HTTPHandlerFunc) *
 
 	route = route.
 		Path(prefix).
-		HandlerFunc(handler)
+		Handler(handler)
 
 	hd.routes[prefix] = route
 
