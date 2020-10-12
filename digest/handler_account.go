@@ -117,7 +117,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 
 	var vas []Hal
 	if err := hd.storage.OperationsByAddress(
-		address, true, reverse, offset, hd.limiter("account-operations"),
+		address, true, reverse, offset, hd.itemsLimiter("account-operations"),
 		func(_ valuehash.Hash, va OperationValue) (bool, error) {
 			if hal, err := hd.buildOperationHal(va); err != nil {
 				return false, err

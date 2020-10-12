@@ -359,6 +359,10 @@ func (cmd *RunCommand) handlers(cache digest.Cache) (*digest.Handlers, error) {
 		cmd.log.Debug().Msg("send handler attached")
 	}
 
+	if cmd.design.RateLimiter != nil {
+		handlers = handlers.SetRateLimiter(cmd.design.RateLimiter.Limiter())
+	}
+
 	_ = handlers.SetLogger(cmd.log)
 
 	if err := handlers.Initialize(); err != nil {

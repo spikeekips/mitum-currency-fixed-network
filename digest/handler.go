@@ -15,6 +15,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/ulule/limiter/v3"
+	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"golang.org/x/xerrors"
 )
 
@@ -44,7 +46,7 @@ var (
 	unknownProblemJSON []byte
 )
 
-var GlobalLimitList int64 = 10
+var GlobalItemsLimit int64 = 10
 
 func init() {
 	if b, err := jsonenc.Marshal(UnknownProblem); err != nil {
@@ -65,7 +67,8 @@ type Handlers struct {
 	send            func(interface{}) (seal.Seal, error)
 	router          *mux.Router
 	routes          map[ /* path */ string]*mux.Route
-	limiter         func(string /* request type */) int64
+	itemsLimiter    func(string /* request type */) int64
+	rateLimiter     *limiter.Limiter
 }
 
 func NewHandlers(
@@ -79,14 +82,14 @@ func NewHandlers(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "http2-handlers")
 		}),
-		networkID: networkID,
-		encs:      encs,
-		enc:       enc,
-		storage:   st,
-		cache:     cache,
-		router:    mux.NewRouter(),
-		routes:    map[string]*mux.Route{},
-		limiter:   defaultLimiter,
+		networkID:    networkID,
+		encs:         encs,
+		enc:          enc,
+		storage:      st,
+		cache:        cache,
+		router:       mux.NewRouter(),
+		routes:       map[string]*mux.Route{},
+		itemsLimiter: defaultItemsLimiter,
 	}
 }
 
@@ -105,7 +108,7 @@ func (hd *Handlers) Initialize() error {
 }
 
 func (hd *Handlers) SetLimiter(f func(string) int64) *Handlers {
-	hd.limiter = f
+	hd.itemsLimiter = f
 
 	return hd
 }
@@ -166,6 +169,10 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 		route = r
 	} else {
 		route = hd.router.Name(name)
+	}
+
+	if hd.rateLimiter != nil {
+		handler = stdlib.NewMiddleware(hd.rateLimiter).Handler(handler)
 	}
 
 	route = route.
@@ -254,6 +261,12 @@ func (hd *Handlers) writeCache(w http.ResponseWriter, key string, expire time.Du
 	}
 }
 
+func (hd *Handlers) SetRateLimiter(limiter *limiter.Limiter) *Handlers {
+	hd.rateLimiter = limiter
+
+	return hd
+}
+
 func cacheKeyPath(r *http.Request) string {
 	return r.URL.Path
 }
@@ -262,6 +275,6 @@ func cacheKey(key string, s ...string) string {
 	return fmt.Sprintf("%s-%s", key, strings.Join(s, ","))
 }
 
-func defaultLimiter(string) int64 {
-	return GlobalLimitList
+func defaultItemsLimiter(string) int64 {
+	return GlobalItemsLimit
 }

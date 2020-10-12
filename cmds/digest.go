@@ -156,6 +156,10 @@ func (cmd *DigestCommand) handlers(st *digest.Storage, cache digest.Cache) (*dig
 		cmd.log.Debug().Msg("send handler attached")
 	}
 
+	if cmd.design.RateLimiter != nil {
+		handlers = handlers.SetRateLimiter(cmd.design.RateLimiter.Limiter())
+	}
+
 	if err := handlers.Initialize(); err != nil {
 		return nil, err
 	}

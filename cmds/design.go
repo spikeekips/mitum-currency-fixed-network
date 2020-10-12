@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
@@ -19,6 +20,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/ulule/limiter/v3"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 var (
@@ -31,7 +34,8 @@ type NodeDesign struct {
 	*launcher.NodeDesign
 	FeeAmount   currency.FeeAmount
 	FeeReceiver base.Address
-	Digest      *DigestDesign `yaml:"-"`
+	Digest      *DigestDesign      `yaml:"-"`
+	RateLimiter *RateLimiterDesign `yaml:"-"`
 }
 
 func (nd *NodeDesign) IsValid(b []byte) error {
@@ -46,6 +50,10 @@ func (nd *NodeDesign) IsValid(b []byte) error {
 	if err := nd.loadDigest(); err != nil {
 		return err
 	} else if err := nd.Digest.Merge(nd); err != nil {
+		return err
+	}
+
+	if err := nd.loadRateLimiter(); err != nil {
 		return err
 	}
 
@@ -176,6 +184,44 @@ func (nd *NodeDesign) loadDigest() error {
 		return err
 	} else {
 		nd.Digest = dd
+	}
+
+	return nil
+}
+
+func (nd *NodeDesign) loadRateLimiter() error {
+	var c map[string]interface{}
+	if nd.Component.Others() != nil {
+		for k, v := range nd.Component.Others() {
+			if k != "rate-limit" {
+				continue
+			}
+
+			if v == nil {
+				continue
+			} else if m, ok := v.(map[string]interface{}); !ok {
+				return xerrors.Errorf("bad formatted rate-limit design")
+			} else {
+				c = m
+			}
+		}
+	}
+
+	if c == nil {
+		nd.RateLimiter = new(RateLimiterDesign)
+
+		return nil
+	}
+
+	var dd *RateLimiterDesign
+	if b, err := yaml.Marshal(c); err != nil {
+		return err
+	} else if err := yaml.Unmarshal(b, &dd); err != nil {
+		return err
+	} else if err := dd.IsValid(nil); err != nil {
+		return err
+	} else {
+		nd.RateLimiter = dd
 	}
 
 	return nil
@@ -452,4 +498,31 @@ func LoadGenesisAccountOperation(nr *Launcher, m map[string]interface{}) (curren
 	} else {
 		return op, nil
 	}
+}
+
+type RateLimiterDesign struct {
+	PeriodString string `yaml:"period"`
+	Limit        uint64
+	limiter      *limiter.Limiter
+}
+
+func (rd *RateLimiterDesign) IsValid([]byte) error {
+	switch d, err := time.ParseDuration(rd.PeriodString); {
+	case err != nil:
+		return xerrors.Errorf("invalid period string, %q: %w", rd.PeriodString, err)
+	case d < 0:
+		return xerrors.Errorf("negative period string, %q", rd.PeriodString)
+	case rd.Limit > 0:
+		rd.limiter = limiter.New(
+			memory.NewStore(),
+			limiter.Rate{Period: d, Limit: int64(rd.Limit)},
+			limiter.WithTrustForwardHeader(true),
+		)
+	}
+
+	return nil
+}
+
+func (rd *RateLimiterDesign) Limiter() *limiter.Limiter {
+	return rd.limiter
 }
