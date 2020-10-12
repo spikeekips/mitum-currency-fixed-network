@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -37,42 +38,71 @@ func (hd *Handlers) handleSend(w http.ResponseWriter, r *http.Request) {
 	var v []json.RawMessage
 	if err := jsonenc.Unmarshal(body.Bytes(), &v); err != nil {
 		if hinter, err := hd.enc.DecodeByHint(body.Bytes()); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
+			hd.problemWithError(w, err, http.StatusBadRequest)
 
 			return
-		} else if h, err := hd.sendSeal(hinter); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
-
-			return
-		} else {
-			hal = h
-		}
-	} else { // NOTE only support operation.Operation
-		ops := make([]operation.Operation, len(v))
-		for i := range v {
-			if hinter, err := hd.enc.DecodeByHint(v[i]); err != nil {
-				hd.problemWithError(w, err, http.StatusBadRequest)
-
-				return
-			} else if op, ok := hinter.(operation.Operation); !ok {
-				hd.problemWithError(w, xerrors.Errorf("unsupported message type, %T", hinter), http.StatusBadRequest)
-
-				return
-			} else {
-				ops[i] = op
-			}
-		}
-
-		if h, err := hd.sendSeal((operation.BaseSeal{}).SetOperations(ops)); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
+		} else if h, err := hd.sendItem(hinter); err != nil {
+			hd.problemWithError(w, err, http.StatusBadRequest)
 
 			return
 		} else {
 			hal = h
 		}
+	} else if h, err := hd.sendOperations(v); err != nil {
+		hd.problemWithError(w, err, http.StatusBadRequest)
+
+		return
+	} else {
+		hal = h
 	}
 
 	hd.writeHal(w, hal, http.StatusOK)
+}
+
+func (hd *Handlers) sendItem(v interface{}) (Hal, error) {
+	switch t := v.(type) {
+	case operation.Seal:
+		for i := range t.Operations() {
+			if err := t.Operations()[i].IsValid(hd.networkID); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := t.IsValid(hd.networkID); err != nil {
+			if !xerrors.Is(err, key.SignatureVerificationFailedError) {
+				return nil, err
+			}
+		}
+	case seal.Seal:
+		if err := t.IsValid(hd.networkID); err != nil {
+			return nil, err
+		}
+	case operation.Operation:
+		if err := t.IsValid(hd.networkID); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, xerrors.Errorf("unsupported message type, %T", v)
+	}
+
+	return hd.sendSeal(v)
+}
+
+func (hd *Handlers) sendOperations(v []json.RawMessage) (Hal, error) {
+	ops := make([]operation.Operation, len(v))
+	for i := range v {
+		if hinter, err := hd.enc.DecodeByHint(v[i]); err != nil {
+			return nil, err
+		} else if op, ok := hinter.(operation.Operation); !ok {
+			return nil, xerrors.Errorf("unsupported message type, %T", hinter)
+		} else if err := op.IsValid(hd.networkID); err != nil {
+			return nil, err
+		} else {
+			ops[i] = op
+		}
+	}
+
+	return hd.sendSeal((operation.BaseSeal{}).SetOperations(ops))
 }
 
 func (hd *Handlers) sendSeal(v interface{}) (Hal, error) {

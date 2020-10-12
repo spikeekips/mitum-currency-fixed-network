@@ -97,7 +97,7 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 	fact := currency.NewTransfersFact(token, sender, items)
 
 	pk := key.MustNewEtherPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	sig, err := operation.NewFactSignature(pk, fact, t.networkID)
 	t.NoError(err)
 
 	tf, err := currency.NewTransfers(

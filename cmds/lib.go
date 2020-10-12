@@ -445,6 +445,8 @@ func newSendHandler(
 		case operation.Seal, seal.Seal:
 			if s, err := signSeal(v.(seal.Seal), priv, networkID); err != nil {
 				return nil, err
+			} else if err := s.IsValid(networkID); err != nil {
+				return nil, err
 			} else {
 				sl = s
 			}
@@ -455,6 +457,8 @@ func newSendHandler(
 				networkID,
 			); err != nil {
 				return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+			} else if err := bs.IsValid(networkID); err != nil {
+				return nil, err
 			} else {
 				sl = bs
 			}
