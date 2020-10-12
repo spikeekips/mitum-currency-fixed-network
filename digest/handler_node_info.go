@@ -16,7 +16,7 @@ func (hd *Handlers) SetNodeInfoHandler(handler network.NodeInfoHandler) *Handler
 
 func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 	if hd.nodeInfoHandler == nil {
-		hd.notSupported(w)
+		hd.notSupported(w, nil)
 
 		return
 	}

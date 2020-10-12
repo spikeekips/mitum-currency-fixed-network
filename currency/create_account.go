@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	CreateAccountFactType = hint.MustNewType(0xa0, 0x05, "mitum-currency-create-account-operation-fact")
-	CreateAccountFactHint = hint.MustHint(CreateAccountFactType, "0.0.1")
-	CreateAccountType     = hint.MustNewType(0xa0, 0x06, "mitum-currency-create-account-operation")
-	CreateAccountHint     = hint.MustHint(CreateAccountType, "0.0.1")
+	CreateAccountsFactType = hint.MustNewType(0xa0, 0x05, "mitum-currency-create-accounts-operation-fact")
+	CreateAccountsFactHint = hint.MustHint(CreateAccountsFactType, "0.0.1")
+	CreateAccountsType     = hint.MustNewType(0xa0, 0x06, "mitum-currency-create-accounts-operation")
+	CreateAccountsHint     = hint.MustHint(CreateAccountsType, "0.0.1")
 )
 
 var (
@@ -90,7 +90,7 @@ func NewCreateAccountsFact(token []byte, sender base.Address, items []CreateAcco
 }
 
 func (caf CreateAccountsFact) Hint() hint.Hint {
-	return CreateAccountFactHint
+	return CreateAccountsFactHint
 }
 
 func (caf CreateAccountsFact) Hash() valuehash.Hash {
@@ -213,7 +213,7 @@ type CreateAccounts struct {
 }
 
 func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo string) (CreateAccounts, error) {
-	if bo, err := operation.NewBaseOperationFromFact(CreateAccountHint, fact, fs); err != nil {
+	if bo, err := operation.NewBaseOperationFromFact(CreateAccountsHint, fact, fs); err != nil {
 		return CreateAccounts{}, err
 	} else {
 		ca := CreateAccounts{BaseOperation: bo, Memo: memo}
@@ -225,7 +225,7 @@ func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo st
 }
 
 func (ca CreateAccounts) Hint() hint.Hint {
-	return CreateAccountHint
+	return CreateAccountsHint
 }
 
 func (ca CreateAccounts) IsValid(networkID []byte) error {

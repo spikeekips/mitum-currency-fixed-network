@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
@@ -20,6 +21,7 @@ import (
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
@@ -61,7 +63,7 @@ func init() {
 		digest.OperationValue{},
 		digest.Problem{},
 		digest.BaseHal{},
-		NodeInfo{},
+		digest.NodeInfo{},
 	)
 
 	if es, err := loadEncoders(); err != nil {
@@ -425,5 +427,64 @@ func loadDigestStorage(design *NodeDesign, st storage.Storage, readonly bool) (*
 		return nil, err
 	} else {
 		return nst, nil
+	}
+}
+
+func newSendHandler(
+	priv key.Privatekey,
+	networkID base.NetworkID,
+	remotes []network.Node,
+) func(interface{}) (seal.Seal, error) {
+	return func(v interface{}) (seal.Seal, error) {
+		if len(remotes) < 1 {
+			return nil, xerrors.Errorf("not supported")
+		}
+
+		var sl seal.Seal
+		switch t := v.(type) {
+		case operation.Seal, seal.Seal:
+			if s, err := signSeal(v.(seal.Seal), priv, networkID); err != nil {
+				return nil, err
+			} else {
+				sl = s
+			}
+		case operation.Operation:
+			if bs, err := operation.NewBaseSeal(
+				priv,
+				[]operation.Operation{t},
+				networkID,
+			); err != nil {
+				return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+			} else {
+				sl = bs
+			}
+		default:
+			return nil, xerrors.Errorf("unsupported message type, %T", t)
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(len(remotes))
+
+		errchan := make(chan error, len(remotes))
+		for i := range remotes {
+			go func(i int) {
+				defer wg.Done()
+
+				errchan <- remotes[i].Channel().SendSeal(sl)
+			}(i)
+		}
+
+		wg.Wait()
+		close(errchan)
+
+		for err := range errchan {
+			if err == nil {
+				continue
+			}
+
+			return sl, err
+		}
+
+		return sl, nil
 	}
 }

@@ -42,7 +42,7 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	default:
 		if hal, err := hd.buildAccountHal(va); err != nil {
-			hd.writePoblem(w, NewProblemFromError(err), http.StatusInternalServerError)
+			hd.problemWithError(w, err, http.StatusNotFound)
 
 			return
 		} else {
@@ -104,9 +104,9 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 	}
 
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
-	reverse := parseReverseQuery(r.URL.Query().Get("reverse"))
+	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringReverseQuery(reverse))
+	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 	if err := loadFromCache(hd.cache, ckey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
@@ -138,7 +138,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 	}
 
 	if hal, err := hd.buildAccountOperationsHal(address, vas, reverse); err != nil {
-		hd.writePoblem(w, NewProblemFromError(err), http.StatusInternalServerError)
+		hd.problemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	} else {
@@ -169,7 +169,7 @@ func (hd *Handlers) buildAccountOperationsHal(
 			hal = hal.AddLink(
 				"next",
 				NewHalLink(
-					h+fmt.Sprintf("?%s&%s", stringOffsetQuery(nextoffset), stringReverseQuery(reverse)),
+					h+fmt.Sprintf("?%s&%s", stringOffsetQuery(nextoffset), stringBoolQuery("reverse", reverse)),
 					nil,
 				),
 			)

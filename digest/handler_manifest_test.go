@@ -42,7 +42,7 @@ func (t *testHandlerManifest) TestByHeight() {
 	self, err := handlers.router.Get(HandlerPathManifestByHeight).URLPath("height", height.String())
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", self.Path)
+	w := t.requestOK(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -70,7 +70,7 @@ func (t *testHandlerManifest) TestByHeightNotFound() {
 	self, err := handlers.router.Get(HandlerPathManifestByHeight).URLPath("height", height.String())
 	t.NoError(err)
 
-	w := t.request404(handlers, "GET", self.Path)
+	w := t.request404(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -93,7 +93,7 @@ func (t *testHandlerManifest) TestByHash() {
 	nonself, err := handlers.router.Get(HandlerPathManifestByHash).URLPath("hash", blk.Hash().String())
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", nonself.Path)
+	w := t.requestOK(handlers, "GET", nonself.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -119,7 +119,7 @@ func (t *testHandlerManifest) TestByHashNotFound() {
 	self, err := handlers.router.Get(HandlerPathManifestByHash).URLPath("hash", valuehash.RandomSHA256().String())
 	t.NoError(err)
 
-	w := t.request404(handlers, "GET", self.Path)
+	w := t.request404(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)

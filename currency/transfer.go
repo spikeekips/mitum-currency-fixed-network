@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	TransferFactType = hint.MustNewType(0xa0, 0x01, "mitum-currency-transfer-operation-fact")
-	TransferFactHint = hint.MustHint(TransferFactType, "0.0.1")
-	TransferType     = hint.MustNewType(0xa0, 0x02, "mitum-currency-transfer-operation")
-	TransferHint     = hint.MustHint(TransferType, "0.0.1")
+	TransfersFactType = hint.MustNewType(0xa0, 0x01, "mitum-currency-transfers-operation-fact")
+	TransfersFactHint = hint.MustHint(TransfersFactType, "0.0.1")
+	TransfersType     = hint.MustNewType(0xa0, 0x02, "mitum-currency-transfers-operation")
+	TransfersHint     = hint.MustHint(TransfersType, "0.0.1")
 )
 
 var maxTransferItems uint = 10
@@ -79,7 +79,7 @@ func NewTransfersFact(token []byte, sender base.Address, items []TransferItem) T
 }
 
 func (tff TransfersFact) Hint() hint.Hint {
-	return TransferFactHint
+	return TransfersFactHint
 }
 
 func (tff TransfersFact) Hash() valuehash.Hash {
@@ -183,7 +183,7 @@ func NewTransfers(
 	fs []operation.FactSign,
 	memo string,
 ) (Transfers, error) {
-	if bo, err := operation.NewBaseOperationFromFact(TransferHint, fact, fs); err != nil {
+	if bo, err := operation.NewBaseOperationFromFact(TransfersHint, fact, fs); err != nil {
 		return Transfers{}, err
 	} else {
 		tf := Transfers{BaseOperation: bo, Memo: memo}
@@ -195,7 +195,7 @@ func NewTransfers(
 }
 
 func (tf Transfers) Hint() hint.Hint {
-	return TransferHint
+	return TransfersHint
 }
 
 func (tf Transfers) IsValid(networkID []byte) error {

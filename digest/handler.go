@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -22,14 +24,19 @@ var (
 )
 
 var (
-	HandlerPathNodeInfo          = `/`
-	HandlerPathBlockByHeight     = `/block/{height:[0-9]+}`
-	HandlerPathBlockByHash       = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}`
-	HandlerPathManifestByHeight  = `/block/{height:[0-9]+}/manifest`
-	HandlerPathManifestByHash    = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
-	HandlerPathAccount           = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}`
-	HandlerPathAccountOperations = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}/operations`
-	HandlerPathOperation         = `/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
+	HandlerPathNodeInfo                   = `/`
+	HandlerPathBlockByHeight              = `/block/{height:[0-9]+}`
+	HandlerPathBlockByHash                = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}`
+	HandlerPathManifestByHeight           = `/block/{height:[0-9]+}/manifest`
+	HandlerPathManifestByHash             = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
+	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}`
+	HandlerPathAccountOperations          = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}/operations` // nolint:lll
+	HandlerPathOperation                  = `/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
+	HandlerPathOperationBuildFactTemplate = `/builder/operation/fact/template/{fact:[\w][\w\-]*}`
+	HandlerPathOperationBuildFact         = `/builder/operation/fact`
+	HandlerPathOperationBuildSign         = `/builder/operation/sign`
+	HandlerPathOperationBuild             = `/builder/operation`
+	HandlerPathSend                       = `/send`
 )
 
 var (
@@ -49,26 +56,37 @@ func init() {
 
 type Handlers struct {
 	*logging.Logging
+	networkID       base.NetworkID
+	encs            *encoder.Encoders
 	enc             encoder.Encoder
 	storage         *Storage
 	cache           Cache
 	nodeInfoHandler network.NodeInfoHandler
+	send            func(interface{}) (seal.Seal, error)
 	router          *mux.Router
 	routes          map[ /* path */ string]*mux.Route
 	limiter         func(string /* request type */) int64
 }
 
-func NewHandlers(enc encoder.Encoder, st *Storage, cache Cache) *Handlers {
+func NewHandlers(
+	networkID base.NetworkID,
+	encs *encoder.Encoders,
+	enc encoder.Encoder,
+	st *Storage,
+	cache Cache,
+) *Handlers {
 	return &Handlers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "http2-handlers")
 		}),
-		enc:     enc,
-		storage: st,
-		cache:   cache,
-		router:  mux.NewRouter(),
-		routes:  map[string]*mux.Route{},
-		limiter: defaultLimiter,
+		networkID: networkID,
+		encs:      encs,
+		enc:       enc,
+		storage:   st,
+		cache:     cache,
+		router:    mux.NewRouter(),
+		routes:    map[string]*mux.Route{},
+		limiter:   defaultLimiter,
 	}
 }
 
@@ -111,6 +129,16 @@ func (hd *Handlers) setHandlers() {
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation, true).
 		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathOperationBuildFactTemplate, hd.handleOperationBuildFactTemplate, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathOperationBuildFact, hd.handleOperationBuildFact, false).
+		Methods(http.MethodOptions, http.MethodPost)
+	_ = hd.setHandler(HandlerPathOperationBuildSign, hd.handleOperationBuildSign, false).
+		Methods(http.MethodOptions, http.MethodPost)
+	_ = hd.setHandler(HandlerPathOperationBuild, hd.handleOperationBuild, true).
+		Methods(http.MethodOptions, http.MethodGet, http.MethodPost)
+	_ = hd.setHandler(HandlerPathSend, hd.handleSend, false).
+		Methods(http.MethodOptions, http.MethodPost)
 	_ = hd.setHandler(HandlerPathNodeInfo, hd.handleNodeInfo, true).
 		Methods(http.MethodOptions, "GET")
 }
@@ -120,7 +148,7 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 	if !useCache {
 		handler = http.HandlerFunc(h)
 	} else {
-		ch := NewCachedHTTPHandler(hd.cache, hd.handleNodeInfo)
+		ch := NewCachedHTTPHandler(hd.cache, h)
 		_ = ch.SetLogger(hd.Log())
 
 		handler = ch
@@ -179,8 +207,12 @@ func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 	}
 }
 
-func (hd *Handlers) notSupported(w http.ResponseWriter) {
-	hd.writePoblem(w, NewProblemFromError(xerrors.Errorf("not supported")), http.StatusInternalServerError)
+func (hd *Handlers) notSupported(w http.ResponseWriter, err error) {
+	if err == nil {
+		err = xerrors.Errorf("not supported")
+	}
+
+	hd.problemWithError(w, err, http.StatusInternalServerError)
 }
 
 func (hd *Handlers) problemWithError(w http.ResponseWriter, err error, status int) {

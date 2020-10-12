@@ -73,7 +73,7 @@ func (hd *Handlers) handleManifest(w http.ResponseWriter, r *http.Request, get f
 	}
 
 	if hal, err := hd.buildManifestHal(manifest); err != nil {
-		hd.writePoblem(w, NewProblemFromError(err), http.StatusInternalServerError)
+		hd.problemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	} else {

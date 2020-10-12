@@ -220,7 +220,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 		address = addr
 	}
 
-	n := isaac.NewLocalNode(address, key.MustNewBTCPrivatekey())
+	n := isaac.NewLocalNode(address, key.MustNewBTCPrivatekey(), "quic://local")
 	cmd.Log().Debug().Msg("local node created")
 
 	local, err := isaac.NewLocalstate(cmd.storage, localfs.TempBlockFS(defaultJSONEnc), n, cmd.networkID)

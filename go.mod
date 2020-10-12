@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/kong v0.2.11
 	github.com/aws/aws-sdk-go v1.35.3 // indirect
 	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
+	github.com/btcsuite/btcutil v1.0.2
 	github.com/ethereum/go-ethereum v1.9.22 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/gorilla/handlers v1.5.1
@@ -15,7 +16,7 @@ require (
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2
 	github.com/rs/zerolog v1.20.0
 	github.com/sirupsen/logrus v1.7.0 // indirect
-	github.com/spikeekips/mitum v0.0.0-20201005190012-a09e5921e42c
+	github.com/spikeekips/mitum v0.0.0-20201012153230-7c339ca17dc6
 	github.com/stellar/go v0.0.0-20201005172357-947b63b1099f // indirect
 	github.com/stretchr/testify v1.6.1
 	go.mongodb.org/mongo-driver v1.4.1

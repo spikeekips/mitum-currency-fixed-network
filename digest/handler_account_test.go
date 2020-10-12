@@ -41,7 +41,7 @@ func (t *testHandlerAccount) TestAccount() {
 	previousBlockLink, err := handlers.router.Get(HandlerPathBlockByHeight).URLPath("height", va.PreviousHeight().String())
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", self.Path)
+	w := t.requestOK(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -71,7 +71,7 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", currency.AddressToHintedString(unknown))
 	t.NoError(err)
 
-	w := t.request404(handlers, "GET", self.Path)
+	w := t.request404(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -122,9 +122,9 @@ func (t *testHandlerAccount) TestAccountOperations() {
 	reverse := false
 	next, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 	t.NoError(err)
-	next.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offsetByHashes[hashes[limit-1]]), stringReverseQuery(reverse))
+	next.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offsetByHashes[hashes[limit-1]]), stringBoolQuery("reverse", reverse))
 
-	w := t.requestOK(handlers, "GET", self.Path)
+	w := t.requestOK(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -181,11 +181,11 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 
 		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 		t.NoError(err)
-		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringReverseQuery(reverse))
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
 		var uhashes []string
 		for {
-			w := t.requestOK(handlers, "GET", self.String())
+			w := t.requestOK(handlers, "GET", self.String(), nil)
 
 			b, err := ioutil.ReadAll(w.Result().Body)
 			t.NoError(err)
@@ -228,11 +228,11 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 
 		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 		t.NoError(err)
-		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringReverseQuery(reverse))
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
 		var uhashes []string
 		for {
-			w := t.requestOK(handlers, "GET", self.String())
+			w := t.requestOK(handlers, "GET", self.String(), nil)
 
 			b, err := ioutil.ReadAll(w.Result().Body)
 			t.NoError(err)
@@ -303,7 +303,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 	self.RawQuery = fmt.Sprintf("%s&", stringOffsetQuery(offset))
 	t.NoError(err)
 
-	w := t.request404(handlers, "GET", self.String())
+	w := t.request404(handlers, "GET", self.String(), nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)

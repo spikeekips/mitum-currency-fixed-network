@@ -47,6 +47,7 @@ func init() {
 type baseTest struct { // nolint: unused
 	suite.Suite
 	isaac.StorageSupportTest
+	networkID base.NetworkID
 }
 
 func (t *baseTest) SetupSuite() {
@@ -73,6 +74,9 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(OperationValue{})
 	_ = t.Encs.AddHinter(Problem{})
 	_ = t.Encs.AddHinter(BaseHal{})
+	_ = t.Encs.AddHinter(NodeInfo{})
+
+	t.networkID = util.UUID().Bytes()
 }
 
 func (t *baseTest) MongodbStorage() *mongodbstorage.Storage {

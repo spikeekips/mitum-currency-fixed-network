@@ -7,12 +7,15 @@ import (
 )
 
 type Hal interface {
+	RawInterface() []byte
 	Interface() interface{}
+	SetInterface(interface{}) Hal
 	Self() HalLink
+	SetSelf(HalLink) Hal
 	Links() map[string]HalLink
 	AddLink(rel string, link HalLink) Hal
-	SetSelf(HalLink) Hal
-	SetInterface(interface{}) Hal
+	Extras() map[string]interface{}
+	AddExtras(string, interface{}) Hal
 }
 
 var (
@@ -21,19 +24,21 @@ var (
 )
 
 type BaseHal struct {
-	ht    hint.Hint
-	i     interface{}
-	raw   []byte
-	self  HalLink
-	links map[string]HalLink
+	ht     hint.Hint
+	i      interface{}
+	raw    []byte
+	self   HalLink
+	links  map[string]HalLink
+	extras map[string]interface{}
 }
 
 func NewBaseHal(i interface{}, self HalLink) BaseHal {
 	return BaseHal{
-		ht:    BaseHalHint,
-		i:     i,
-		self:  self,
-		links: map[string]HalLink{},
+		ht:     BaseHalHint,
+		i:      i,
+		self:   self,
+		links:  map[string]HalLink{},
+		extras: map[string]interface{}{},
 	}
 }
 
@@ -56,7 +61,25 @@ func (hal BaseHal) SetInterface(i interface{}) Hal {
 }
 
 func (hal BaseHal) Links() map[string]HalLink {
+	if hal.links == nil {
+		return map[string]HalLink{}
+	}
+
 	return hal.links
+}
+
+func (hal BaseHal) Extras() map[string]interface{} {
+	return hal.extras
+}
+
+func (hal BaseHal) AddExtras(key string, value interface{}) Hal {
+	if hal.extras == nil {
+		hal.extras = map[string]interface{}{}
+	}
+
+	hal.extras[key] = value
+
+	return hal
 }
 
 func (hal BaseHal) Self() HalLink {
@@ -70,6 +93,10 @@ func (hal BaseHal) SetSelf(url HalLink) Hal {
 }
 
 func (hal BaseHal) AddLink(rel string, link HalLink) Hal {
+	if hal.links == nil {
+		hal.links = map[string]HalLink{}
+	}
+
 	hal.links[rel] = link
 
 	return hal

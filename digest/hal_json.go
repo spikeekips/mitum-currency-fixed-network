@@ -17,6 +17,7 @@ type BaseHalJSONPacker struct {
 	HINT map[string]interface{} `json:"hint,omitempty"`
 	I    interface{}            `json:"_embedded,omitempty"`
 	LS   map[string]HalLink     `json:"_links,omitempty"`
+	EX   map[string]interface{} `json:"_extra,omitempty"`
 }
 
 func (hal BaseHal) MarshalJSON() ([]byte, error) {
@@ -36,12 +37,14 @@ func (hal BaseHal) MarshalJSON() ([]byte, error) {
 		I:          hal.i,
 		LS:         ls,
 		HINT:       ht,
+		EX:         hal.extras,
 	})
 }
 
 type BaseHalJSONUnpacker struct {
-	R  json.RawMessage    `json:"_embedded,omitempty"`
-	LS map[string]HalLink `json:"_links,omitempty"`
+	R  json.RawMessage        `json:"_embedded,omitempty"`
+	LS map[string]HalLink     `json:"_links,omitempty"`
+	EX map[string]interface{} `json:"_extra,omitempty"`
 }
 
 func (hal *BaseHal) UnmarshalJSON(b []byte) error {
@@ -52,6 +55,7 @@ func (hal *BaseHal) UnmarshalJSON(b []byte) error {
 
 	hal.raw = uh.R
 	hal.links = uh.LS
+	hal.extras = uh.EX
 
 	return nil
 }

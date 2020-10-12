@@ -1,4 +1,4 @@
-package cmds
+package digest
 
 import (
 	"go.mongodb.org/mongo-driver/bson"

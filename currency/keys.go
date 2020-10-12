@@ -164,7 +164,7 @@ func (ks Keys) IsValid([]byte) error {
 	if h, err := ks.GenerateHash(); err != nil {
 		return err
 	} else if !ks.h.Equal(h) {
-		return xerrors.Errorf("has not matched")
+		return xerrors.Errorf("hash not matched")
 	}
 
 	return nil

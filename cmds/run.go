@@ -13,6 +13,7 @@ import (
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 
@@ -316,11 +317,7 @@ func (cmd *RunCommand) startDigestAPI() error {
 		nt = sv
 	}
 
-	handlers := digest.NewHandlers(defaultJSONEnc, cmd.digestStoarge, cache).
-		SetNodeInfoHandler(cmd.nr.nodeInfoHandler)
-	_ = handlers.SetLogger(cmd.log)
-
-	if err := handlers.Initialize(); err != nil {
+	if handlers, err := cmd.handlers(cache); err != nil {
 		return err
 	} else {
 		nt.SetHandler(handlers.Handler())
@@ -337,4 +334,36 @@ func (cmd *RunCommand) startDigestAPI() error {
 	})
 
 	return nil
+}
+
+func (cmd *RunCommand) handlers(cache digest.Cache) (*digest.Handlers, error) {
+	handlers := digest.NewHandlers(cmd.design.NetworkID(), encs, defaultJSONEnc, cmd.digestStoarge, cache).
+		SetNodeInfoHandler(cmd.nr.nodeInfoHandler)
+
+	if cmd.nr.Localstate().Nodes().Len() > 0 { // remote nodes
+		var rns []network.Node
+		if n, err := cmd.design.NetworkNode(encs); err != nil {
+			return nil, err
+		} else {
+			rns = append(rns, n)
+		}
+
+		cmd.nr.Localstate().Nodes().Traverse(func(rn network.Node) bool {
+			rns = append(rns, rn)
+
+			return true
+		})
+
+		handlers = handlers.SetSend(newSendHandler(cmd.design.Privatekey(), cmd.design.NetworkID(), rns))
+
+		cmd.log.Debug().Msg("send handler attached")
+	}
+
+	_ = handlers.SetLogger(cmd.log)
+
+	if err := handlers.Initialize(); err != nil {
+		return nil, err
+	} else {
+		return handlers, nil
+	}
 }

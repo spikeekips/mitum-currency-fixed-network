@@ -8,7 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum-currency/digest"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -166,19 +166,16 @@ func (nr *Launcher) attachRemoteNodes() error {
 
 		l.Debug().Msg("trying to create remote node")
 
-		n := isaac.NewRemoteNode(r.Address(), r.Publickey())
-		if ch, err := launcher.LoadNodeChannel(r.NetworkURL(), nr.Encoders()); err != nil {
+		if n, err := r.NetworkNode(nr.Encoders()); err != nil {
 			return err
 		} else {
-			if l, ok := ch.(logging.SetLogger); ok {
+			if l, ok := n.Channel().(logging.SetLogger); ok {
 				_ = l.SetLogger(nr.Log())
 			}
 
-			_ = n.SetChannel(ch)
+			nodes[i] = n
 		}
 		l.Debug().Msg("created")
-
-		nodes[i] = n
 	}
 
 	return nr.Localstate().Nodes().Add(nodes...)
@@ -258,6 +255,6 @@ func (nr *Launcher) nodeInfoHandler() (network.NodeInfo, error) {
 	} else if ni, ok := i.(network.NodeInfoV0); !ok {
 		return nil, xerrors.Errorf("unsupported NodeInfo, %T", i)
 	} else {
-		return NewNodeInfo(ni, nr.Design().FeeAmount, ga, gb), nil
+		return digest.NewNodeInfo(ni, nr.Design().FeeAmount, ga, gb), nil
 	}
 }

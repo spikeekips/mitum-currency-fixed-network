@@ -107,11 +107,7 @@ func (cmd *DigestCommand) run() error {
 		nt = sv
 	}
 
-	handlers := digest.NewHandlers(defaultJSONEnc, st, cache).
-		SetNodeInfoHandler(cmd.nodeInfo)
-	_ = handlers.SetLogger(cmd.log)
-
-	if err := handlers.Initialize(); err != nil {
+	if handlers, err := cmd.handlers(st, cache); err != nil {
 		return err
 	} else {
 		nt.SetHandler(handlers.Handler())
@@ -132,4 +128,37 @@ func (cmd *DigestCommand) run() error {
 
 func (cmd *DigestCommand) nodeInfo() (network.NodeInfo, error) {
 	return cmd.ch.NodeInfo()
+}
+
+func (cmd *DigestCommand) handlers(st *digest.Storage, cache digest.Cache) (*digest.Handlers, error) {
+	handlers := digest.NewHandlers(cmd.design.NetworkID(), encs, defaultJSONEnc, st, cache).
+		SetNodeInfoHandler(cmd.nodeInfo)
+	_ = handlers.SetLogger(cmd.log)
+
+	if len(cmd.design.Nodes) > 0 { // remote nodes
+		var rns []network.Node
+		for i := range cmd.design.Nodes {
+			if n, err := cmd.design.Nodes[i].NetworkNode(encs); err != nil {
+				return nil, err
+			} else {
+				rns = append(rns, n)
+			}
+		}
+
+		if n, err := cmd.design.NetworkNode(encs); err != nil {
+			return nil, err
+		} else {
+			rns = append(rns, n)
+		}
+
+		handlers = handlers.SetSend(newSendHandler(cmd.design.Privatekey(), cmd.design.NetworkID(), rns))
+
+		cmd.log.Debug().Msg("send handler attached")
+	}
+
+	if err := handlers.Initialize(); err != nil {
+		return nil, err
+	}
+
+	return handlers, nil
 }

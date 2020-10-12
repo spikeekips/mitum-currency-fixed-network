@@ -108,7 +108,7 @@ component:
 	t.NoError(err)
 	t.True(priv.Equal(d.Privatekey()))
 
-	t.Equal([]byte("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
+	t.Equal(base.NetworkID("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
 	t.Equal("mongodb://127.0.0.1:27017/mc", d.Storage)
 	t.Equal("quic://0.0.0.0:54321", d.Network.Bind().String())
 	t.Equal("quic://127.0.0.1:54321", d.Network.Publish)
@@ -187,7 +187,7 @@ component:
 	t.NoError(err)
 	t.True(priv.Equal(d.Privatekey()))
 
-	t.Equal([]byte("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
+	t.Equal(base.NetworkID("mc; Thu 10 Sep 2020 03:23:31 PM UTC"), d.NetworkID())
 	t.Equal("mongodb://127.0.0.1:27017/mc", d.Storage)
 	t.Equal("quic://0.0.0.0:54321", d.Network.Bind().String())
 	t.Equal("quic://127.0.0.1:54321", d.Network.Publish)

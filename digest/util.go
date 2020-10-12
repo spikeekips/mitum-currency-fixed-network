@@ -64,17 +64,17 @@ func parseOffsetQuery(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func parseReverseQuery(s string) bool {
-	return s == "1"
-}
-
 func stringOffsetQuery(offset string) string {
 	return fmt.Sprintf("offset=%s", offset)
 }
 
-func stringReverseQuery(reverse bool) string {
-	if reverse {
-		return "reverse=1"
+func parseBoolQuery(s string) bool {
+	return s == "1"
+}
+
+func stringBoolQuery(key string, v bool) string {
+	if v {
+		return fmt.Sprintf("%s=1", key)
 	}
 
 	return ""

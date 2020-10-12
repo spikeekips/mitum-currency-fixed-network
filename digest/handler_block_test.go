@@ -23,7 +23,7 @@ func (t *testHandlerBlock) TestByHeight() {
 	self, err := handlers.router.Get(HandlerPathBlockByHeight).URLPath("height", height.String())
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", self.Path)
+	w := t.requestOK(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)
@@ -50,7 +50,7 @@ func (t *testHandlerBlock) TestByHash() {
 	self, err := handlers.router.Get(HandlerPathBlockByHash).URLPath("hash", hash.String())
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", self.Path)
+	w := t.requestOK(handlers, "GET", self.Path, nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)

@@ -39,7 +39,7 @@ func (t *testHandlerOperation) TestNew() {
 		self, err := handlers.router.Get(HandlerPathOperation).URLPath("hash", va.Operation().Fact().Hash().String())
 		t.NoError(err)
 
-		w := t.requestOK(handlers, "GET", self.String())
+		w := t.requestOK(handlers, "GET", self.String(), nil)
 
 		b, err := ioutil.ReadAll(w.Result().Body)
 		t.NoError(err)
@@ -65,7 +65,7 @@ func (t *testHandlerOperation) TestNotFound() {
 	self, err := handlers.router.Get(HandlerPathOperation).URLPath("hash", valuehash.RandomSHA256().String())
 	t.NoError(err)
 
-	w := t.request404(handlers, "GET", self.String())
+	w := t.request404(handlers, "GET", self.String(), nil)
 
 	b, err := ioutil.ReadAll(w.Result().Body)
 	t.NoError(err)

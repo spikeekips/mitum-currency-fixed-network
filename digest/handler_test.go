@@ -3,6 +3,9 @@
 package digest
 
 import (
+	"bytes"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 
@@ -14,14 +17,19 @@ type baseTestHandlers struct {
 }
 
 func (t *baseTestHandlers) handlers(st *Storage, cache Cache) *Handlers {
-	handlers := NewHandlers(t.JSONEnc, st, cache)
+	handlers := NewHandlers(t.networkID, t.Encs, t.JSONEnc, st, cache)
 	t.NoError(handlers.Initialize())
 
 	return handlers
 }
 
-func (t *baseTestHandlers) request(handlers *Handlers, method, path string) *httptest.ResponseRecorder {
-	r, err := http.NewRequest(method, "http://localhost"+path, nil)
+func (t *baseTestHandlers) request(handlers *Handlers, method, path string, data []byte) *httptest.ResponseRecorder {
+	var body io.Reader
+	if data != nil {
+		body = bytes.NewBuffer(data)
+	}
+
+	r, err := http.NewRequest(method, "http://localhost"+path, body)
 	t.NoError(err)
 
 	w := httptest.NewRecorder()
@@ -30,8 +38,8 @@ func (t *baseTestHandlers) request(handlers *Handlers, method, path string) *htt
 	return w
 }
 
-func (t *baseTestHandlers) requestOK(handlers *Handlers, method, path string) *httptest.ResponseRecorder {
-	w := t.request(handlers, method, path)
+func (t *baseTestHandlers) requestOK(handlers *Handlers, method, path string, data []byte) *httptest.ResponseRecorder {
+	w := t.request(handlers, method, path, data)
 
 	t.Equal(http.StatusOK, w.Result().StatusCode)
 	t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
@@ -40,14 +48,40 @@ func (t *baseTestHandlers) requestOK(handlers *Handlers, method, path string) *h
 	return w
 }
 
-func (t *baseTestHandlers) request404(handlers *Handlers, method, path string) *httptest.ResponseRecorder {
-	w := t.request(handlers, method, path)
+func (t *baseTestHandlers) request404(handlers *Handlers, method, path string, data []byte) *httptest.ResponseRecorder {
+	w := t.request(handlers, method, path, data)
 
 	t.Equal(http.StatusNotFound, w.Result().StatusCode)
 	t.Equal(ProblemMimetype, w.Result().Header.Get("content-type"))
 	t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
 
 	return w
+}
+
+func (t *baseTestHandlers) request405(handlers *Handlers, method, path string, data []byte) *httptest.ResponseRecorder {
+	w := t.request(handlers, method, path, data)
+
+	t.Equal(http.StatusMethodNotAllowed, w.Result().StatusCode)
+
+	return w
+}
+
+func (t *baseTestHandlers) request500(handlers *Handlers, method, path string, data []byte) (*httptest.ResponseRecorder, Problem) {
+	w := t.request(handlers, method, path, data)
+
+	t.Equal(http.StatusInternalServerError, w.Result().StatusCode)
+	t.Equal(ProblemMimetype, w.Result().Header.Get("content-type"))
+
+	b, err := ioutil.ReadAll(w.Result().Body)
+	t.NoError(err)
+
+	hinter, err := t.JSONEnc.DecodeByHint(b)
+	t.NoError(err)
+
+	problem, ok := hinter.(Problem)
+	t.True(ok)
+
+	return w, problem
 }
 
 func (t *baseTestHandlers) loadHal(b []byte) BaseHal {
