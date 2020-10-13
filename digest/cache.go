@@ -243,7 +243,7 @@ func (cr *CacheResponseWriter) Cache() error {
 	}
 }
 
-func ScanCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func ScanCRLF(data []byte, atEOF bool) (int, []byte, error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}

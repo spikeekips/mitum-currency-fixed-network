@@ -172,7 +172,7 @@ type tcpKeepAliveListener struct {
 	keepAliveTimeout time.Duration
 }
 
-func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	if tc, err := ln.AcceptTCP(); err != nil {
 		return nil, err
 	} else {
