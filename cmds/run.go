@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"time"
@@ -303,10 +304,16 @@ func (cmd *RunCommand) startDigestAPI() error {
 		Str("publish", cmd.design.Digest.Network.PublishURL().String()).
 		Msg("trying to start http2 server for digest API")
 	var nt *digest.HTTP2Server
+
+	var certs []tls.Certificate
+	if cmd.design.Digest.Network.Bind().Scheme == "https" {
+		certs = cmd.design.Digest.Network.Certs()
+	}
+
 	if sv, err := digest.NewHTTP2Server(
 		cmd.design.Digest.Network.Bind().Host,
 		cmd.design.Network.PublishURL().Host,
-		cmd.design.Digest.Network.Certs(),
+		certs,
 	); err != nil {
 		return err
 	} else if err := sv.Initialize(); err != nil {
