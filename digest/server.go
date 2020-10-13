@@ -61,7 +61,7 @@ func newHTTP2Server(sv *HTTP2Server, certs []tls.Certificate) (*http.Server, err
 		IdleTimeout:  sv.idleTimeout,
 		TLSConfig: &tls.Config{
 			Certificates: certs,
-			MinVersion:   tls.VersionTLS13,
+			MinVersion:   tls.VersionTLS12,
 		},
 		// ErrorLog:  // TODO connect with http logging
 		Handler: network.HTTPLogHandler(sv.router, sv.Log()),
@@ -160,7 +160,7 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 
 			go func() {
 				if err := c.Close(); err != nil {
-					sv.Log().Error().Err(err).Msg("failed to close")
+					sv.Log().Debug().Err(err).Msg("failed to close")
 				}
 			}()
 		})
