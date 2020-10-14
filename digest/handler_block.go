@@ -87,7 +87,7 @@ func (hd *Handlers) buildBlockHalByHeight(height base.Height) (Hal, error) {
 		if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", (height - 1).String()); err != nil {
 			return nil, err
 		} else {
-			hal = hal.AddLink("priv", NewHalLink(h, nil))
+			hal = hal.AddLink("prev", NewHalLink(h, nil))
 		}
 	}
 
