@@ -94,13 +94,13 @@ func (hd *Handlers) buildBlockHalByHeight(height base.Height) (Hal, error) {
 	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", height.String()); err != nil {
 		return nil, err
 	} else {
-		hal = hal.AddLink("latest", NewHalLink(h, nil))
+		hal = hal.AddLink("current", NewHalLink(h, nil))
 	}
 
 	if h, err := hd.combineURL(HandlerPathManifestByHeight, "height", height.String()); err != nil {
 		return nil, err
 	} else {
-		hal = hal.AddLink("latest-manifest", NewHalLink(h, nil))
+		hal = hal.AddLink("current-manifest", NewHalLink(h, nil))
 	}
 
 	for k := range halBlockTemplate {
