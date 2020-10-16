@@ -38,7 +38,7 @@ var (
 	HandlerPathOperationBuildFact         = `/builder/operation/fact`
 	HandlerPathOperationBuildSign         = `/builder/operation/sign`
 	HandlerPathOperationBuild             = `/builder/operation`
-	HandlerPathSend                       = `/send`
+	HandlerPathSend                       = `/builder/send`
 )
 
 var (
