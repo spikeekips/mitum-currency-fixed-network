@@ -70,10 +70,10 @@ func (bl Builder) templateCreateAccountsFact() Hal {
 
 	hal := NewBaseHal(fact, HalLink{})
 	return hal.AddExtras("default", map[string]interface{}{
-		"token":          templateToken,
-		"sender":         templateSender,
-		"items.keys.key": templatePublickey,
-		"items.amount":   templateAmount,
+		"token":               templateToken,
+		"sender":              templateSender,
+		"items.keys.keys.key": templatePublickey,
+		"items.amount":        templateAmount,
 	})
 }
 
@@ -91,7 +91,7 @@ func (bl Builder) templateKeyUpdaterFact() Hal {
 	return hal.AddExtras("default", map[string]interface{}{
 		"token":         templateToken,
 		"target":        templateSender,
-		"keys.keys.key": templateReceiver,
+		"keys.keys.key": templatePublickey,
 	})
 }
 
