@@ -1,7 +1,6 @@
 package digest
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -137,7 +136,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if hal, err := hd.buildAccountOperationsHal(address, vas, reverse); err != nil {
+	if hal, err := hd.buildAccountOperationsHal(address, vas, offset, reverse); err != nil {
 		hd.problemWithError(w, err, http.StatusInternalServerError)
 
 		return
@@ -150,31 +149,54 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 func (hd *Handlers) buildAccountOperationsHal(
 	address base.Address,
 	vas []Hal,
+	offset string,
 	reverse bool,
 ) (Hal, error) {
 	var hal Hal
 	hinted := currency.AddressToHintedString(address)
+
+	var baseSelf string
 	if h, err := hd.combineURL(HandlerPathAccountOperations, "address", hinted); err != nil {
 		return nil, err
 	} else {
-		hal = NewBaseHal(vas, NewHalLink(h, nil))
+		baseSelf = h
 
-		var nextoffset string
-		if len(vas) > 0 {
-			va := vas[len(vas)-1].Interface().(OperationValue)
-			nextoffset = buildOffset(va.Height(), va.Operation().Fact().Hash().String())
+		var self string = baseSelf
+		if len(offset) > 0 {
+			self = addQueryValue(baseSelf, stringOffsetQuery(offset))
 		}
-
-		if len(nextoffset) > 0 {
-			hal = hal.AddLink(
-				"next",
-				NewHalLink(
-					h+fmt.Sprintf("?%s&%s", stringOffsetQuery(nextoffset), stringBoolQuery("reverse", reverse)),
-					nil,
-				),
-			)
+		if reverse {
+			self = addQueryValue(h, stringBoolQuery("reverse", reverse))
 		}
+		hal = NewBaseHal(vas, NewHalLink(self, nil))
 	}
+
+	if h, err := hd.combineURL(HandlerPathAccount, "address", hinted); err != nil {
+		return nil, err
+	} else {
+		hal = hal.AddLink("account", NewHalLink(h, nil))
+	}
+
+	var nextoffset string
+	if len(vas) > 0 {
+		va := vas[len(vas)-1].Interface().(OperationValue)
+		nextoffset = buildOffset(va.Height(), va.Operation().Fact().Hash().String())
+	}
+
+	if len(nextoffset) > 0 {
+		var next string = baseSelf
+		if len(nextoffset) > 0 {
+			next = addQueryValue(next, stringOffsetQuery(nextoffset))
+		}
+
+		if reverse {
+			next = addQueryValue(next, stringBoolQuery("reverse", reverse))
+		}
+
+		hal = hal.AddLink("next", NewHalLink(next, nil))
+	}
+
+	hal = hal.AddLink("reverse", NewHalLink(addQueryValue(baseSelf, stringBoolQuery("reverse", !reverse)), nil))
 
 	return hal, nil
 }
