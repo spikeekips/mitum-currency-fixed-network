@@ -72,10 +72,22 @@ func parseBoolQuery(s string) bool {
 	return s == "1"
 }
 
-func stringBoolQuery(key string, v bool) string {
+func stringBoolQuery(key string, v bool) string { // nolint:unparam
 	if v {
 		return fmt.Sprintf("%s=1", key)
 	}
 
 	return ""
+}
+
+func addQueryValue(base, s string) string {
+	if len(s) < 1 {
+		return base
+	}
+
+	if !strings.Contains(base, "?") {
+		return base + "?" + s
+	}
+
+	return base + "&" + s
 }
