@@ -10,4 +10,5 @@ type KeyCommand struct {
 	New     GenerateKeyCommand `cmd:"" help:"new keypair"`
 	Verify  VerifyKeyCommand   `cmd:"" help:"verify key"`
 	Address KeyAddressCommand  `cmd:"" help:"generate address from key"`
+	Sign    SignKeyCommand     `cmd:"" help:"signature signing"`
 }
