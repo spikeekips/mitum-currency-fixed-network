@@ -64,7 +64,7 @@ func (hd *Handlers) handleOperationBuildFactTemplate(w http.ResponseWriter, r *h
 	factType := mux.Vars(r)["fact"]
 	var hinter hint.Hinter
 	if ht, found := factTypesByHint[factType]; !found {
-		hd.problemWithError(w, xerrors.Errorf("unknown operation, %q", factType), http.StatusInternalServerError)
+		hd.problemWithError(w, xerrors.Errorf("unknown operation, %q", factType), http.StatusNotFound)
 
 		return
 	} else {
@@ -134,7 +134,7 @@ func (hd *Handlers) handleOperationBuildSign(w http.ResponseWriter, r *http.Requ
 	var hal Hal
 	builder := NewBuilder(hd.enc, hd.networkID)
 	if h, err := builder.BuildOperation(body.Bytes()); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		hd.problemWithError(w, err, http.StatusBadRequest)
 
 		return
 	} else {
