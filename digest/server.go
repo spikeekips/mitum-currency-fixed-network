@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/net/http2"
+	"golang.org/x/xerrors"
 )
 
 type HTTP2Server struct {
@@ -119,7 +120,7 @@ func (sv *HTTP2Server) start(stopchan chan struct{}) error {
 
 		select {
 		case err := <-errchan:
-			if err == nil || err == http.ErrServerClosed {
+			if err != nil && xerrors.Is(err, http.ErrServerClosed) {
 				sv.Log().Debug().Msg("server closed")
 
 				return nil

@@ -119,10 +119,9 @@ func (t *testHandlerAccount) TestAccountOperations() {
 	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 	t.NoError(err)
 
-	reverse := false
 	next, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 	t.NoError(err)
-	next.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offsetByHashes[hashes[limit-1]]), stringBoolQuery("reverse", reverse))
+	next.RawQuery = stringOffsetQuery(offsetByHashes[hashes[limit-1]])
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 

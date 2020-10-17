@@ -342,14 +342,16 @@ func (cmd *BenchCommand) prepareAccounts() error {
 			continue
 		}
 
-		aerr := err.(acerr)
-		if aerr.err != nil {
+		var aerr acerr
+		if !xerrors.As(err, &aerr) {
+			return err
+		} else if aerr.err != nil {
 			return err
 		}
 
-		acs[i] = err.(acerr).ac.(*account)
+		acs[i] = aerr.ac.(*account)
 
-		for _, st := range err.(acerr).sts {
+		for _, st := range aerr.sts {
 			if err := cmd.storage.(storage.StateUpdater).NewState(st); err != nil {
 				return err
 			}
@@ -425,7 +427,7 @@ func (cmd *BenchCommand) createAccount(amount currency.Amount) (*account, []stat
 	return ac, sts, nil
 }
 
-func (cmd *BenchCommand) prepareOperations() error {
+func (cmd *BenchCommand) prepareOperations() error { // nolint:funlen
 	var n uint = 100
 	if n > cmd.Operations {
 		n = cmd.Operations
@@ -474,7 +476,14 @@ func (cmd *BenchCommand) prepareOperations() error {
 			continue
 		}
 
-		ops[i] = err.(acerr).ac.(operation.Operation)
+		var aerr acerr
+		if !xerrors.As(err, &aerr) {
+			return err
+		} else if aerr.err != nil {
+			return err
+		}
+
+		ops[i] = aerr.ac.(operation.Operation)
 		cmd.log.Debug().Hinted("op", ops[i].Fact().Hash()).Msg("op")
 		i++
 	}

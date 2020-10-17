@@ -38,7 +38,7 @@ func (t *testHandlerBlock) TestByHeight() {
 
 	manifest, err := handlers.router.Get(HandlerPathManifestByHeight).URLPath("height", height.String())
 	t.NoError(err)
-	t.Equal(manifest.Path, hal.Links()["manifest"].Href())
+	t.Equal(manifest.Path, hal.Links()["current-manifest"].Href())
 }
 
 func (t *testHandlerBlock) TestByHash() {
