@@ -4,7 +4,6 @@ package digest
 
 import (
 	"context"
-	"sort"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -74,29 +73,30 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 	}
 
 	for _, address := range addrs {
-		var ops []string
+		var i int
+		ops := make([]string, len(opsByAddress[address.String()]))
 		err := st.OperationsByAddress(address, true, false, "", 0, func(fh valuehash.Hash, va OperationValue) (bool, error) {
-			ops = append(ops, va.Operation().Fact().Hash().String())
+			ops[i] = va.Operation().Fact().Hash().String()
+			i++
 
 			return true, nil
 		})
 		t.NoError(err)
 
 		opsa := opsByAddress[address.String()]
-		sort.Strings(opsa)
 
 		t.Equal(opsa, ops)
 
 		// reverse
-		ops = nil
+		ops = make([]string, len(opsByAddress[address.String()]))
+		i = len(ops) - 1
 		err = st.OperationsByAddress(address, true, true, "", 0, func(fh valuehash.Hash, va OperationValue) (bool, error) {
-			ops = append(ops, va.Operation().Fact().Hash().String())
+			ops[i] = va.Operation().Fact().Hash().String()
+			i--
 
 			return true, nil
 		})
 		t.NoError(err)
-
-		sort.Sort(sort.Reverse(sort.StringSlice(opsa)))
 
 		t.Equal(opsa, ops)
 	}

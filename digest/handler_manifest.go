@@ -116,3 +116,101 @@ func (hd *Handlers) buildManifestHal(manifest block.Manifest) (Hal, error) {
 
 	return hal, nil
 }
+
+func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
+	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
+	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
+
+	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := loadFromCache(hd.cache, ckey, w); err != nil {
+		hd.Log().Verbose().Err(err).Msg("failed to load cache")
+	} else {
+		hd.Log().Verbose().Msg("loaded from cache")
+
+		return
+	}
+
+	var height base.Height = base.NilHeight
+	if len(offset) > 0 {
+		if ht, err := base.NewHeightFromString(offset); err != nil {
+			hd.problemWithError(w, err, http.StatusBadRequest)
+
+			return
+		} else {
+			height = ht
+		}
+	}
+
+	var vas []Hal
+	if err := hd.storage.Manifests(
+		true, reverse, height, hd.itemsLimiter("manifests"),
+		func(_ base.Height, _ valuehash.Hash, va block.Manifest) (bool, error) {
+			if hal, err := hd.buildManifestHal(va); err != nil {
+				return false, err
+			} else {
+				vas = append(vas, hal)
+			}
+
+			return true, nil
+		},
+	); err != nil {
+		hd.problemWithError(w, err, http.StatusInternalServerError)
+
+		return
+	} else if len(vas) < 1 {
+		hd.problemWithError(w, xerrors.Errorf("manifests not found"), http.StatusNotFound)
+
+		return
+	}
+
+	if hal, err := hd.buildManifestsHAL(vas, offset, reverse); err != nil {
+		hd.problemWithError(w, err, http.StatusInternalServerError)
+
+		return
+	} else {
+		hd.writeHal(w, hal, http.StatusOK)
+		hd.writeCache(w, ckey, time.Second*2) // TODO too short expire time.
+	}
+}
+
+func (hd *Handlers) buildManifestsHAL(vas []Hal, offset string, reverse bool) (Hal, error) {
+	var hal Hal
+	var baseSelf string
+	if h, err := hd.combineURL(HandlerPathManifests); err != nil {
+		return nil, err
+	} else {
+		baseSelf = h
+
+		var self string = baseSelf
+		if len(offset) > 0 {
+			self = addQueryValue(baseSelf, stringOffsetQuery(offset))
+		}
+		if reverse {
+			self = addQueryValue(h, stringBoolQuery("reverse", reverse))
+		}
+		hal = NewBaseHal(vas, NewHalLink(self, nil))
+	}
+
+	var nextoffset string
+	if len(vas) > 0 {
+		va := vas[len(vas)-1].Interface().(block.Manifest)
+		nextoffset = va.Height().String()
+	}
+
+	if len(nextoffset) > 0 {
+		var next string = baseSelf
+		if len(nextoffset) > 0 {
+			next = addQueryValue(next, stringOffsetQuery(nextoffset))
+		}
+
+		if reverse {
+			next = addQueryValue(next, stringBoolQuery("reverse", reverse))
+		}
+
+		hal = hal.AddLink("next", NewHalLink(next, nil))
+	}
+
+	hal = hal.AddLink("reverse", NewHalLink(addQueryValue(baseSelf, stringBoolQuery("reverse", !reverse)), nil))
+
+	return hal, nil
+}

@@ -45,6 +45,10 @@ func (t *baseTestHandlers) requestOK(handlers *Handlers, method, path string, da
 	t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
 	t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
 
+	if w.Result().StatusCode != http.StatusOK {
+		panic(w)
+	}
+
 	return w
 }
 

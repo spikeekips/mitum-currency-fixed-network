@@ -139,6 +139,7 @@ func (bs *BlockStorage) prepareOperations() error {
 			bs.block.Height(),
 			bs.block.ConfirmedAt(),
 			inStates(op.Fact().Hash()),
+			uint64(i),
 		); err != nil {
 			return err
 		} else {

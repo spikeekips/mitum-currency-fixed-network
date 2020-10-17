@@ -25,6 +25,7 @@ func NewOperationDoc(
 	height base.Height,
 	confirmedAt time.Time,
 	inStates bool,
+	index uint64,
 ) (OperationDoc, error) {
 	var addresses []string
 	if ads, ok := op.Fact().(currency.Addresses); ok {
@@ -38,7 +39,7 @@ func NewOperationDoc(
 		}
 	}
 
-	va := NewOperationValue(op, height, confirmedAt, inStates)
+	va := NewOperationValue(op, height, confirmedAt, inStates, index)
 	b, err := mongodbstorage.NewBaseDoc(nil, va, enc)
 	if err != nil {
 		return OperationDoc{}, err
@@ -62,6 +63,7 @@ func (doc OperationDoc) MarshalBSON() ([]byte, error) {
 	m["addresses"] = doc.addresses
 	m["fact"] = doc.op.Fact().Hash()
 	m["height"] = doc.height
+	m["index"] = doc.va.index
 
 	return bsonenc.Marshal(m)
 }

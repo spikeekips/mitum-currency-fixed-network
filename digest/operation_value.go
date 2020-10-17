@@ -18,6 +18,7 @@ type OperationValue struct {
 	height      base.Height
 	confirmedAt time.Time
 	inStates    bool
+	index       uint64
 }
 
 func NewOperationValue(
@@ -25,8 +26,9 @@ func NewOperationValue(
 	height base.Height,
 	confirmedAt time.Time,
 	inStates bool,
+	index uint64,
 ) OperationValue {
-	return OperationValue{op: op, height: height, confirmedAt: confirmedAt, inStates: inStates}
+	return OperationValue{op: op, height: height, confirmedAt: confirmedAt, inStates: inStates, index: index}
 }
 
 func (va OperationValue) Hint() hint.Hint {
@@ -47,4 +49,9 @@ func (va OperationValue) ConfirmedAt() time.Time {
 
 func (va OperationValue) InState() bool {
 	return va.inStates
+}
+
+// Index indicates the index number of Operation in OperationTree of block.
+func (va OperationValue) Index() uint64 {
+	return va.index
 }

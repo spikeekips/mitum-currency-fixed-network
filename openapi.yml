@@ -1,0 +1,2541 @@
+openapi: 3.0.1
+
+info:
+  title: mitum-currency - digest API
+  description: >-
+    This is API description of digest service of mitum-currency.
+  contact:
+    name: Spike^ekipS
+    url: https://github.com/spikeekips/mitum-currency
+    email: spikeekips@gmail.com
+  license:
+    name: GPL-3.0
+    url: https://github.com/spikeekips/mitum-currency/blob/master/LICENSE
+  version: 0.0.1
+
+externalDocs:
+  description: Find out more about mitum-currency
+  url: 'https://github.com/spikeekips/mitum-currency'
+
+servers:
+- url: https://localhost:54322
+
+tags:
+- name: node-info
+  description: node information of mitum-currency node
+- name: block
+  description: block information
+- name: account
+  description: account state and it's operations
+- name: builder
+  description: build operation and broadcast it
+
+paths:
+  /:
+    get:
+      tags:
+      - node-info
+      summary: Getting node information
+      operationId: node-info
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: node info
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/NodeInfoHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/{height}:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of block by block height
+      description: >-
+        Getting hal document of *block* by height. Basically the hal document of response does include the links for components of *block* like *manifest*.
+      operationId: block-by-height
+      parameters:
+        - name: height
+          in: path
+          description: block height
+          required: true
+          schema:
+            $ref: '#/components/schemas/Height'
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of block by block height
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/BlockHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/{block_hash}:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of block by block hash
+      description: >-
+        Getting hal document of *block* by *hash*. The basic structure of it is same with `/block/{height}`.
+      operationId: block-by-hash
+      parameters:
+        - name: block_hash
+          in: path
+          description: block hash
+          required: true
+          schema:
+            type: string
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of block
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/BlockHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/{height}/manifest:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of block manifest by block height
+      description: >-
+        Getting hal document of *block* *manifest* by height.
+      operationId: manifest-by-height
+      parameters:
+        - name: height
+          in: path
+          description: block height
+          required: true
+          schema:
+            $ref: '#/components/schemas/Height'
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of block manifest by block height
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/ManifestHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/{block_hash}/manifest:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of block manifest by block hash
+      description: >-
+        Getting hal document of *block* *manifest* by hash.
+      operationId: manifest-by-hash
+      parameters:
+        - name: block_hash
+          in: path
+          description: block hash
+          required: true
+          schema:
+            type: string
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of block manifest by block hash
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/ManifestHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/operation/{operation_fact_hash}:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of operation by it's fact hash.
+      description: >-
+        Getting hal document of operation by it's **fact** *hash*, not it's own *hash*.
+      operationId: operation
+      parameters:
+        - name: operation_fact_hash
+          in: path
+          description: >-
+              *fact* *hash* of operation.
+          required: true
+          schema:
+            type: string
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/manifests:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of all the manifest
+      operationId: manifests
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: string
+            example: "2"
+          description: >-
+            Getting *manifest*s after *offset*, usually it is block *height*.
+        - name: reverse
+          in: query
+          schema:
+            type: boolean
+            example: false
+            default: false
+          description: >-
+            Getting *manifest*s by reverse order.
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "...."
+                      detail:
+                        type: string
+                        example: "...."
+        404:
+          description: no more manifests
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "manifests not found"
+                      detail:
+                        type: string
+                        example: "...."
+        200:
+          description: hal document of manifests
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/ManifestsHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /block/operations:
+    get:
+      tags:
+      - block
+      summary: Getting hal document of all the operations
+      operationId: operations
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: string
+            example: "2,0"
+          description: >-
+            Getting *operation*s after *offset*.
+        - name: reverse
+          in: query
+          schema:
+            type: boolean
+            example: false
+            default: false
+          description: >-
+            Getting *operation*s by reverse order.
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "...."
+                      detail:
+                        type: string
+                        example: "...."
+        404:
+          description: no more operations
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "operations not found"
+                      detail:
+                        type: string
+                        example: "...."
+        200:
+          description: hal document of operations
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationsHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /account/{address}:
+    get:
+      tags:
+      - account
+      summary: Getting hal document of the latest state of account
+      description: >-
+        Getting hal document of the latest state of account. It contains the *keys* of account and it's *balance*.
+      operationId: account
+      parameters:
+        - name: address
+          in: path
+          description: >-
+              *address* of account.
+          required: true
+          schema:
+            type: string
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of account
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/AccountHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /account/{address}/operations:
+    get:
+      tags:
+      - account
+      summary: Getting hal document of the operations, which are related with the account
+      description: >-
+        Getting hal document of the operations, which are related with the account.
+      operationId: account-operations
+      parameters:
+        - name: address
+          in: path
+          description: >-
+              *address* of account.
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          schema:
+            type: string
+            example: "2,0"
+          description: >-
+            Getting *operation*s after *offset*.
+        - name: reverse
+          in: query
+          schema:
+            type: boolean
+            example: false
+            default: false
+          description: >-
+            Getting *operation*s by reverse order.
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "...."
+                      detail:
+                        type: string
+                        example: "...."
+        404:
+          description: no more operations
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "operations not found"
+                      detail:
+                        type: string
+                        example: "...."
+        200:
+          description: hal document of operations
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/AccountOperationsHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /builder/operation:
+    get:
+      tags:
+      - builder
+      summary: Help to build operation messages.
+      operationId: operation-builder
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationBuilderHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /builder/operation/fact/template/{fact}:
+    get:
+      tags:
+      - builder
+      summary: Help to build operation fact messages. it returns fact template for `/builder/operation/fact`.
+      operationId: operation-builder-fact-template
+      parameters:
+        - name: fact
+          in: path
+          description: >-
+              *fact* name.
+          required: true
+          schema:
+            type: string
+            enum:
+            - create-accounts
+            - key-updater
+            - transfers
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        404:
+          description: template not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation fact template
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationTemplateCreateAccountsFactHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /builder/operation/fact:
+    post:
+      tags:
+      - builder
+      summary: Help to build operation messages.
+      description: >-
+        It receives the edited fact message, not template HAL itself.
+      operationId: operation-fact-builder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountsFact'
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        400:
+          description: found some problems in request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation template with signed fact.
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationTemplateCreateAccountsHAL'
+
+  /builder/operation/sign:
+    post:
+      tags:
+      - builder
+      summary: Help to sign operation messages.
+      description: >-
+        It receives the edited operation message, not template HAL itself.
+      operationId: operation-fact-builder-sign
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccounts'
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        400:
+          description: found some problems in request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation template with signed fact.
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationTemplateCreateAccountsSignHAL'
+
+  /builder/send:
+    post:
+      tags:
+      - builder
+      summary: Broadcast message to network
+      description: >-
+        It receives the operation or seal and broadcasts to the network. The signer of seal(not *operation*) will be digest node itself. Such as,
+
+        - If request body is *operation*, new seal will be created with the given *operation* and the new seal will be signed by digest node.
+
+        - If request body is *seal*, it will be signed by digest node.
+      operationId: operation-builder-send
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CreateAccounts'
+                - $ref: '#/components/schemas/KeyUpdater'
+                - $ref: '#/components/schemas/Transfers'
+                - $ref: '#/components/schemas/Seal'
+      responses:
+        500:
+          description: found some problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        400:
+          description: found some problems in request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of operation template with signed fact.
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationTemplateCreateAccountsHAL'
+
+components:
+  schemas:
+    Hint:
+      type: string
+      example: a015:0.0.1
+
+    Problem:
+      type: object
+      required:
+      - _hint
+      - title
+      - type
+      - detail
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: a017:0.0.1
+              default: a017:0.0.1
+        title:
+          type: string
+          example: "failed to sign"
+        type:
+          type: string
+          example: "https://github.com/spikeekips/mitum-currency/problems/others"
+        detail:
+          type: string
+          example: "invalid privatekey"
+
+    Seal:
+      type: object
+      required:
+        - _hint
+        - hash
+        - body_hash
+        - signer
+        - signature
+        - signed_at
+        - operations
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: 0151:0.0.1
+              default: 0151:0.0.1
+        hash:
+          type: string
+          format: hash
+          example: yaJGkXgizfaB3HEAf9LWdWBC3Sh954pzuc2tNTM9PHG
+        body_hash:
+          type: string
+          format: hash
+          example: zaJGkXgizfaB3HEAf9LWdWBC3Sh954pzuc2tNTM9PHG
+        signer:
+          type: string
+          example: 04805444d3eb37090874c13d5620657b33a7f2c98f631ca2c2f87ff6ebace5cf0c0fbf860ea6003a7ad01d57f8e5582aa2aad1345d5d2bf5c2e703e340ff7b690d-0115:0.0.1
+        signature:
+          type: string
+          format: signature
+          example: 5BpRZ6vnScSTCDt5K7wKiJPefMTjzZs5sE1U1ZoZ5XAgG7CG45z97N9Vt6PZtnRwGn7fx5mnBVANDgEHJ1YfS5yALXdD1
+        signed_at:
+          type: string
+          format: date-time
+          example: "2020-10-13T23:37:20Z"
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operation'
+
+    HAL:
+      type: object
+      required:
+      - _hint
+      - _links
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: a016:0.0.1
+              default: a016:0.0.1
+        _embedded:
+          type: object
+          default: {}
+        _links:
+          type: object
+          properties:
+            self:
+              allOf:
+                - $ref: '#/components/schemas/HALLink'
+                - type: object
+                  properties:
+                    href:
+                      type: string
+                      default: /
+                      example: /
+                    templated:
+                      type: boolean
+                      default: false
+                      example: false
+
+    HALLink:
+      type: object
+      required:
+        - href
+      properties:
+        href:
+          type: string
+        templated:
+          type: boolean
+          description: The link is is templated link, not used without it's arguments.
+          default: false
+          example: false
+
+    NodeInfoHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-node-info
+                  example: mitum-currency-node-info
+                hint:
+                  type: string
+                  default: a016:0.0.1
+                  example: a016:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/NodeInfo'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /
+                          example: /
+                block:prev:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/243
+                block:next:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/245
+                block:current:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244
+                block:current-manifest:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244/manifest
+                block:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{height:[0-9]+}
+                          example: /block/{height:[0-9]+}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{height:[0-9]+}/manifest
+                          example: /block/{height:[0-9]+}/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                block:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{hash:(?i)[0-9a-z][0-9a-z]+}
+                          example: /block/{hash:(?i)[0-9a-z][0-9a-z]+}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest
+                          example: /block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+
+    BlockHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/333
+                prev:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/243
+                next:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/245
+                current:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244
+                current-manifest:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244/manifest
+                block:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/333
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/33/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                block:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/KqvjCvX8LCKBPSZA8KoqhLEdzVtGNtSrwvuPuL5rNb6y
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/KqvjCvX8LCKBPSZA8KoqhLEdzVtGNtSrwvuPuL5rNb6y/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+
+    Node:
+      type: object
+      required:
+        - _hint
+        - address
+        - published
+        - url
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: 0170:0.0.1
+              default: 0170:0.0.1
+        address:
+          type: string
+          example: mc-node-010a:0.0.1
+        publickey:
+          type: string
+          format: publickey
+          example: rqvjCvX8LCKBPSZA8KoqhLEdzVtGNtSrwvuPuL5rNb6y-0113:0.0.1
+        url:
+          type: string
+          example: quic://127.0.0.1:54321
+
+    NodeInfo:
+      type: object
+      required:
+      - _hint
+      - node
+      - network_id
+      - state
+      - last_block
+      - version
+      - url
+      - policy
+      - suffrage
+      - genesis
+      - fee_amount
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a016:0.0.1
+              example: a016:0.0.1
+        node:
+          $ref: '#/components/schemas/Node'
+        network_id:
+          type: string
+          example: "bWM7IFRodSAxMCBTZXAgMjAyMCAwMzoyMzozMSBQTSBVVEM="
+        state:
+          type: string
+          example: CONSENSUS
+          default: BOOTING
+          enum:
+          - STOPPED
+          - BOOTING
+          - CONSENSUS
+          - JOINGING
+          - SYNCING
+          - BROKEN
+        last_block:
+          $ref: '#/components/schemas/Manifest'
+        version:
+          type: string
+          example: v0.0.1
+        url:
+          type: string
+          description: node published url
+          example: quic://127.0.0.1:54321
+        policy:
+          type: object
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  default: 010b:0.0.1
+                  example: 010b:0.0.1
+            threshold:
+              type: integer
+              description: minimum threshold of agreement for new block
+              example: 67
+            max_operations_in_seal:
+              type: integer
+              description: maximum number of operations in one seal
+              example: 100
+            max_operations_in_proposal:
+              type: integer
+              description: maximum number of operations in one proposal
+              example: 100
+        suffrage:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+        fee_amount:
+          description: >-
+           - if type is "fixed", *amount* should be set. It is the amount of fee.
+
+           - if type is "ratio", *ratio* should be set.
+
+           - if type is "ratio", *min* should be set. It is the minimum amount of fee.
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+              - fixed
+              - ratio
+            amount:
+              $ref: '#/components/schemas/Amount'
+            ratio:
+              type: number
+              format: float
+              description: if type is "ratio", the ratio of fee
+            min:
+              $ref: '#/components/schemas/Amount'
+        genesis:
+          type: object
+          required:
+          - account
+          - balance
+          properties:
+            account:
+              $ref: '#/components/schemas/Account'
+            balance:
+              allOf:
+                - $ref: '#/components/schemas/Amount'
+              description: the initial balance
+
+    Manifest:
+      type: object
+      required:
+      - _hint
+      - hash
+      - height
+      - round
+      - proposal
+      - previous_block
+      - block_operations
+      - block_states
+      - confirmed_at
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: 0141:0.0.1
+              example: 0141:0.0.1
+        hash:
+          type: string
+          format: hash
+          description: hash block
+          example: zaJGkXgizfaB3HEAf9LWdWBC3Sh954pzuc2tNTM9PHG
+        height:
+          $ref: '#/components/schemas/Height'
+        round:
+          type: integer
+          format: int64
+          example: 0
+        proposal:
+          type: string
+          description: hash of proposal ballot
+          example: DPZsPTmgDGkRJXwoQYm1ZbNaNLRva5Cz8ZNJKuaoZNqX
+        previous_block:
+          type: string
+          description: hash of previous block
+          example: Gzsv15iXxrJFbbqdCJw7wGLzdbB9HpoSJrEyA2cTcMjw
+        block_operations:
+          type: string
+          description: root hash of operation tree
+          example: Yksv15iXxrJFbbqdCJw7wGLzdbB9HpoSJrEyA2cTcMjj
+        block_states:
+          type: string
+          description: root hash of states tree
+          example: Aksv15iXxrJFbbqdCJw7wGLzdbB9HpoSJrEyA2cTcMjj
+        confirmed_at:
+          type: string
+          format: date-time
+          description: confirmed time of block
+          example: "2020-10-13T15:04:50Z"
+        created_at:
+          type: string
+          format: date-time
+          description: saved time in node
+          example: "2020-10-14T00:04:51Z"
+
+    Height:
+      description: >-
+        height of *block*.
+      type: integer
+      format: int64
+    Amount:
+      description: >-
+        The amount of currency. It is big number, represented by string.
+      type: string
+      example: "33"
+
+    AccountKey:
+      description: >-
+        *publickey* and *weight* to access account.
+      type: object
+      required:
+      - _hint
+      - key
+      - weight
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a003:0.0.1
+              example: a003:0.0.1
+        key:
+          description: >-
+            *publickey*
+          type: string
+          format: publickey
+          example: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7-0115:0.0.1
+        weight:
+          description: >-
+            *weight* should be `> 1` and  `<= 100`.
+          type: integer
+          format: int32
+          example: 100
+
+    AccountKeys:
+      description: >-
+        *AccountKey*s and *threshold* of the account. *AccountKeys* authorizes *operation* to modify
+        the state of account if the *FactSign* of operation have the enough signs of *AccountKeys*.
+
+        - Multiple *AccountKey* can be defined and at least, one *AccountKey* should be defined.
+
+        - The sum of *weight* of *AccountKey*s should be over *threshold*.
+
+
+        For example, if there are 3 *AccountKey* and *threshold* is `60`,
+
+        - `key0`:
+          * publickey: `key0-pub`
+          * weight: `30`
+
+        - `key1`:
+          * publickey: `key1-pub`
+          * weight: `30`
+
+        - `key2`:
+          * publickey: `key2-pub`
+          * weight: `30`
+
+        The *FactSign* of the operation consists with signs of `key0` and `key1`. In this
+        *FactSign*, the sum of *weight* is `60` and is same or over *threshold*, `sum=60 >=
+        threshold=60`, so this *FactSign* authorizes the operation.
+      type: object
+      required:
+      - _hint
+      - keys
+      - threshold
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a004:0.0.1
+              example: a004:0.0.1
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountKey'
+        threshold:
+          description: >-
+            *threshold* should be `> 0` and `<= 100`.
+          type: integer
+          format: int32
+          example: 100
+
+    Account:
+      type: object
+      required:
+      - _hint
+      - hash
+      - address
+      - keys
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a014:0.0.1
+              example: a014:0.0.1
+        hash:
+          type: string
+          format: hash
+          description: hash account
+          example: CkNB7yu1YbAU5c8LFRV6HbFiuj9azQ3LCwuTuxMREbkd
+        address:
+          type: string
+          description: account address
+          example: B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1
+        keys:
+          type: object
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  default: a004:0.0.1
+                  example: a004:0.0.1
+            keys:
+              type: array
+              items:
+                type: object
+                properties:
+                  _hint:
+                    allOf:
+                      - $ref: '#/components/schemas/Hint'
+                      - type: string
+                        default: a003:0.0.1
+                        example: a003:0.0.1
+                  weight:
+                    type: integer
+                    format: int32
+                    example: 100
+                  key:
+                    type: string
+                    example: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7-0115:0.0.1
+            threshold:
+              type: integer
+              format: int32
+              example: 100
+
+    AccountValue:
+      allOf:
+        - $ref: '#/components/schemas/Account'
+        - type: object
+          required:
+          - balance
+          - height
+          - previous_height
+          properties:
+            balance:
+              $ref: '#/components/schemas/Amount'
+            height:
+              $ref: '#/components/schemas/Height'
+            previous_height:
+              $ref: '#/components/schemas/Height'
+
+    ManifestHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: block-manifest-v0
+                  example: block-manifest-v0
+                hint:
+                  type: string
+                  default: 0141:0.0.1
+                  example: 0141:0.0.1
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244/manifest
+                prev:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/243/manifest
+                next:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/245/manifest
+                current:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244
+                current-manifest:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244/manifest
+                block:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{height:[0-9]+}
+                          example: /block/{height:[0-9]+}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{height}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{height:[0-9]+}/manifest
+                          example: /block/{height:[0-9]+}/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                block:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{hash:(?i)[0-9a-z][0-9a-z]+}
+                          example: /block/{hash:(?i)[0-9a-z][0-9a-z]+}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                manifest:{hash}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest
+                          example: /block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+            _embedded:
+              $ref: '#/components/schemas/Manifest'
+
+    AccountHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-account-value
+                  example: mitum-currency-account-value
+                hint:
+                  type: string
+                  default: a018:0.0.1
+                  example: a018:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/AccountValue'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1
+                operations:
+                  description: >-
+                    Getting *operation*s, which are related of the account.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations
+                operations:{offset}:
+                  description: >-
+                    Getting *operation*s, which are related of the account after offset.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations?offset={offset}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                operations:{offset,reverse}:
+                  description: >-
+                    Getting *operation*s, which are related of the account after offset by reverse order.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations?offset={offset&reverse=1}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                block:
+                  description: >-
+                    Request `/block/{height}`.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244
+
+    FactSign:
+      description: >-
+        *FactSign* represents the *signer* signs the *operation* with valid *hash* of *operation*.
+      type: object
+      required:
+      - _hint
+      - signer
+      - signature
+      - signed_at
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: 0150:0.0.1
+              default: 0150:0.0.1
+        signer:
+          description: >-
+            *publickey*, which signes the operation
+          type: string
+          format: publickey
+          example: 04805444d3eb37090874c13d5620657b33a7f2c98f631ca2c2f87ff6ebace5cf0c0fbf860ea6003a7ad01d57f8e5582aa2aad1345d5d2bf5c2e703e340ff7b690d-0115:0.0.1
+        signature:
+          description: signature, created by *signer*. Usually it is encoded thru *bsae58*.
+          type: string
+          format: signature
+          example: 5BpRZ6vnScSTCDt5K7wKiJPefMTjzZs5sE1U1ZoZ5XAgG7CG45z97N9Vt6PZtnRwGn7fx5mnBVANDgEHJ1YfS5yALXdD1
+        signed_at:
+          description: time to be signed
+          type: string
+          format: date-time
+          example: "2020-10-13T23:37:20Z"
+
+    BaseFact:
+      type: object
+      required:
+      - _hint
+      - hash
+      - token
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a005:0.0.1
+              example: a005:0.0.1
+        hash:
+          type: string
+          format: hash
+          example: 4jhzcudKgtoPGR6rA7Fuxmfwz3C8KGiP5MEKXuBXcW9j
+        token:
+          type: string
+          format: bytes
+          example: cmFpc2VkIGJ5
+
+    Operation:
+      type: object
+      required:
+      - _hint
+      - fact_signs
+      - hash
+      - fact
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a008:0.0.1
+              example: a008:0.0.1
+        fact_signs:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactSign'
+        hash:
+          description: operation hash
+          type: string
+          format: hash
+          example: 8u4ua32jnYjS1BP8jBoL2BYqSwdZTno8vd4NzujbZQbH
+        fact:
+          type: object
+          required:
+          - _hint
+          - hash
+          - token
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  default: a008:0.0.1
+                  example: a008:0.0.1
+            hash:
+              description: operation fact hash
+              type: string
+              format: hash
+              example: 9u4ua32jnYjS1BP8jBoL2BYqSwdZTno8vd4NzujbZQbH
+            token:
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+        memo:
+          type: string
+          example: "show me and find me"
+
+    OperationValue:
+      type: object
+      required:
+      - _hint
+      - hash
+      - operation
+      - height
+      - confirmed_at
+      - in_state
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: 0150:0.0.1
+              default: 0150:0.0.1
+        hash:
+          description: operation value hash, not operation hash
+          type: string
+          format: hash
+          example: 6GymxmuvhgUfAKWYQUKKveYh1H8b981vQaZcMsbWqykS
+        operation:
+          oneOf:
+            - $ref: '#/components/schemas/CreateAccounts'
+            - $ref: '#/components/schemas/KeyUpdater'
+            - $ref: '#/components/schemas/Transfers'
+            - $ref: '#/components/schemas/GenesisAccount'
+        height:
+          $ref: '#/components/schemas/Height'
+        confirmed_at:
+          type: string
+          format: date-time
+          example: "2020-10-13T14:37:20Z"
+        in_state:
+          description: Whether the operation is in block or not. If `false`, the operation is processed, but ignored with it's own problem.
+          type: boolean
+          example: true
+
+    OperationHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-operation-value
+                  example: mitum-currency-operation-value
+                hint:
+                  type: string
+                  default: a019:0.0.1
+                  example: a019:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/OperationValue'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /operation/6GymxmuvhgUfAKWYQUKKveYh1H8b981vQaZcMsbWqykS
+                operation:{hash}:
+                  description: request `/operation/{hash}`
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /operation/{hash:(?i)[0-9a-z][0-9a-z]+}
+                          example: /operation/{hash:(?i)[0-9a-z][0-9a-z]+}
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                block:
+                  description: request `/block/{height}` of the operation
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244
+                manifest:
+                  description: request `/block/{height}/manifest` of the operation
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/244/manifest
+
+
+    AccountOperationsHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _embedded:
+              type: array
+              items:
+                $ref: '#/components/schemas/OperationHAL'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations
+                account:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1
+                next:
+                  description: >-
+                    next operations with *offset*.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations?offset=2,0
+                reverse:
+                  description: >-
+                    operations by reverse oder of self.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations?reverse=1
+
+    ManifestsHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _embedded:
+              type: array
+              items:
+                $ref: '#/components/schemas/ManifestHAL'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/manifests
+                next:
+                  description: >-
+                    next manifests with *offset*.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/manifests?offset=2
+                reverse:
+                  description: >-
+                    manifests by reverse oder of self.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/manifests?reverse=1
+
+    OperationsHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _embedded:
+              type: array
+              items:
+                $ref: '#/components/schemas/OperationHAL'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/operations
+                next:
+                  description: >-
+                    next operations with *offset*.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/operations?offset=2,0
+                reverse:
+                  description: >-
+                    operations by reverse oder of self.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/operations?reverse=1
+
+    OperationBuilderHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation
+                operation-fact:{create-accounts}:
+                  description: >-
+                    request the template of *create-accounts* operation.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /builder/operation/fact/template/create-accounts
+                          example: /builder/operation/fact/template/create-accounts
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                operation-fact:{key-updater}:
+                  description: >-
+                    request the template of *key-updater* operation.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /builder/operation/fact/template/key-updater
+                          example: /builder/operation/fact/template/key-updater
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                operation-fact:{transfers}:
+                  description: >-
+                    request the template of *transfers* operation.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /builder/operation/fact/template/transfers
+                          example: /builder/operation/fact/template/transfers
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+
+    CreateAccounts:
+      allOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: object
+          properties:
+            fact:
+              $ref: '#/components/schemas/CreateAccountsFact'
+
+    KeyUpdater:
+      allOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: object
+          properties:
+            fact:
+              $ref: '#/components/schemas/KeyUpdaterFact'
+
+    Transfers:
+      allOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: object
+          properties:
+            fact:
+              $ref: '#/components/schemas/TransfersFact'
+
+    GenesisAccount:
+      allOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: object
+          properties:
+            fact:
+              $ref: '#/components/schemas/GenesisAccountFact'
+
+    CreateAccountsFact:
+      allOf:
+        - $ref: '#/components/schemas/BaseFact'
+        - type: object
+          required:
+          - sender
+          - items
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  example: a005:0.0.1
+                  default: a005:0.0.1
+            hash:
+              description: >-
+                The value of hash will be generated automatically by builder. *Don't need to edit*.
+              type: string
+              format: hash
+              example: 4jhzcudKgtoPGR6rA7Fuxmfwz3C8KGiP5MEKXuBXcW9j
+            token:
+              description: >-
+                Replace your own token. *token* value should be encoded by base64.
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+            sender:
+              description: >-
+                Replace your own sender address.
+              type: string
+              example: mother-a000:0.0.1
+            items:
+              type: array
+              items:
+                type: object
+                required:
+                - keys
+                - amount
+                properties:
+                  keys:
+                    $ref: '#/components/schemas/AccountKeys'
+                  amount:
+                    description: >-
+                      The initial balance of account.
+                    allOf:
+                      - $ref: '#/components/schemas/Amount'
+
+    KeyUpdaterFact:
+      allOf:
+        - $ref: '#/components/schemas/BaseFact'
+        - type: object
+          required:
+          - _hint
+          - hash
+          - token
+          - target
+          - keys
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  example: a009:0.0.1
+                  default: a009:0.0.1
+            hash:
+              description: >-
+                The value of hash will be generated automatically by builder. *Don't need to edit*.
+              type: string
+              format: hash
+              example: 2TsuSVfu5eUEZnGxztyn3fWo5bHS1nu861wJReXajw4u
+            token:
+              description: >-
+                Replace your own token. *token* value should be encoded by base64.
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+            target:
+              description: >-
+                Replace your own account owner address.
+              type: string
+              example: mother-a000:0.0.1
+            keys:
+              $ref: '#/components/schemas/AccountKeys'
+
+    TransfersFact:
+      allOf:
+        - $ref: '#/components/schemas/BaseFact'
+        - type: object
+          required:
+          - _hint
+          - hash
+          - token
+          - sender
+          - items
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  example: a001:0.0.1
+                  default: a001:0.0.1
+            hash:
+              description: >-
+                The value of hash will be generated automatically by builder. *Don't need to edit*.
+              type: string
+              format: hash
+              example: 4jhzcudKgtoPGR6rA7Fuxmfwz3C8KGiP5MEKXuBXcW9j
+            token:
+              description: >-
+                Replace your own token. *token* value should be encoded by base64.
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+            sender:
+              description: >-
+                Replace your own sender address.
+              type: string
+              example: mother-a000:0.0.1
+            items:
+              type: array
+              items:
+                type: object
+                required:
+                - receiver
+                - amount
+                properties:
+                  receiver:
+                    type: string
+                    description: >-
+                      Receiver account address.
+                  amount:
+                    description: >-
+                      The amount to transfer.
+                    allOf:
+                      - $ref: '#/components/schemas/Amount'
+
+    GenesisAccountFact:
+      allOf:
+        - $ref: '#/components/schemas/BaseFact'
+        - type: object
+          required:
+          - _hint
+          - hash
+          - token
+          - genesis_node_key
+          - keys
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  example: a007:0.0.1
+                  default: a007:0.0.1
+            genesis_node_key:
+              description: >-
+                The *publickey* of the node, which generates genesis block.
+              type: string
+              example: 04805444d3eb37090874c13d5620657b33a7f2c98f631ca2c2f87ff6ebace5cf0c0fbf860ea6003a7ad01d57f8e5582aa2aad1345d5d2bf5c2e703e340ff7b690d-0115:0.0.1
+            keys:
+              type: array
+              items:
+                $ref: '#/components/schemas/AccountKey'
+
+    OperationTemplateCreateAccountsFactHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-create-accounts-operation-fact
+                  example: mitum-currency-create-accounts-operation-fact
+                hint:
+                  type: string
+                  default: a005:0.0.1
+                  example: a005:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/CreateAccountsFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new fact can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    token:
+                      description: >-
+                        *base64* encoded **example** bytes
+                      type: string
+                      example: cmFpc2VkIGJ5
+                    sender:
+                      description: >-
+                        **example** sender *address*
+                      type: string
+                      example: "mother-a000:0.0.1"
+                    items.keys.keys.key:
+                      description: >-
+                        **example** new account *publickey*
+                      type: string
+                      format: publickey
+                      example: "oRHdEPPrgbfNxUp6TWsC35DmWu1zbLCW9rp41Z8npF8H-0113:0.0.1"
+                    items.amount:
+                      description: >-
+                        **example** amount of new account
+                      type: string
+                      example: "-333"
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact/template/create-accounts
+                          default: /builder/operation/fact/template/create-accounts
+
+    OperationTemplateKeyUpdaterFactHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-keyupdater-operation-fact
+                  example: mitum-currency-keyupdater-operation-fact
+                hint:
+                  type: string
+                  default: a009:0.0.1
+                  example: a009:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/KeyUpdaterFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new fact can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    token:
+                      description: >-
+                        *base64* encoded **example** bytes
+                      type: string
+                      example: cmFpc2VkIGJ5
+                    target:
+                      description: >-
+                        **example** key owner *address*
+                      type: string
+                      example: "mother-a000:0.0.1"
+                    keys.keys.key:
+                      description: >-
+                        **example** new account *publickey*
+                      type: string
+                      format: publickey
+                      example: "oRHdEPPrgbfNxUp6TWsC35DmWu1zbLCW9rp41Z8npF8H-0113:0.0.1"
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact/template/key-updater
+                          default: /builder/operation/fact/template/key-updater
+
+    OperationTemplateTransfersFactHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-transfers-operation-fact
+                  example: mitum-currency-transfers-operation-fact
+                hint:
+                  type: string
+                  default: a001:0.0.1
+                  example: a001:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/TransfersFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new fact can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    token:
+                      description: >-
+                        *base64* encoded **example** bytes
+                      type: string
+                      example: cmFpc2VkIGJ5
+                    sender:
+                      description: >-
+                        **example** sender *address*
+                      type: string
+                      example: "mother-a000:0.0.1"
+                    items.receiver:
+                      description: >-
+                        **example** receiver address
+                      type: string
+                      example: "father-a000:0.0.1"
+                    items.amount:
+                      description: >-
+                        **example** amount to transfer
+                      type: string
+                      example: "-333"
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact/template/transfers
+                          default: /builder/operation/fact/template/transfers
+
+    OperationTemplateCreateAccountsHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-create-accounts-operation
+                  example: mitum-currency-create-accounts-operation
+                hint:
+                  type: string
+                  default: a006:0.0.1
+                  example: a006:0.0.1
+            _embedded:
+              allOf:
+                - $ref: '#/components/schemas/Operation'
+                - type: object
+                  properties:
+                    fact:
+                      $ref: '#/components/schemas/CreateAccountsFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new operation can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    fact_signs.signer:
+                      description: >-
+                        **example** *publickey* for signing
+                      type: string
+                      format: publickey
+                      example: "oRHdEPPrgbfNxUp6TWsC35DmWu1zbLCW9rp41Z8npF8H-0113:0.0.1"
+                    fact_signs.signature:
+                      description: >-
+                        **example** signature
+                      type: string
+                      format: signature
+                      example: "22UZo26eN"
+                signature_base:
+                  description: >-
+                    Bytes for creating *signature*. *base64* encoded string.
+                  type: string
+                  format: signature
+                  example: "M1d82nkxHCooJq1ktIkd09MHgj3sSL8/7d4KYSNv1s1tYzsgVGh1IDEwIFNlcCAyMDIwIDAzOjIzOjMxIFBNIFVUQw=="
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact
+                          default: /builder/operation/fact
+
+    OperationTemplateCreateAccountsSignHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-create-accounts-operation
+                  example: mitum-currency-create-accounts-operation
+                hint:
+                  type: string
+                  default: a006:0.0.1
+                  example: a006:0.0.1
+            _embedded:
+              allOf:
+                - $ref: '#/components/schemas/Operation'
+                - type: object
+                  properties:
+                    fact:
+                      $ref: '#/components/schemas/CreateAccountsFact'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/sign
+                          default: /builder/operation/sign
+
+# vi: ft=yaml tw=100 ts=2 sw=2 expandtab smarttab

@@ -37,3 +37,7 @@ component:
     fee-amount:
         type: fixed
         amount: 1
+    digest:
+        storage: mongodb://127.0.0.1:27017/mc_digest
+        network:
+            bind: https://localhost:54322

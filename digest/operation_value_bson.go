@@ -18,6 +18,7 @@ func (va OperationValue) MarshalBSON() ([]byte, error) {
 			"height":       va.height,
 			"confirmed_at": va.confirmedAt,
 			"in_state":     va.inStates,
+			"index":        va.index,
 		},
 	))
 }
@@ -27,6 +28,7 @@ type OperationValueBSONUnpacker struct {
 	HT base.Height `bson:"height"`
 	CT time.Time   `bson:"confirmed_at"`
 	IN bool        `bson:"in_state"`
+	ID uint64      `bson:"index"`
 }
 
 func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -46,6 +48,7 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	va.height = uva.HT
 	va.confirmedAt = uva.CT
 	va.inStates = uva.IN
+	va.index = uva.ID
 
 	return nil
 }

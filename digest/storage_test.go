@@ -3,7 +3,6 @@
 package digest
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
@@ -52,7 +51,7 @@ func (t *testStorage) TestOperationByAddress() {
 
 	{
 		tf := t.newTransfer(sender, receiver0)
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 0)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -62,17 +61,13 @@ func (t *testStorage) TestOperationByAddress() {
 
 	{
 		tf := t.newTransfer(sender, receiver1)
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 1)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
 		hashes = append(hashes, tf.Fact().Hash().String())
 		hashes1 = append(hashes1, tf.Fact().Hash().String())
 	}
-
-	sort.Strings(hashes)
-	sort.Strings(hashes0)
-	sort.Strings(hashes1)
 
 	{ // NOTE by sender
 		var uhashes []string
@@ -137,7 +132,7 @@ func (t *testStorage) TestOperationByAddressOrderByHeight() {
 		receiver := currency.MustAddress(util.UUID().String())
 		{
 			tf := t.newTransfer(sender, receiver)
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, 0)
 			t.NoError(err)
 			t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -150,7 +145,7 @@ func (t *testStorage) TestOperationByAddressOrderByHeight() {
 		receiver := currency.MustAddress(util.UUID().String())
 		{
 			tf := t.newTransfer(sender, receiver)
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, 1)
 			t.NoError(err)
 			t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -210,7 +205,7 @@ func (t *testStorage) TestOperationByAddressOffset() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 0)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -238,7 +233,7 @@ func (t *testStorage) TestOperationByAddressOffset() {
 	}
 
 	{ // next of 3
-		offset := buildOffset(hashesByHeight[hashes[3]], hashes[3])
+		offset := buildOffset(hashesByHeight[hashes[3]], uint64(0))
 		var uhashes []string
 		t.NoError(st.OperationsByAddress(
 			sender,
@@ -257,7 +252,7 @@ func (t *testStorage) TestOperationByAddressOffset() {
 	}
 
 	{ // next of 9
-		offset := buildOffset(hashesByHeight[hashes[9]], hashes[9])
+		offset := buildOffset(hashesByHeight[hashes[9]], uint64(0))
 		var uhashes []string
 		t.NoError(st.OperationsByAddress(
 			sender,
@@ -285,7 +280,7 @@ func (t *testStorage) TestOperationByAddressLimit() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(i))
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -404,7 +399,7 @@ func (t *testStorage) TestOperationsFact() {
 
 	for i := 0; i < 3; i++ {
 		tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, uint64(i))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -438,7 +433,7 @@ func (t *testStorage) TestClean() {
 	lastHeight := base.Height(3)
 	for height := base.Height(0); height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(height))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 	}
@@ -477,7 +472,7 @@ func (t *testStorage) TestCleanByHeight() {
 	lastHeight := base.Height(10)
 	for height := base.Height(0); height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(height))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -605,6 +600,72 @@ func (t *testStorage) TestAccountBalanceUpdated() {
 	t.Equal(stB1.Height(), urs.height)
 	t.Equal(stB1.PreviousHeight(), urs.previousHeight)
 	t.Equal(lastamount, urs.balance)
+}
+
+func (t *testStorage) TestOperations() {
+	st, _ := t.Storage()
+
+	var hashes []string
+
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			height := base.Height(i)
+			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(j))
+			t.NoError(err)
+			_ = t.insertDoc(st, defaultColNameOperation, doc)
+
+			hashes = append(hashes, tf.Fact().Hash().String())
+		}
+	}
+
+	{ // NOTE no offset
+		var uhashes []string
+		t.NoError(st.Operations(
+			false,
+			false,
+			"",
+			100,
+			func(h valuehash.Hash, va OperationValue) (bool, error) {
+				uhashes = append(uhashes, h.String())
+				return true, nil
+			},
+		))
+
+		t.Equal(hashes, uhashes)
+	}
+
+	{ // NOTE offset
+		var uhashes []string
+		t.NoError(st.Operations(
+			false,
+			false,
+			buildOffset(base.Height(0), 1),
+			100,
+			func(h valuehash.Hash, va OperationValue) (bool, error) {
+				uhashes = append(uhashes, h.String())
+				return true, nil
+			},
+		))
+
+		t.Equal(hashes[2:], uhashes)
+	}
+
+	{ // NOTE over offset
+		var uhashes []string
+		t.NoError(st.Operations(
+			false,
+			false,
+			buildOffset(base.Height(4), 1),
+			100,
+			func(h valuehash.Hash, va OperationValue) (bool, error) {
+				uhashes = append(uhashes, h.String())
+				return true, nil
+			},
+		))
+
+		t.Empty(uhashes)
+	}
 }
 
 func TestStorage(t *testing.T) {

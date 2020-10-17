@@ -27,13 +27,15 @@ var (
 
 var (
 	HandlerPathNodeInfo                   = `/`
+	HandlerPathManifests                  = `/block/manifests`
+	HandlerPathOperations                 = `/block/operations`
+	HandlerPathOperation                  = `/block/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
 	HandlerPathBlockByHeight              = `/block/{height:[0-9]+}`
 	HandlerPathBlockByHash                = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}`
 	HandlerPathManifestByHeight           = `/block/{height:[0-9]+}/manifest`
 	HandlerPathManifestByHash             = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
 	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}`
 	HandlerPathAccountOperations          = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}/operations` // nolint:lll
-	HandlerPathOperation                  = `/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
 	HandlerPathOperationBuildFactTemplate = `/builder/operation/fact/template/{fact:[\w][\w\-]*}`
 	HandlerPathOperationBuildFact         = `/builder/operation/fact`
 	HandlerPathOperationBuildSign         = `/builder/operation/sign`
@@ -118,6 +120,12 @@ func (hd *Handlers) Handler() http.Handler {
 }
 
 func (hd *Handlers) setHandlers() {
+	_ = hd.setHandler(HandlerPathManifests, hd.handleManifests, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathOperations, hd.handleOperations, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation, true).
+		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathManifestByHeight, hd.handleManifestByHeight, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathManifestByHash, hd.handleManifestByHash, true).
@@ -129,8 +137,6 @@ func (hd *Handlers) setHandlers() {
 	_ = hd.setHandler(HandlerPathAccount, hd.handleAccount, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathAccountOperations, hd.handleAccountOperations, true).
-		Methods(http.MethodOptions, "GET")
-	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathOperationBuildFactTemplate, hd.handleOperationBuildFactTemplate, true).
 		Methods(http.MethodOptions, "GET")
@@ -203,8 +209,14 @@ func (hd *Handlers) stream(w http.ResponseWriter, bufsize int, status int) (*jso
 }
 
 func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
-	if len(pairs)%2 != 0 {
+	if n := len(pairs); n%2 != 0 {
 		return "", xerrors.Errorf("failed to combine url; uneven pairs to combine url")
+	} else if n < 1 {
+		if u, err := hd.routes[path].URL(); err != nil {
+			return "", xerrors.Errorf("failed to combine url: %w", err)
+		} else {
+			return u.String(), nil
+		}
 	}
 
 	if u, err := hd.routes[path].URLPath(pairs...); err != nil {

@@ -180,7 +180,7 @@ func (hd *Handlers) buildAccountOperationsHal(
 	var nextoffset string
 	if len(vas) > 0 {
 		va := vas[len(vas)-1].Interface().(OperationValue)
-		nextoffset = buildOffset(va.Height(), va.Operation().Fact().Hash().String())
+		nextoffset = buildOffset(va.Height(), va.Index())
 	}
 
 	if len(nextoffset) > 0 {
@@ -197,24 +197,6 @@ func (hd *Handlers) buildAccountOperationsHal(
 	}
 
 	hal = hal.AddLink("reverse", NewHalLink(addQueryValue(baseSelf, stringBoolQuery("reverse", !reverse)), nil))
-
-	return hal, nil
-}
-
-func (hd *Handlers) buildOperationHal(va OperationValue) (Hal, error) {
-	var hal Hal
-
-	if h, err := hd.combineURL(HandlerPathOperation, "hash", va.Operation().Fact().Hash().String()); err != nil {
-		return nil, err
-	} else {
-		hal = NewBaseHal(va, NewHalLink(h, nil))
-	}
-
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", va.Height().String()); err != nil {
-		return nil, err
-	} else {
-		hal = hal.AddLink("block", NewHalLink(h, nil))
-	}
 
 	return hal, nil
 }

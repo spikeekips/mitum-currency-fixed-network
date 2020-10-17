@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -14,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -92,13 +90,14 @@ func (t *testHandlerAccount) TestAccountOperations() {
 
 	for i := 0; i < 10; i++ {
 		height := base.Height(i % 3)
+		index := uint64(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, index)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
 		fh := tf.Fact().Hash().String()
-		offset := buildOffset(height, fh)
+		offset := buildOffset(height, index)
 		offsets = append(offsets, offset)
 		offsetByHashes[fh] = offset
 		hashesByOffset[offset] = fh
@@ -150,14 +149,15 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 
 	for i := 0; i < 10; i++ {
 		height := base.Height(i % 3)
+		index := uint64(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, index)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
 		fh := tf.Fact().Hash().String()
 
-		offset := buildOffset(height, fh)
+		offset := buildOffset(height, index)
 		offsets = append(offsets, offset)
 		hashesByOffset[offset] = fh
 	}
@@ -271,7 +271,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i % 3)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(i))
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -286,17 +286,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 		return limit
 	})
 
-	var offset string
-	for {
-		o := valuehash.RandomSHA256().String()
-		if strings.Compare(hashes[0], o) > 0 {
-			continue
-		}
-
-		offset = buildOffset(base.Height(9), o)
-
-		break
-	}
+	offset := buildOffset(base.Height(9), uint64(20))
 
 	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
 	self.RawQuery = fmt.Sprintf("%s&", stringOffsetQuery(offset))

@@ -36,7 +36,12 @@ var balanceIndexModels = []mongo.IndexModel{
 
 var operationIndexModels = []mongo.IndexModel{
 	{
-		Keys: bson.D{bson.E{Key: "addresses", Value: 1}, bson.E{Key: "height", Value: 1}, bson.E{Key: "fact", Value: 1}},
+		Keys: bson.D{bson.E{Key: "addresses", Value: 1}, bson.E{Key: "height", Value: 1}, bson.E{Key: "index", Value: 1}},
+		Options: options.Index().
+			SetName("mitum_digest_account_operation"),
+	},
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "index", Value: 1}},
 		Options: options.Index().
 			SetName("mitum_digest_operation"),
 	},

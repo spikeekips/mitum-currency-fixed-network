@@ -480,6 +480,8 @@ github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnIn
 github.com/spf13/viper v0.0.0-20150621231900-db7ff930a189/go.mod h1:A8kyI5cUJhb8N+3pkfONlcEcZbueH6nhAm0Fq7SrnBM=
 github.com/spikeekips/mitum v0.0.0-20201012153230-7c339ca17dc6 h1:Yy2KYxLWzv3yg5ootrhH5tY2cY0EBZTPwwN1ah8wN1c=
 github.com/spikeekips/mitum v0.0.0-20201012153230-7c339ca17dc6/go.mod h1:wG4fBUhbXW7+UWYhS+54ljvy4HJT6DF3RbGW8mEO3WA=
+github.com/spikeekips/mitum v0.0.0-20201017203728-5e194f4407a5 h1:qtpfzK40OujpCl6tmdPdsI/e2Tusb11EMqY4oegFnpY=
+github.com/spikeekips/mitum v0.0.0-20201017203728-5e194f4407a5/go.mod h1:wG4fBUhbXW7+UWYhS+54ljvy4HJT6DF3RbGW8mEO3WA=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570/go.mod h1:8OR4w3TdeIHIh1g6EMY5p0gVNOovcWC+1vpc7naMuAw=
 github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3/go.mod h1:hpGUWaI9xL8pRQCTXQgocU38Qw1g0Us7n5PxxTwTCYU=

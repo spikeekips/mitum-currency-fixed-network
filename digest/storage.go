@@ -3,6 +3,7 @@ package digest
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -244,6 +245,32 @@ func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	return st.mitum.Manifest(h)
 }
 
+// Manifests returns block.Manifests by it's order, height.
+func (st *Storage) Manifests(
+	load bool,
+	reverse bool,
+	offset base.Height,
+	limit int64,
+	callback func(base.Height, valuehash.Hash /* block hash */, block.Manifest) (bool, error),
+) error {
+	var filter bson.M
+	if offset > base.NilHeight {
+		if reverse {
+			filter = bson.M{"height": bson.M{"$lt": offset}}
+		} else {
+			filter = bson.M{"height": bson.M{"$gt": offset}}
+		}
+	}
+
+	return st.mitum.Manifests(
+		filter,
+		load,
+		reverse,
+		limit,
+		callback,
+	)
+}
+
 // OperationsByAddress finds the operation.Operations, which are related with
 // the given Address. The returned valuehash.Hash is the
 // operation.Operation.Fact().Hash().
@@ -260,7 +287,7 @@ func (st *Storage) OperationsByAddress(
 	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
 ) error {
 	var filter bson.M
-	if f, err := buildOperationsByAddressFilter(address, offset, reverse); err != nil {
+	if f, err := buildOperationsFilterByAddress(address, offset, reverse); err != nil {
 		return err
 	} else {
 		filter = f
@@ -272,7 +299,7 @@ func (st *Storage) OperationsByAddress(
 	}
 
 	opt := options.Find().SetSort(
-		util.NewBSONFilter("height", sr).Add("fact", sr).D(),
+		util.NewBSONFilter("height", sr).Add("index", sr).D(),
 	)
 
 	switch {
@@ -347,6 +374,65 @@ func (st *Storage) Operation(
 	} else {
 		return va, true, nil
 	}
+}
+
+// Operations returns operation.Operations by it's order, height and index.
+func (st *Storage) Operations(
+	load bool,
+	reverse bool,
+	offset string,
+	limit int64,
+	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
+) error {
+	var filter bson.M
+	if f, err := buildOperationsFilterByOffset(offset, reverse); err != nil {
+		return err
+	} else {
+		filter = f
+	}
+
+	var sr int = 1
+	if reverse {
+		sr = -1
+	}
+
+	opt := options.Find().SetSort(
+		util.NewBSONFilter("height", sr).Add("index", sr).D(),
+	)
+
+	switch {
+	case limit <= 0: // no limit
+	case limit > maxLimit:
+		opt = opt.SetLimit(maxLimit)
+	default:
+		opt = opt.SetLimit(limit)
+	}
+
+	if !load {
+		opt = opt.SetProjection(bson.M{"fact": 1})
+	}
+
+	return st.storage.Client().Find(
+		context.Background(),
+		defaultColNameOperation,
+		filter,
+		func(cursor *mongo.Cursor) (bool, error) {
+			if !load {
+				if h, err := loadOperationHash(cursor.Decode); err != nil {
+					return false, err
+				} else {
+					return callback(h, OperationValue{})
+				}
+			}
+
+			if va, err := loadOperation(cursor.Decode, st.storage.Encoders()); err != nil {
+				return false, err
+			} else {
+				return callback(va.Operation().Fact().Hash(), va)
+			}
+		},
+		opt,
+	)
 }
 
 // Account returns AccountValue.
@@ -435,30 +521,32 @@ func loadLastBlock(st *Storage) (base.Height, bool, error) {
 	}
 }
 
-func parseOffset(s string) (base.Height, string, error) {
+func parseOffset(s string) (base.Height, uint64, error) {
 	if n := strings.SplitN(s, ",", 2); n == nil {
-		return base.NilHeight, "", xerrors.Errorf("invalid offset string: %q", s)
+		return base.NilHeight, 0, xerrors.Errorf("invalid offset string: %q", s)
 	} else if h, err := base.NewHeightFromString(n[0]); err != nil {
-		return base.NilHeight, "", xerrors.Errorf("invalid height of offset: %w", err)
+		return base.NilHeight, 0, xerrors.Errorf("invalid height of offset: %w", err)
+	} else if u, err := strconv.ParseUint(n[1], 10, 64); err != nil {
+		return base.NilHeight, 0, xerrors.Errorf("invalid index of offset: %w", err)
 	} else {
-		return h, n[1], nil
+		return h, u, nil
 	}
 }
 
-func buildOffset(height base.Height, fact string) string {
-	return fmt.Sprintf("%s,%s", height.String(), fact)
+func buildOffset(height base.Height, index uint64) string {
+	return fmt.Sprintf("%d,%d", height, index)
 }
 
-func buildOperationsByAddressFilter(address base.Address, offset string, reverse bool) (bson.M, error) {
+func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
 	filter := bson.M{"addresses": bson.M{"$in": []string{address.String()}}}
 	if len(offset) > 0 {
 		var height base.Height
-		var fact string
-		if h, f, err := parseOffset(offset); err != nil {
+		var index uint64
+		if h, i, err := parseOffset(offset); err != nil {
 			return nil, err
 		} else {
 			height = h
-			fact = f
+			index = i
 		}
 
 		if reverse {
@@ -466,7 +554,7 @@ func buildOperationsByAddressFilter(address base.Address, offset string, reverse
 				{"height": bson.M{"$lt": height}},
 				{"$and": []bson.M{
 					{"height": height},
-					{"fact": bson.M{"$lt": fact}},
+					{"index": bson.M{"$lt": index}},
 				}},
 			}
 		} else {
@@ -474,7 +562,41 @@ func buildOperationsByAddressFilter(address base.Address, offset string, reverse
 				{"height": bson.M{"$gt": height}},
 				{"$and": []bson.M{
 					{"height": height},
-					{"fact": bson.M{"$gt": fact}},
+					{"index": bson.M{"$gt": index}},
+				}},
+			}
+		}
+	}
+
+	return filter, nil
+}
+
+func buildOperationsFilterByOffset(offset string, reverse bool) (bson.M, error) {
+	filter := bson.M{}
+	if len(offset) > 0 {
+		var height base.Height
+		var index uint64
+		if h, i, err := parseOffset(offset); err != nil {
+			return nil, err
+		} else {
+			height = h
+			index = i
+		}
+
+		if reverse {
+			filter["$or"] = []bson.M{
+				{"height": bson.M{"$lt": height}},
+				{"$and": []bson.M{
+					{"height": height},
+					{"index": bson.M{"$lt": index}},
+				}},
+			}
+		} else {
+			filter["$or"] = []bson.M{
+				{"height": bson.M{"$gt": height}},
+				{"$and": []bson.M{
+					{"height": height},
+					{"index": bson.M{"$gt": index}},
 				}},
 			}
 		}

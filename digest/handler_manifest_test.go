@@ -3,7 +3,9 @@
 package digest
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
@@ -127,6 +129,180 @@ func (t *testHandlerManifest) TestByHashNotFound() {
 	var problem Problem
 	t.NoError(jsonenc.Unmarshal(b, &problem))
 	t.Contains(problem.Error(), "manifest not found")
+}
+
+func (t *testHandlerManifest) TestManifests() {
+	st, mst := t.Storage()
+
+	var baseheight int64 = 33
+
+	var blocks []block.Manifest
+	for i := int64(0); i < 7; i++ {
+		blk := t.newBlock(base.Height(baseheight+i), mst)
+		blocks = append(blocks, blk.Manifest())
+	}
+
+	var limit int64 = 3
+	handlers := t.handlers(st, DummyCache{})
+	_ = handlers.SetLimiter(func(string) int64 {
+		return limit
+	})
+
+	{ // no reverse
+		reverse := false
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathManifests).URL()
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		var ublocks []block.Manifest
+		for {
+			w := t.request(handlers, "GET", self.String(), nil)
+
+			if r := w.Result().StatusCode; r == http.StatusOK {
+				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
+				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
+			} else if r == http.StatusNotFound {
+				break
+			} else {
+				panic(w)
+			}
+
+			b, err := ioutil.ReadAll(w.Result().Body)
+			t.NoError(err)
+
+			hal := t.loadHal(b)
+
+			var em []BaseHal
+			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
+			t.True(int(limit) >= len(em))
+
+			for _, b := range em {
+				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				t.NoError(err)
+				ublocks = append(ublocks, m)
+			}
+
+			next, err := hal.Links()["next"].URL()
+			t.NoError(err)
+			self = next
+
+			if int64(len(em)) < limit {
+				break
+			}
+		}
+
+		t.Equal(len(blocks), len(ublocks))
+
+		for i := range blocks {
+			t.compareManifest(blocks[i], ublocks[i])
+		}
+	}
+
+	{ // reverse
+		reverse := true
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathManifests).URL()
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		var ublocks []block.Manifest
+		for {
+			w := t.request(handlers, "GET", self.String(), nil)
+
+			if r := w.Result().StatusCode; r == http.StatusOK {
+				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
+				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
+			} else if r == http.StatusNotFound {
+				break
+			} else {
+				panic(w)
+			}
+
+			b, err := ioutil.ReadAll(w.Result().Body)
+			t.NoError(err)
+
+			hal := t.loadHal(b)
+
+			var em []BaseHal
+			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
+			t.True(int(limit) >= len(em))
+
+			for _, b := range em {
+				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				t.NoError(err)
+				ublocks = append(ublocks, m)
+			}
+
+			next, err := hal.Links()["next"].URL()
+			t.NoError(err)
+			self = next
+
+			if int64(len(em)) < limit {
+				break
+			}
+		}
+
+		t.Equal(len(blocks), len(ublocks))
+
+		for i := range blocks {
+			t.compareManifest(blocks[i], ublocks[len(blocks)-i-1])
+		}
+	}
+
+	{ // offset
+		reverse := false
+		offset := blocks[3].Height().String()
+
+		self, err := handlers.router.Get(HandlerPathManifests).URL()
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		var ublocks []block.Manifest
+		for {
+			w := t.request(handlers, "GET", self.String(), nil)
+
+			if r := w.Result().StatusCode; r == http.StatusOK {
+				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
+				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
+			} else if r == http.StatusNotFound {
+				break
+			} else {
+				panic(w)
+			}
+
+			b, err := ioutil.ReadAll(w.Result().Body)
+			t.NoError(err)
+
+			hal := t.loadHal(b)
+
+			var em []BaseHal
+			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
+			t.True(int(limit) >= len(em))
+
+			for _, b := range em {
+				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				t.NoError(err)
+				ublocks = append(ublocks, m)
+			}
+
+			next, err := hal.Links()["next"].URL()
+			t.NoError(err)
+			self = next
+
+			if int64(len(em)) < limit {
+				break
+			}
+		}
+
+		t.Equal(len(blocks[4:]), len(ublocks))
+
+		for i, m := range blocks[4:] {
+			t.compareManifest(m, ublocks[i])
+		}
+	}
 }
 
 func TestHandlerManifest(t *testing.T) {
