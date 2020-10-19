@@ -378,19 +378,12 @@ func (st *Storage) Operation(
 
 // Operations returns operation.Operations by it's order, height and index.
 func (st *Storage) Operations(
+	filter bson.M,
 	load bool,
 	reverse bool,
-	offset string,
 	limit int64,
 	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
 ) error {
-	var filter bson.M
-	if f, err := buildOperationsFilterByOffset(offset, reverse); err != nil {
-		return err
-	} else {
-		filter = f
-	}
-
 	var sr int = 1
 	if reverse {
 		sr = -1
@@ -524,6 +517,8 @@ func loadLastBlock(st *Storage) (base.Height, bool, error) {
 func parseOffset(s string) (base.Height, uint64, error) {
 	if n := strings.SplitN(s, ",", 2); n == nil {
 		return base.NilHeight, 0, xerrors.Errorf("invalid offset string: %q", s)
+	} else if len(n) < 2 {
+		return base.NilHeight, 0, xerrors.Errorf("invalid offset, %q", s)
 	} else if h, err := base.NewHeightFromString(n[0]); err != nil {
 		return base.NilHeight, 0, xerrors.Errorf("invalid height of offset: %w", err)
 	} else if u, err := strconv.ParseUint(n[1], 10, 64); err != nil {
@@ -539,40 +534,6 @@ func buildOffset(height base.Height, index uint64) string {
 
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
 	filter := bson.M{"addresses": bson.M{"$in": []string{address.String()}}}
-	if len(offset) > 0 {
-		var height base.Height
-		var index uint64
-		if h, i, err := parseOffset(offset); err != nil {
-			return nil, err
-		} else {
-			height = h
-			index = i
-		}
-
-		if reverse {
-			filter["$or"] = []bson.M{
-				{"height": bson.M{"$lt": height}},
-				{"$and": []bson.M{
-					{"height": height},
-					{"index": bson.M{"$lt": index}},
-				}},
-			}
-		} else {
-			filter["$or"] = []bson.M{
-				{"height": bson.M{"$gt": height}},
-				{"$and": []bson.M{
-					{"height": height},
-					{"index": bson.M{"$gt": index}},
-				}},
-			}
-		}
-	}
-
-	return filter, nil
-}
-
-func buildOperationsFilterByOffset(offset string, reverse bool) (bson.M, error) {
-	filter := bson.M{}
 	if len(offset) > 0 {
 		var height base.Height
 		var index uint64

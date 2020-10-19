@@ -32,6 +32,7 @@ var (
 	HandlerPathOperation                  = `/block/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
 	HandlerPathBlockByHeight              = `/block/{height:[0-9]+}`
 	HandlerPathBlockByHash                = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}`
+	HandlerPathOperationsByHeight         = `/block/{height:[0-9]+}/operations`
 	HandlerPathManifestByHeight           = `/block/{height:[0-9]+}/manifest`
 	HandlerPathManifestByHash             = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
 	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+\-[a-z0-9]{4}\:[a-z0-9\.]*}`
@@ -125,6 +126,8 @@ func (hd *Handlers) setHandlers() {
 	_ = hd.setHandler(HandlerPathOperations, hd.handleOperations, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathOperation, hd.handleOperation, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathOperationsByHeight, hd.handleOperationsByHeight, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathManifestByHeight, hd.handleManifestByHeight, true).
 		Methods(http.MethodOptions, "GET")

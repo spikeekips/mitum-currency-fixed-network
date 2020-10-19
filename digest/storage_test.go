@@ -3,6 +3,7 @@
 package digest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
@@ -607,24 +608,35 @@ func (t *testStorage) TestOperations() {
 
 	var hashes []string
 
+	hashesByHeight := map[base.Height][]string{}
 	for i := 0; i < 3; i++ {
+		var hs []string
+		height := base.Height(i)
 		for j := 0; j < 3; j++ {
-			height := base.Height(i)
 			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
 			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, uint64(j))
 			t.NoError(err)
 			_ = t.insertDoc(st, defaultColNameOperation, doc)
 
 			hashes = append(hashes, tf.Fact().Hash().String())
+			hs = append(hs, tf.Fact().Hash().String())
 		}
+
+		hashesByHeight[height] = hs
 	}
 
 	{ // NOTE no offset
+
+		reverse := false
+		offset := ""
+		filter, err := buildOperationsFilterByOffset(offset, reverse)
+		t.NoError(err)
+
 		var uhashes []string
 		t.NoError(st.Operations(
+			filter,
 			false,
-			false,
-			"",
+			reverse,
 			100,
 			func(h valuehash.Hash, va OperationValue) (bool, error) {
 				uhashes = append(uhashes, h.String())
@@ -636,11 +648,16 @@ func (t *testStorage) TestOperations() {
 	}
 
 	{ // NOTE offset
+		reverse := false
+		offset := buildOffset(base.Height(0), 1)
+		filter, err := buildOperationsFilterByOffset(offset, reverse)
+		t.NoError(err)
+
 		var uhashes []string
 		t.NoError(st.Operations(
+			filter,
 			false,
-			false,
-			buildOffset(base.Height(0), 1),
+			reverse,
 			100,
 			func(h valuehash.Hash, va OperationValue) (bool, error) {
 				uhashes = append(uhashes, h.String())
@@ -652,11 +669,16 @@ func (t *testStorage) TestOperations() {
 	}
 
 	{ // NOTE over offset
+		reverse := false
+		offset := buildOffset(base.Height(4), 1)
+		filter, err := buildOperationsFilterByOffset(offset, reverse)
+		t.NoError(err)
+
 		var uhashes []string
 		t.NoError(st.Operations(
+			filter,
 			false,
-			false,
-			buildOffset(base.Height(4), 1),
+			reverse,
 			100,
 			func(h valuehash.Hash, va OperationValue) (bool, error) {
 				uhashes = append(uhashes, h.String())
@@ -665,6 +687,48 @@ func (t *testStorage) TestOperations() {
 		))
 
 		t.Empty(uhashes)
+	}
+
+	{ // NOTE no offset by height
+		height := base.Height(1)
+		reverse := false
+		filter, err := buildOperationsByHeightFilterByOffset(height, "", reverse)
+		t.NoError(err)
+
+		var uhashes []string
+		t.NoError(st.Operations(
+			filter,
+			false,
+			reverse,
+			100,
+			func(h valuehash.Hash, va OperationValue) (bool, error) {
+				uhashes = append(uhashes, h.String())
+				return true, nil
+			},
+		))
+
+		t.Equal(hashesByHeight[height], uhashes)
+	}
+
+	{ // NOTE offset by height
+		height := base.Height(1)
+		reverse := false
+		filter, err := buildOperationsByHeightFilterByOffset(height, fmt.Sprintf("%d", 0), reverse)
+		t.NoError(err)
+
+		var uhashes []string
+		t.NoError(st.Operations(
+			filter,
+			false,
+			reverse,
+			100,
+			func(h valuehash.Hash, va OperationValue) (bool, error) {
+				uhashes = append(uhashes, h.String())
+				return true, nil
+			},
+		))
+
+		t.Equal(hashesByHeight[height][1:], uhashes)
 	}
 }
 

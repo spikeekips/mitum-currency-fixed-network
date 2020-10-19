@@ -88,7 +88,6 @@ type testHandlerOperations struct {
 func (t *testHandlerOperations) TestOperationsPaging() {
 	st, _ := t.Storage()
 
-	var offsets []string
 	var hashes []string
 
 	for i := 0; i < 3; i++ {
@@ -102,8 +101,6 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 
 			fh := tf.Fact().Hash().String()
 
-			offset := buildOffset(height, index)
-			offsets = append(offsets, offset)
 			hashes = append(hashes, fh)
 		}
 	}
@@ -171,6 +168,139 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 		offset := ""
 
 		self, err := handlers.router.Get(HandlerPathOperations).URL()
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		var uhashes []string
+		for {
+			w := t.request(handlers, "GET", self.String(), nil)
+			if r := w.Result().StatusCode; r == http.StatusOK {
+				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
+				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
+			} else if r == http.StatusNotFound {
+				break
+			}
+
+			b, err := ioutil.ReadAll(w.Result().Body)
+			t.NoError(err)
+
+			hal := t.loadHal(b)
+
+			var em []BaseHal
+			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
+			t.True(int(limit) >= len(em))
+
+			for _, b := range em {
+				var va OperationValue
+				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				fh := va.Operation().Fact().Hash().String()
+				uhashes = append(uhashes, fh)
+			}
+
+			next, err := hal.Links()["next"].URL()
+			t.NoError(err)
+			self = next
+
+			if int64(len(em)) < limit {
+				break
+			}
+		}
+
+		t.Equal(rhashes, uhashes)
+	}
+}
+
+func (t *testHandlerOperations) TestOperationsByHeightPaging() {
+	st, _ := t.Storage()
+
+	var hashes []string
+
+	hashesByHeight := map[base.Height][]string{}
+
+	for i := 0; i < 3; i++ {
+		height := base.Height(i)
+		var hs []string
+		for j := 0; j < 3; j++ {
+			index := uint64(j)
+			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.Now(), true, index)
+			t.NoError(err)
+			_ = t.insertDoc(st, defaultColNameOperation, doc)
+
+			fh := tf.Fact().Hash().String()
+
+			hashes = append(hashes, fh)
+			hs = append(hs, fh)
+		}
+
+		hashesByHeight[height] = hs
+	}
+
+	var limit int64 = 3
+	handlers := t.handlers(st, DummyCache{})
+	_ = handlers.SetLimiter(func(string) int64 {
+		return limit
+	})
+
+	{ // no reverse
+		height := base.Height(1)
+		reverse := false
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathOperationsByHeight).URLPath("height", height.String())
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		var uhashes []string
+		for {
+			w := t.request(handlers, "GET", self.String(), nil)
+
+			if r := w.Result().StatusCode; r == http.StatusOK {
+				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
+				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
+			} else if r == http.StatusNotFound {
+				break
+			}
+
+			b, err := ioutil.ReadAll(w.Result().Body)
+			t.NoError(err)
+
+			hal := t.loadHal(b)
+
+			var em []BaseHal
+			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
+			t.True(int(limit) >= len(em))
+
+			for _, b := range em {
+				var va OperationValue
+				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				fh := va.Operation().Fact().Hash().String()
+				uhashes = append(uhashes, fh)
+			}
+
+			next, err := hal.Links()["next"].URL()
+			t.NoError(err)
+			self = next
+
+			if int64(len(em)) < limit {
+				break
+			}
+		}
+
+		t.Equal(hashesByHeight[height], uhashes)
+	}
+
+	{ // reverse
+		height := base.Height(1)
+		var rhashes []string
+		for i := len(hashesByHeight[height]) - 1; i >= 0; i-- {
+			rhashes = append(rhashes, hashesByHeight[height][i])
+		}
+
+		reverse := true
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathOperationsByHeight).URLPath("height", height.String())
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
