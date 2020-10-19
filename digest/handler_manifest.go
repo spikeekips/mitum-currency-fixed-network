@@ -144,7 +144,11 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 	var vas []Hal
 	if err := hd.storage.Manifests(
 		true, reverse, height, hd.itemsLimiter("manifests"),
-		func(_ base.Height, _ valuehash.Hash, va block.Manifest) (bool, error) {
+		func(height base.Height, _ valuehash.Hash, va block.Manifest) (bool, error) {
+			if height <= base.PreGenesisHeight {
+				return !reverse, nil
+			}
+
 			if hal, err := hd.buildManifestHal(va); err != nil {
 				return false, err
 			} else {
