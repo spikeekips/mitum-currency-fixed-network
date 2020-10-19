@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
@@ -185,6 +186,32 @@ func (hd *Handlers) buildOperationHal(va OperationValue) (Hal, error) {
 		return nil, err
 	} else {
 		hal = hal.AddLink("manifest", NewHalLink(h, nil))
+	}
+
+	if va.InState() {
+		if t, ok := va.Operation().(currency.CreateAccounts); ok {
+			items := t.Fact().(currency.CreateAccountsFact).Items()
+			for i := range items {
+				var address string
+				if a, err := items[i].Address(); err != nil {
+					return nil, err
+				} else {
+					address = currency.AddressToHintedString(a)
+				}
+
+				if h, err := hd.combineURL(HandlerPathAccount, "address", address); err != nil {
+					return nil, err
+				} else {
+					keyHash := items[i].Keys().Hash().String()
+					hal = hal.AddLink(
+						fmt.Sprintf("new_account:%s", keyHash),
+						NewHalLink(h, nil).
+							SetProperty("key", keyHash).
+							SetProperty("address", address),
+					)
+				}
+			}
+		}
 	}
 
 	return hal, nil
