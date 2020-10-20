@@ -347,24 +347,24 @@ func (cmd *RunCommand) handlers(cache digest.Cache) (*digest.Handlers, error) {
 	handlers := digest.NewHandlers(cmd.design.NetworkID(), encs, defaultJSONEnc, cmd.digestStoarge, cache).
 		SetNodeInfoHandler(cmd.nr.nodeInfoHandler)
 
-	if cmd.nr.Localstate().Nodes().Len() > 0 { // remote nodes
-		var rns []network.Node
-		if n, err := cmd.design.NetworkNode(encs); err != nil {
-			return nil, err
-		} else {
-			rns = append(rns, n)
-		}
+	var rns []network.Node
+	if n, err := cmd.design.NetworkNode(encs); err != nil {
+		return nil, err
+	} else {
+		rns = append(rns, n)
+	}
 
+	if cmd.nr.Localstate().Nodes().Len() > 0 { // remote nodes
 		cmd.nr.Localstate().Nodes().Traverse(func(rn network.Node) bool {
 			rns = append(rns, rn)
 
 			return true
 		})
-
-		handlers = handlers.SetSend(newSendHandler(cmd.design.Privatekey(), cmd.design.NetworkID(), rns))
-
-		cmd.log.Debug().Msg("send handler attached")
 	}
+
+	handlers = handlers.SetSend(newSendHandler(cmd.design.Privatekey(), cmd.design.NetworkID(), rns))
+
+	cmd.log.Debug().Msg("send handler attached")
 
 	if cmd.design.RateLimiter != nil {
 		handlers = handlers.SetRateLimiter(cmd.design.RateLimiter.Limiter())
