@@ -234,12 +234,12 @@ func (t *baseTest) compareOperationValue(a, b interface{}) {
 	ubop := ub.Operation()
 
 	t.Equal(ua.Height(), ub.Height())
-	t.Equal(localtime.Normalize(ua.ConfirmedAt()), localtime.Normalize(ub.ConfirmedAt()))
+	t.True(localtime.Equal(ua.ConfirmedAt(), ub.ConfirmedAt()))
 
 	t.True(uaop.Hint().Equal(ubop.Hint()))
 	t.True(uaop.Hash().Equal(ubop.Hash()))
 	t.True(uaop.Fact().Hash().Equal(ubop.Fact().Hash()))
-	t.Equal(localtime.Normalize(uaop.LastSignedAt()), localtime.Normalize(ubop.LastSignedAt()))
+	t.True(localtime.Equal(uaop.LastSignedAt(), ubop.LastSignedAt()))
 	t.Equal(ua.InState(), ub.InState())
 }
 

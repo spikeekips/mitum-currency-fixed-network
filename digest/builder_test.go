@@ -335,7 +335,7 @@ func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operatio
 	// new added factsign is not changed
 	t.True(npriv.Publickey().Equal(fop.Signs()[0].Signer()))
 	t.Equal(nsig, fop.Signs()[0].Signature())
-	t.Equal(localtime.RFC3339(nfs.SignedAt()), localtime.RFC3339(fop.Signs()[0].SignedAt()))
+	t.True(localtime.Equal(nfs.SignedAt(), fop.Signs()[0].SignedAt()))
 
 	t.True(priv.Publickey().Equal(fop.Signs()[1].Signer()))
 	t.Equal(sig, fop.Signs()[1].Signature())

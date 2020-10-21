@@ -41,7 +41,6 @@ github.com/alecthomas/kong v0.2.11 h1:RKeJXXWfg9N47RYfMm0+igkxBCTF4bzbneAxaqid0c
 github.com/alecthomas/kong v0.2.11/go.mod h1:kQOmtJgV+Lb4aj+I2LEn40cbtawdWJ9Y8QLq+lElKxE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
-github.com/alexkohler/nargs v0.0.0-20200419150446-2df8ecd3c73a/go.mod h1:ESswRknzMNX0jvrvgPzLWDj7wqc6Q2MgGYjXpmNdfX0=
 github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156/go.mod h1:Cb/ax3seSYIx7SuZdm2G2xzfwmv3TPSk2ucNfQESPXM=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
@@ -478,10 +477,8 @@ github.com/spf13/jwalterweatherman v0.0.0-20141219030609-3d60171a6431/go.mod h1:
 github.com/spf13/pflag v0.0.0-20161005214240-4bd69631f475/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/viper v0.0.0-20150621231900-db7ff930a189/go.mod h1:A8kyI5cUJhb8N+3pkfONlcEcZbueH6nhAm0Fq7SrnBM=
-github.com/spikeekips/mitum v0.0.0-20201012153230-7c339ca17dc6 h1:Yy2KYxLWzv3yg5ootrhH5tY2cY0EBZTPwwN1ah8wN1c=
-github.com/spikeekips/mitum v0.0.0-20201012153230-7c339ca17dc6/go.mod h1:wG4fBUhbXW7+UWYhS+54ljvy4HJT6DF3RbGW8mEO3WA=
-github.com/spikeekips/mitum v0.0.0-20201017203728-5e194f4407a5 h1:qtpfzK40OujpCl6tmdPdsI/e2Tusb11EMqY4oegFnpY=
-github.com/spikeekips/mitum v0.0.0-20201017203728-5e194f4407a5/go.mod h1:wG4fBUhbXW7+UWYhS+54ljvy4HJT6DF3RbGW8mEO3WA=
+github.com/spikeekips/mitum v0.0.0-20201021144805-0339107dd835 h1:MDJGIrB2ZzCypbRaFi/G/9CEZ3j8f8VbEMDLl5Svwxw=
+github.com/spikeekips/mitum v0.0.0-20201021144805-0339107dd835/go.mod h1:wG4fBUhbXW7+UWYhS+54ljvy4HJT6DF3RbGW8mEO3WA=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570/go.mod h1:8OR4w3TdeIHIh1g6EMY5p0gVNOovcWC+1vpc7naMuAw=
 github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3/go.mod h1:hpGUWaI9xL8pRQCTXQgocU38Qw1g0Us7n5PxxTwTCYU=

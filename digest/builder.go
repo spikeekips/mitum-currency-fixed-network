@@ -415,7 +415,7 @@ func (bl Builder) checkToken(token []byte) ([]byte, error) {
 	}
 
 	if bytes.Equal(token, templateToken) {
-		return []byte(localtime.String(localtime.Now())), nil
+		return localtime.NewTime(localtime.Now()).Bytes(), nil
 	}
 
 	return token, nil

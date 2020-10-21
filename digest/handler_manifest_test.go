@@ -30,7 +30,7 @@ func (t *testHandlerManifest) compareManifest(a, b interface{}) {
 	t.True(ma.Proposal().Equal(mb.Proposal()))
 	t.True(ma.OperationsHash().Equal(mb.OperationsHash()))
 	t.True(ma.StatesHash().Equal(mb.StatesHash()))
-	t.Equal(localtime.Normalize(ma.ConfirmedAt()), localtime.Normalize(mb.ConfirmedAt()))
+	t.True(localtime.Equal(ma.ConfirmedAt(), mb.ConfirmedAt()))
 }
 
 func (t *testHandlerManifest) TestByHeight() {

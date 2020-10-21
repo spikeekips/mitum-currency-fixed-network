@@ -86,7 +86,7 @@ func (t *baseTestOperationEncode) TestEncode() {
 
 		t.True(a.Signer().Equal(b.Signer()))
 		t.Equal(a.Signature(), b.Signature())
-		t.Equal(localtime.RFC3339(a.SignedAt()), localtime.RFC3339(b.SignedAt()))
+		t.True(localtime.Equal(a.SignedAt(), b.SignedAt()))
 	}
 
 	t.compare(op, uop)

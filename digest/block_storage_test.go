@@ -69,7 +69,7 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 
 		t.True(op.Hash().Equal(va.Operation().Hash()))
 		t.True(op.Fact().Hash().Equal(va.Operation().Fact().Hash()))
-		t.Equal(localtime.Normalize(blk.ConfirmedAt()), localtime.Normalize(va.ConfirmedAt()))
+		t.True(localtime.Equal(blk.ConfirmedAt(), va.ConfirmedAt()))
 	}
 
 	for _, address := range addrs {

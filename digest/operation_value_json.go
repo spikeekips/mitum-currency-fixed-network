@@ -15,7 +15,7 @@ type OperationValueJSONPacker struct {
 	HS valuehash.Hash      `json:"hash"`
 	OP operation.Operation `json:"operation"`
 	HT base.Height         `json:"height"`
-	CF localtime.JSONTime  `json:"confirmed_at"`
+	CF localtime.Time      `json:"confirmed_at"`
 	IN bool                `json:"in_state"`
 	ID uint64              `json:"index"`
 }
@@ -26,18 +26,18 @@ func (va OperationValue) MarshalJSON() ([]byte, error) {
 		HS:         va.op.Fact().Hash(),
 		OP:         va.op,
 		HT:         va.height,
-		CF:         localtime.NewJSONTime(va.confirmedAt),
+		CF:         localtime.NewTime(va.confirmedAt),
 		IN:         va.inStates,
 		ID:         va.index,
 	})
 }
 
 type OperationValueJSONUnpacker struct {
-	OP json.RawMessage    `json:"operation"`
-	HT base.Height        `json:"height"`
-	CF localtime.JSONTime `json:"confirmed_at"`
-	IN bool               `json:"in_state"`
-	ID uint64             `json:"index"`
+	OP json.RawMessage `json:"operation"`
+	HT base.Height     `json:"height"`
+	CF localtime.Time  `json:"confirmed_at"`
+	IN bool            `json:"in_state"`
+	ID uint64          `json:"index"`
 }
 
 func (va *OperationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
