@@ -213,8 +213,6 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 	st, _ := t.Storage()
 
-	var hashes []string
-
 	hashesByHeight := map[base.Height][]string{}
 
 	for i := 0; i < 3; i++ {
@@ -229,7 +227,6 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 
 			fh := tf.Fact().Hash().String()
 
-			hashes = append(hashes, fh)
 			hs = append(hs, fh)
 		}
 

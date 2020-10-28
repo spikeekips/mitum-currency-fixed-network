@@ -31,7 +31,7 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
      privatekey: KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1
  publickey hint: hint{type="btc-publickey" code="0113" version="0.0.1"}
       publickey: mbxYSTvbpdN7ANWEav536HzDivVu9tqGgKzZjcXJLYKY-0113:0.0.1
-`, string(buf.Bytes()))
+`, buf.String())
 }
 
 func TestVerifyKeyCommand(t *testing.T) {

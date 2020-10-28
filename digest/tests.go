@@ -28,7 +28,8 @@ import (
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
-var log logging.Logger // nolint
+//lint:ignore U1000 debugging for test
+var log logging.Logger
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano

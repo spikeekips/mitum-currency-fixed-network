@@ -49,11 +49,11 @@ func (t *testCreateAccountsOperation) TestSufficientBalance() {
 	sa, st := t.newAccount(true, saBalance)
 	na, _ := t.newAccount(false, NilAmount)
 
-	pool, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
 
 	fee := NewAmount(1)
 	fa := NewFixedFeeAmount(fee)
-	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+	opr := NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	amount := NewAmount(3)
 	items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), amount)}
@@ -79,6 +79,7 @@ func (t *testCreateAccountsOperation) TestSufficientBalance() {
 	t.Equal(fee, sb.(AmountState).Fee())
 
 	address, err := NewAddressFromKeys(na.Keys())
+	t.NoError(err)
 	uac := ns.Value().Interface().(Account)
 	t.True(address.Equal(uac.Address()))
 
@@ -98,11 +99,11 @@ func (t *testCreateAccountsOperation) TestMultipleItemsWithFee() {
 	na0, _ := t.newAccount(false, NilAmount)
 	na1, _ := t.newAccount(false, NilAmount)
 
-	pool, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
 
 	fee := NewAmount(1)
 	fa := NewFixedFeeAmount(fee)
-	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+	opr := NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	amount := NewAmount(3)
 	items := []CreateAccountItem{
@@ -137,6 +138,7 @@ func (t *testCreateAccountsOperation) TestMultipleItemsWithFee() {
 	t.Equal(nb1.Value().Interface(), amount.String())
 
 	address0, err := NewAddressFromKeys(na0.Keys())
+	t.NoError(err)
 	uac0 := ns0.Value().Interface().(Account)
 	t.True(address0.Equal(uac0.Address()))
 
@@ -150,6 +152,7 @@ func (t *testCreateAccountsOperation) TestMultipleItemsWithFee() {
 	}
 
 	address1, err := NewAddressFromKeys(na1.Keys())
+	t.NoError(err)
 	uac1 := ns1.Value().Interface().(Account)
 	t.True(address1.Equal(uac1.Address()))
 
@@ -169,11 +172,11 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithFee() {
 	sa, st := t.newAccount(true, saBalance)
 	na, _ := t.newAccount(false, NilAmount)
 
-	pool, opr := t.statepool(st)
+	pool, _ := t.statepool(st)
 
 	fee := NewAmount(4)
 	fa := NewFixedFeeAmount(fee)
-	opr = NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
+	opr := NewOperationProcessor(fa, func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	amount := NewAmount(30)
 	items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), amount)}

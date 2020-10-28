@@ -38,7 +38,7 @@ func (t *testAddress) TestSingleKey() {
 
 func (t *testAddress) TestWrongKey() {
 	keys := Keys{
-		keys:      []Key{Key{k: key.MustNewBTCPrivatekey().Publickey(), w: 101}},
+		keys:      []Key{{k: key.MustNewBTCPrivatekey().Publickey(), w: 101}},
 		threshold: 100,
 		h:         valuehash.RandomSHA256(),
 	}
@@ -82,7 +82,10 @@ func (t *testAddress) TestMultipleKeyOrder() {
 	nks = append(nks, ks[1])
 	nks = append(nks, ks[0])
 
-	b, err := NewAddressFromKeys(keys)
+	newkeys, err := NewKeys(nks, 90)
+	t.NoError(err)
+
+	b, err := NewAddressFromKeys(newkeys)
 	t.NoError(err)
 
 	t.Equal(a, b)

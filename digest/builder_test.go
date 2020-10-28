@@ -104,6 +104,7 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
 	hal, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
 	t.NoError(err)
@@ -165,6 +166,7 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
 	hal, err := bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
 	t.NoError(err)
@@ -218,6 +220,7 @@ func (t *testBuilder) TestBuildFactTransfers() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
 	hal, err := bl.FactTemplate(currency.Transfers{}.Hint())
+	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
 	t.NoError(err)
