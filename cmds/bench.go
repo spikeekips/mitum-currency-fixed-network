@@ -40,7 +40,7 @@ type BenchCommand struct {
 	storage       storage.Storage
 	genesis       *account
 	lastHeight    base.Height
-	local         *isaac.Localstate
+	local         *isaac.Local
 	suffrage      base.Suffrage
 	accounts      []*account
 	ops           []operation.Operation
@@ -93,8 +93,8 @@ func (cmd *BenchCommand) run() error {
 	}
 	cmd.Log().Debug().Msg("storage prepared")
 
-	if local, err := cmd.localstate(); err != nil {
-		return xerrors.Errorf("failed to preaper localstate: %w", err)
+	if local, err := cmd.makeLocal(); err != nil {
+		return xerrors.Errorf("failed to preaper local: %w", err)
 	} else {
 		cmd.local = local
 	}
@@ -212,7 +212,7 @@ func (cmd *BenchCommand) prepareStorage() (storage.Storage, error) {
 	}
 }
 
-func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
+func (cmd *BenchCommand) makeLocal() (*isaac.Local, error) {
 	var address currency.Address
 	if addr, err := currency.NewAddress("bench"); err != nil {
 		return nil, err
@@ -223,7 +223,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	n := isaac.NewLocalNode(address, key.MustNewBTCPrivatekey(), "quic://local")
 	cmd.Log().Debug().Msg("local node created")
 
-	local, err := isaac.NewLocalstate(cmd.storage, localfs.TempBlockFS(defaultJSONEnc), n, cmd.networkID)
+	local, err := isaac.NewLocal(cmd.storage, localfs.TempBlockFS(defaultJSONEnc), n, cmd.networkID)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (cmd *BenchCommand) localstate() (*isaac.Localstate, error) {
 	if err := local.Initialize(); err != nil {
 		return nil, err
 	}
-	cmd.Log().Debug().Msg("localstate created")
+	cmd.Log().Debug().Msg("local created")
 
 	amount, _ := currency.NewAmountFromString(genesisAmountString)
 	cmd.Log().Debug().

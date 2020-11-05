@@ -4,7 +4,7 @@ blockfs: /tmp/mc-blockfs
 storage: mongodb://127.0.0.1:27017/mc
 network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
 network:
-    bind: 0.0.0.0:54321
+    bind: quic://0.0.0.0:54321
     publish: quic://127.0.0.1:54321
 
 genesis-policy:
