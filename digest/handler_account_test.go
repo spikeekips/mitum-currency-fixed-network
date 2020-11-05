@@ -31,7 +31,7 @@ func (t *testHandlerAccount) TestAccount() {
 
 	handlers := t.handlers(st, DummyCache{})
 
-	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", currency.AddressToHintedString(ac.Address()))
+	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", ac.Address().String())
 	t.NoError(err)
 
 	blockLink, err := handlers.router.Get(HandlerPathBlockByHeight).URLPath("height", va.Height().String())
@@ -66,7 +66,7 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 	unknown, err := currency.NewAddress(util.UUID().String())
 	t.NoError(err)
 
-	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", currency.AddressToHintedString(unknown))
+	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", unknown.String())
 	t.NoError(err)
 
 	w := t.request404(handlers, "GET", self.Path, nil)
@@ -115,10 +115,10 @@ func (t *testHandlerAccount) TestAccountOperations() {
 		return limit
 	})
 
-	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
+	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
 	t.NoError(err)
 
-	next, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
+	next, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
 	t.NoError(err)
 	next.RawQuery = stringOffsetQuery(offsetByHashes[hashes[limit-1]])
 
@@ -178,7 +178,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		reverse := false
 		offset := ""
 
-		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
+		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
@@ -225,7 +225,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		reverse := true
 		offset := ""
 
-		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
+		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
@@ -288,7 +288,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 
 	offset := buildOffset(base.Height(9), uint64(20))
 
-	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", currency.AddressToHintedString(sender))
+	self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
 	self.RawQuery = fmt.Sprintf("%s&", stringOffsetQuery(offset))
 	t.NoError(err)
 

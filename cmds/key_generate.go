@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -39,23 +38,21 @@ func (cmd *GenerateKeyCommand) Run(flags *MainFlags, version util.Version, log l
 		priv = key.MustNewStellarPrivatekey()
 	}
 
-	spriv := hint.HintedString(priv.Hint(), priv.String())
-	spub := hint.HintedString(priv.Publickey().Hint(), priv.Publickey().String())
 	if cmd.JSON {
 		cmd.pretty(cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
 				"hint": priv.Hint(),
-				"key":  spriv,
+				"key":  priv.String(),
 			},
 			"publickey": map[string]interface{}{
 				"hint": priv.Publickey().Hint(),
-				"key":  spub,
+				"key":  priv.Publickey().String(),
 			},
 		})
 	} else {
 		cmd.print("      hint: %s", priv.Hint().Verbose())
-		cmd.print("privatekey: %s", spriv)
-		cmd.print(" publickey: %s", spub)
+		cmd.print("privatekey: %s", priv.String())
+		cmd.print(" publickey: %s", priv.Publickey().String())
 	}
 
 	return nil

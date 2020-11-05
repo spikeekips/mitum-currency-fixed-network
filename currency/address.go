@@ -33,12 +33,12 @@ func NewAddressFromKeys(keys Keys) (Address, error) {
 	return NewAddress(keys.Hash().String())
 }
 
-func (ca Address) String() string {
+func (ca Address) Raw() string {
 	return string(ca)
 }
 
-func (ca Address) HintedString() string {
-	return AddressToHintedString(ca)
+func (ca Address) String() string {
+	return hint.HintedString(ca.Hint(), string(ca))
 }
 
 func (ca Address) Hint() hint.Hint {
@@ -62,11 +62,11 @@ func (ca Address) Equal(a base.Address) bool {
 }
 
 func (ca Address) Bytes() []byte {
-	return []byte(ca)
+	return []byte(ca.String())
 }
 
 func (ca Address) MarshalText() ([]byte, error) {
-	return []byte(ca.HintedString()), nil
+	return []byte(ca.String()), nil
 }
 
 func (ca *Address) UnmarshalText(b []byte) error {
@@ -80,11 +80,7 @@ func (ca *Address) UnmarshalText(b []byte) error {
 }
 
 func (ca Address) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, ca.HintedString())
-}
-
-func AddressToHintedString(a base.Address) string {
-	return hint.HintedString(a.Hint(), a.String())
+	return e.Str(key, ca.String())
 }
 
 type Addresses interface {

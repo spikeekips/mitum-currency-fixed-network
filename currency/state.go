@@ -17,8 +17,12 @@ var (
 	StateKeyBalanceSuffix = ":balance"
 )
 
+func StateAddressKey(a base.Address) string {
+	return fmt.Sprintf("%s-%x", a.Raw(), a.Hint().Type())
+}
+
 func StateKeyAccount(a base.Address) string {
-	return fmt.Sprintf("%s%s", a.String(), StateKeyAccountSuffix)
+	return fmt.Sprintf("%s%s", StateAddressKey(a), StateKeyAccountSuffix)
 }
 
 func IsStateAccountKey(key string) bool {
@@ -26,7 +30,7 @@ func IsStateAccountKey(key string) bool {
 }
 
 func StateKeyBalance(a base.Address) string {
-	return fmt.Sprintf("%s%s", a.String(), StateKeyBalanceSuffix)
+	return fmt.Sprintf("%s%s", StateAddressKey(a), StateKeyBalanceSuffix)
 }
 
 func IsStateBalanceKey(key string) bool {

@@ -6,5 +6,5 @@ import (
 )
 
 func (ca Address) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.String, bsoncore.AppendString(nil, ca.HintedString()), nil
+	return bsontype.String, bsoncore.AppendString(nil, ca.String()), nil
 }

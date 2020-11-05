@@ -34,7 +34,7 @@ func NewOperationDoc(
 		} else {
 			addresses = make([]string, len(as))
 			for i := range as {
-				addresses[i] = as[i].String()
+				addresses[i] = currency.StateAddressKey(as[i])
 			}
 		}
 	}

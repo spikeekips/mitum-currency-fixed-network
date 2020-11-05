@@ -116,13 +116,13 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 
 	b := bytes.ReplaceAll(
 		hal.RawInterface(),
-		[]byte(templateSender.HintedString()),
-		[]byte(newSender.HintedString()),
+		[]byte(templateSender.String()),
+		[]byte(newSender.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
-		[]byte(templateReceiver.HintedString()),
-		[]byte(newReceiver.HintedString()),
+		[]byte(templateReceiver.String()),
+		[]byte(newReceiver.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,

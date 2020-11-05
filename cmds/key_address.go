@@ -31,7 +31,7 @@ func (cmd *KeyAddressCommand) Run(flags *MainFlags, version util.Version, log lo
 	if a, err := currency.NewAddressFromKeys(keys); err != nil {
 		return err
 	} else {
-		cmd.print(a.HintedString())
+		cmd.print(a.String())
 	}
 
 	return nil

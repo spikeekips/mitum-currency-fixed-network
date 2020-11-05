@@ -433,7 +433,7 @@ func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, err
 	var rs AccountValue
 	if err := st.storage.Client().GetByFilter(
 		defaultColNameAccount,
-		util.NewBSONFilter("address", a.String()).D(),
+		util.NewBSONFilter("address", currency.StateAddressKey(a)).D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadAccountValue(res.Decode, st.storage.Encoders()); err != nil {
 				return err
@@ -475,7 +475,7 @@ func (st *Storage) balance(a base.Address) (currency.Amount, state.State, bool /
 	var am state.State
 	if err := st.storage.Client().GetByFilter(
 		defaultColNameBalance,
-		util.NewBSONFilter("address", a.String()).D(),
+		util.NewBSONFilter("address", currency.StateAddressKey(a)).D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadBalance(res.Decode, st.storage.Encoders()); err != nil {
 				return err
@@ -533,7 +533,7 @@ func buildOffset(height base.Height, index uint64) string {
 }
 
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
-	filter := bson.M{"addresses": bson.M{"$in": []string{address.String()}}}
+	filter := bson.M{"addresses": bson.M{"$in": []string{currency.StateAddressKey(address)}}}
 	if len(offset) > 0 {
 		var height base.Height
 		var index uint64

@@ -127,10 +127,10 @@ func (tff TransfersFact) IsValid([]byte) error {
 			return err
 		}
 
-		k := it.Receiver().String()
+		k := StateAddressKey(it.Receiver())
 		switch _, found := foundReceivers[k]; {
 		case found:
-			return xerrors.Errorf("duplicated receiver found, %s", k)
+			return xerrors.Errorf("duplicated receiver found, %s", it.Receiver())
 		case tff.sender.Equal(it.Receiver()):
 			return xerrors.Errorf("receiver is same with sender, %q", tff.sender)
 		default:

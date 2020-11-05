@@ -23,7 +23,7 @@ func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
 
 	return AccountDoc{
 		BaseDoc: b,
-		address: rs.ac.Address().String(),
+		address: currency.StateAddressKey(rs.ac.Address()),
 		height:  rs.height,
 	}, nil
 }

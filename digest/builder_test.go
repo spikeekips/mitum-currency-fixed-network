@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/stretchr/testify/suite"
 )
@@ -120,13 +119,13 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 
 	b = bytes.ReplaceAll(
 		rhal.RawInterface(),
-		[]byte(templateSender.HintedString()),
-		[]byte(newSender.HintedString()),
+		[]byte(templateSender.String()),
+		[]byte(newSender.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
-		[]byte(hint.HintedString(templatePublickey.Hint(), templatePublickey.String())),
-		[]byte(hint.HintedString(newPub.Hint(), newPub.String())),
+		[]byte(templatePublickey.String()),
+		[]byte(newPub.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
@@ -181,13 +180,13 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 
 	b = bytes.ReplaceAll(
 		rhal.RawInterface(),
-		[]byte(templateSender.HintedString()),
-		[]byte(newSender.HintedString()),
+		[]byte(templateSender.String()),
+		[]byte(newSender.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
-		[]byte(hint.HintedString(templatePublickey.Hint(), templatePublickey.String())),
-		[]byte(hint.HintedString(newPub.Hint(), newPub.String())),
+		[]byte(templatePublickey.String()),
+		[]byte(newPub.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
@@ -236,13 +235,13 @@ func (t *testBuilder) TestBuildFactTransfers() {
 
 	b = bytes.ReplaceAll(
 		rhal.RawInterface(),
-		[]byte(templateSender.HintedString()),
-		[]byte(newSender.HintedString()),
+		[]byte(templateSender.String()),
+		[]byte(newSender.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,
-		[]byte(templateReceiver.HintedString()),
-		[]byte(newReceiver.HintedString()),
+		[]byte(templateReceiver.String()),
+		[]byte(newReceiver.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,

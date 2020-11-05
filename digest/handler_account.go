@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
@@ -53,7 +52,7 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 
 func (hd *Handlers) buildAccountHal(va AccountValue) (Hal, error) {
 	var hal Hal
-	hinted := currency.AddressToHintedString(va.Account().Address())
+	hinted := va.Account().Address().String()
 	if h, err := hd.combineURL(HandlerPathAccount, "address", hinted); err != nil {
 		return nil, err
 	} else {
@@ -153,10 +152,8 @@ func (hd *Handlers) buildAccountOperationsHal(
 	reverse bool,
 ) (Hal, error) {
 	var hal Hal
-	hinted := currency.AddressToHintedString(address)
-
 	var baseSelf string
-	if h, err := hd.combineURL(HandlerPathAccountOperations, "address", hinted); err != nil {
+	if h, err := hd.combineURL(HandlerPathAccountOperations, "address", address.String()); err != nil {
 		return nil, err
 	} else {
 		baseSelf = h
@@ -171,7 +168,7 @@ func (hd *Handlers) buildAccountOperationsHal(
 		hal = NewBaseHal(vas, NewHalLink(self, nil))
 	}
 
-	if h, err := hd.combineURL(HandlerPathAccount, "address", hinted); err != nil {
+	if h, err := hd.combineURL(HandlerPathAccount, "address", address.String()); err != nil {
 		return nil, err
 	} else {
 		hal = hal.AddLink("account", NewHalLink(h, nil))

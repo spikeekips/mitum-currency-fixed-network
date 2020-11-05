@@ -196,7 +196,7 @@ func (hd *Handlers) buildOperationHal(va OperationValue) (Hal, error) {
 				if a, err := items[i].Address(); err != nil {
 					return nil, err
 				} else {
-					address = currency.AddressToHintedString(a)
+					address = a.String()
 				}
 
 				if h, err := hd.combineURL(HandlerPathAccount, "address", address); err != nil {
