@@ -48,7 +48,7 @@ func (cmd *InitCommand) run() error {
 
 	cmd.Log().Debug().Msg("trying to create genesis block")
 	var genesisBlock block.Block
-	if gg, err := isaac.NewGenesisBlockV0Generator(cmd.nr.Localstate(), ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(cmd.nr.Local(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return xerrors.Errorf("failed to generate genesis block: %w", err)
@@ -84,7 +84,7 @@ func (cmd *InitCommand) initialize() error {
 	if cmd.Force {
 		if err := cmd.nr.Storage().Clean(); err != nil {
 			return xerrors.Errorf("failed to clean storage: %w", err)
-		} else if err := cmd.nr.Localstate().BlockFS().Clean(false); err != nil {
+		} else if err := cmd.nr.Local().BlockFS().Clean(false); err != nil {
 			return xerrors.Errorf("failed to clean blockfs: %w", err)
 		}
 	}

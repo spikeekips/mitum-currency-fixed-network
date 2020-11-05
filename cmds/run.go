@@ -272,7 +272,7 @@ func (cmd *RunCommand) digestFollowup(height base.Height) error {
 	}
 
 	for i := lastBlock; i <= height; i++ {
-		if blk, err := cmd.nr.Localstate().BlockFS().Load(i); err != nil {
+		if blk, err := cmd.nr.Local().BlockFS().Load(i); err != nil {
 			return err
 		} else if err := digest.DigestBlock(cmd.digestStoarge, blk); err != nil {
 			return err
@@ -354,8 +354,8 @@ func (cmd *RunCommand) handlers(cache digest.Cache) (*digest.Handlers, error) {
 		rns = append(rns, n)
 	}
 
-	if cmd.nr.Localstate().Nodes().Len() > 0 { // remote nodes
-		cmd.nr.Localstate().Nodes().Traverse(func(rn network.Node) bool {
+	if cmd.nr.Local().Nodes().Len() > 0 { // remote nodes
+		cmd.nr.Local().Nodes().Traverse(func(rn network.Node) bool {
 			rns = append(rns, rn)
 
 			return true

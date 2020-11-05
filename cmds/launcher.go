@@ -147,7 +147,7 @@ func (nr *Launcher) attachNodeChannel() error {
 		}
 
 		_ = nr.SetNodeChannel(ch)
-		_ = nr.Localstate().Node().SetChannel(ch)
+		_ = nr.Local().Node().SetChannel(ch)
 	}
 
 	l.Debug().Msg("attached")
@@ -178,7 +178,7 @@ func (nr *Launcher) attachRemoteNodes() error {
 		l.Debug().Msg("created")
 	}
 
-	return nr.Localstate().Nodes().Add(nodes...)
+	return nr.Local().Nodes().Add(nodes...)
 }
 
 func (nr *Launcher) attachSuffrage() error {
@@ -187,7 +187,7 @@ func (nr *Launcher) attachSuffrage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if sf, err := nr.design.Component.Suffrage().New(nr.Localstate(), nr.Encoders()); err != nil {
+	if sf, err := nr.design.Component.Suffrage().New(nr.Local(), nr.Encoders()); err != nil {
 		return xerrors.Errorf("failed to create new suffrage component: %w", err)
 	} else {
 		l.Debug().
@@ -209,7 +209,7 @@ func (nr *Launcher) attachProposalProcessor() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if pp, err := nr.design.Component.ProposalProcessor().New(nr.Localstate(), nr.Suffrage()); err != nil {
+	if pp, err := nr.design.Component.ProposalProcessor().New(nr.Local(), nr.Suffrage()); err != nil {
 		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
 	} else {
 		l.Debug().
