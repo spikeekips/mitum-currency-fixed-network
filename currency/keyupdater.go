@@ -180,23 +180,23 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	}
 
 	if err := checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
-		return nil, state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
+		return nil, util.IgnoreError.Errorf("invalid signing: %w", err)
 	}
 
 	if ks, err := StateKeysValue(op.sa); err != nil {
-		return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, util.IgnoreError.Wrap(err)
 	} else if ks.Equal(fact.Keys()) {
-		return nil, state.IgnoreOperationProcessingError.Errorf("same Keys with the existing")
+		return nil, util.IgnoreError.Errorf("same Keys with the existing")
 	}
 
 	if fee, err := op.fa.Fee(ZeroAmount); err != nil {
-		return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, util.IgnoreError.Wrap(err)
 	} else {
 		switch b, err := StateAmountValue(op.sb); {
 		case err != nil:
-			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+			return nil, util.IgnoreError.Wrap(err)
 		case b.Compare(fee) < 0:
-			return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance with fee")
+			return nil, util.IgnoreError.Errorf("insufficient balance with fee")
 		default:
 			op.fee = fee
 		}

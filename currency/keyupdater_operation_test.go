@@ -97,7 +97,7 @@ func (t *testKeyUpdaterOperation) TestEmptyBalance() {
 	op := t.newOperation(sa.Address, nkeys, sa.Privs())
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -115,7 +115,7 @@ func (t *testKeyUpdaterOperation) TestTargetNotExist() {
 	op := t.newOperation(sa.Address, nkeys, sa.Privs())
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "target keys does not exist")
 }
 
@@ -127,7 +127,7 @@ func (t *testKeyUpdaterOperation) TestSameKeys() {
 	op := t.newOperation(sa.Address, sa.Keys(), sa.Privs())
 
 	err := opr.Process(op)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "same Keys")
 }
 

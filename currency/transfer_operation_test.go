@@ -52,7 +52,7 @@ func (t *testTransfersOperations) TestSenderNotExist() {
 	opr := NewOperationProcessor(NewFixedFeeAmount(ZeroAmount), func() (base.Address, error) { return sa.Address, nil }).New(pool)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -66,7 +66,7 @@ func (t *testTransfersOperations) TestReceiverNotExist() {
 	tf := t.newTransfer(sa.Address, ra.Address, NewAmount(3), sa.Privs())
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "keys of receiver does not exist")
 }
 
@@ -81,7 +81,7 @@ func (t *testTransfersOperations) TestInsufficientBalance() {
 	tf := t.newTransfer(sa.Address, ra.Address, saBalance.Add(NewAmount(1)), sa.Privs())
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -206,7 +206,7 @@ func (t *testTransfersOperations) TestInsufficientMultipleItemsWithFee() {
 	t.NoError(err)
 
 	err = opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -224,7 +224,7 @@ func (t *testTransfersOperations) TestInSufficientBalanceWithFee() {
 	tf := t.newTransfer(sa.Address, ra.Address, sent, sa.Privs())
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -275,7 +275,7 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 	tf := t.newTransfer(sender, receiver, amount, pks)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "not passed threshold")
 }
 
@@ -289,7 +289,7 @@ func (t *testTransfersOperations) TestUnknownKey() {
 	tf := t.newTransfer(sa.Address, ra.Address, NewAmount(1), []key.Privatekey{sa.Priv, key.MustNewBTCPrivatekey()})
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "unknown key found")
 }
 

@@ -164,7 +164,7 @@ func (op FeeOperation) Process(
 	}
 
 	if b, err := StateAmountValue(sb); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return util.IgnoreError.Wrap(err)
 	} else {
 		if st, err := SetStateAmountValue(sb, b.Add(fact.Fee())); err != nil {
 			return xerrors.Errorf("failed to add fee: %w", err)

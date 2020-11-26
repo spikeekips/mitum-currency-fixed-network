@@ -183,7 +183,7 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithFee() {
 	ca := t.newOperation(sa.Address, items, sa.Privs())
 
 	err := opr.Process(ca)
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -199,7 +199,7 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 
 	err := opr.Process(ca)
 
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -224,7 +224,7 @@ func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 
 	err = opr.Process(ca)
 
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "balance of sender does not exist")
 }
 
@@ -261,7 +261,7 @@ func (t *testCreateAccountsOperation) TestInsufficientBalance() {
 
 	err := opr.Process(ca)
 
-	t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+	t.True(xerrors.Is(err, util.IgnoreError))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -329,7 +329,7 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 		items := []CreateAccountItem{NewCreateAccountItem(na.Keys(), NewAmount(1))}
 		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.MustNewBTCPrivatekey()})
 		err := opr.Process(ca)
-		t.True(xerrors.Is(err, state.IgnoreOperationProcessingError))
+		t.True(xerrors.Is(err, util.IgnoreError))
 	}
 
 	items := []CreateAccountItem{NewCreateAccountItem(na0.Keys(), NewAmount(1))}

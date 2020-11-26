@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -92,7 +93,7 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 	case CreateAccounts:
 		fact := t.Fact().(CreateAccountsFact)
 		if as, err := fact.Targets(); err != nil {
-			return nil, state.IgnoreOperationProcessingError.Errorf("failed to get Addresses")
+			return nil, util.IgnoreError.Errorf("failed to get Addresses")
 		} else if err := opr.checkNewAddressDuplication(as); err != nil {
 			return nil, err
 		} else {
@@ -166,7 +167,7 @@ func (opr *OperationProcessor) checkSenderDuplication(sender string) error {
 	defer opr.RUnlock()
 
 	if _, found := opr.processedSenders[sender]; found {
-		return state.IgnoreOperationProcessingError.Errorf("violates only one sender in proposal")
+		return util.IgnoreError.Errorf("violates only one sender in proposal")
 	}
 
 	return nil
@@ -178,7 +179,7 @@ func (opr *OperationProcessor) checkNewAddressDuplication(as []base.Address) err
 
 	for i := range as {
 		if _, found := opr.processedNewAddress[as[i].String()]; found {
-			return state.IgnoreOperationProcessingError.Errorf("new address already processed")
+			return util.IgnoreError.Errorf("new address already processed")
 		}
 	}
 

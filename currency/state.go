@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 )
 
 var (
@@ -125,14 +126,14 @@ func checkFactSignsByState(
 		return err
 	} else {
 		if ks, err := StateKeysValue(st); err != nil {
-			return state.IgnoreOperationProcessingError.Wrap(err)
+			return util.IgnoreError.Wrap(err)
 		} else {
 			keys = ks
 		}
 	}
 
 	if err := checkThreshold(fs, keys); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return util.IgnoreError.Wrap(err)
 	}
 
 	return nil
@@ -146,7 +147,7 @@ func checkExistsAccountState(
 	case err != nil:
 		return err
 	case !found:
-		return state.IgnoreOperationProcessingError.Errorf("account state, %q does not exist", key)
+		return util.IgnoreError.Errorf("account state, %q does not exist", key)
 	default:
 		return nil
 	}
@@ -161,7 +162,7 @@ func existsAccountState(
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, state.IgnoreOperationProcessingError.Errorf("%s does not exist", name)
+		return nil, util.IgnoreError.Errorf("%s does not exist", name)
 	default:
 		return st, nil
 	}
@@ -176,7 +177,7 @@ func notExistsAccountState(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, state.IgnoreOperationProcessingError.Errorf("%s already exists", name)
+		return nil, util.IgnoreError.Errorf("%s already exists", name)
 	default:
 		return st, nil
 	}

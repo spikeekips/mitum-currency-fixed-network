@@ -153,7 +153,7 @@ func (ga GenesisAccount) Process(
 
 	var newAddress base.Address
 	if a, err := fact.Address(); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return util.IgnoreError.Wrap(err)
 	} else {
 		newAddress = a
 	}
@@ -179,13 +179,13 @@ func (ga GenesisAccount) Process(
 	}
 
 	if st, err := SetStateAccountValue(ns, nac); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return util.IgnoreError.Wrap(err)
 	} else {
 		ns = st
 	}
 
 	if st, err := SetStateAmountValue(nb, fact.amount); err != nil {
-		return state.IgnoreOperationProcessingError.Wrap(err)
+		return util.IgnoreError.Wrap(err)
 	} else {
 		nb = st
 	}

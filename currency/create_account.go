@@ -356,13 +356,13 @@ func (ca *CreateAccountsProcessor) PreProcess(
 	if st, err := existsAccountState(StateKeyBalance(fact.sender), "balance of sender", getState); err != nil {
 		return nil, err
 	} else if fee, err := ca.calculateFee(); err != nil {
-		return nil, state.IgnoreOperationProcessingError.Wrap(err)
+		return nil, util.IgnoreError.Wrap(err)
 	} else {
 		switch b, err := StateAmountValue(st); {
 		case err != nil:
-			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+			return nil, util.IgnoreError.Wrap(err)
 		case b.Compare(fact.Amount().Add(fee)) < 0:
-			return nil, state.IgnoreOperationProcessingError.Errorf("insufficient balance of sender")
+			return nil, util.IgnoreError.Errorf("insufficient balance of sender")
 		default:
 			ca.sb = NewAmountState(st)
 			ca.fee = fee
@@ -373,14 +373,14 @@ func (ca *CreateAccountsProcessor) PreProcess(
 	for i := range fact.items {
 		c := &CreateAccountItemProcessor{h: ca.Hash(), fact: fact.items[i]}
 		if err := c.PreProcess(getState, setState); err != nil {
-			return nil, state.IgnoreOperationProcessingError.Wrap(err)
+			return nil, util.IgnoreError.Wrap(err)
 		}
 
 		ns[i] = c
 	}
 
 	if err := checkFactSignsByState(fact.sender, ca.Signs(), getState); err != nil {
-		return nil, state.IgnoreOperationProcessingError.Errorf("invalid signing: %w", err)
+		return nil, util.IgnoreError.Errorf("invalid signing: %w", err)
 	}
 
 	ca.ns = ns
@@ -397,7 +397,7 @@ func (ca *CreateAccountsProcessor) Process(
 	sts := make([]state.State, len(ca.ns)*2+1)
 	for i := range ca.ns {
 		if s, err := ca.ns[i].Process(getState, setState); err != nil {
-			return state.IgnoreOperationProcessingError.Errorf("failed to process create account item: %w", err)
+			return util.IgnoreError.Errorf("failed to process create account item: %w", err)
 		} else {
 			sts[i*2] = s[0]
 			sts[i*2+1] = s[1]
