@@ -5,26 +5,19 @@ import (
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SignFactCommand struct {
-	*BaseCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Seal       FileLoad       `help:"seal" optional:""`
 }
 
-func NewSignFactCommand() SignFactCommand {
-	return SignFactCommand{
-		BaseCommand: NewBaseCommand("sign-fact"),
-	}
-}
-
-func (cmd *SignFactCommand) Run(version util.Version) error {
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *SignFactCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	var sl operation.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {

@@ -1,6 +1,5 @@
 package cmds
 
-/*
 import (
 	"bytes"
 	"testing"
@@ -38,4 +37,3 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 func TestVerifyKeyCommand(t *testing.T) {
 	suite.Run(t, new(testVerifyKeyCommand))
 }
-*/

@@ -1,19 +1,21 @@
-address: mc-node-010a:0.0.1
+address: mc-node0-010a:0.0.1
 privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
-blockfs: /tmp/mc-blockfs
-storage: mongodb://127.0.0.1:27017/mc
-network-id: mc; Thu 10 Sep 2020 03:23:31 PM UTC
+storage:
+    uri: mongodb://127.0.0.1:27017/mc
+    blockfs:
+        path: ./mc-blockfs
+        wide-open: true
+network-id: mc; Tue 08 Dec 2020 07:22:18 AM KST
 network:
     bind: quic://0.0.0.0:54321
-    publish: quic://127.0.0.1:54321
+    url: quic://127.0.0.1:54321
 
-genesis-policy:
-    number-of-acting-suffrage-nodes: 1
-    max-operations-in-seal: 10
-    max-operations-in-proposal: 100
-
-init-operations:
-    - name: genesis-account
+genesis-operations:
+    - type: set-policy
+      number-of-acting-suffrage-nodes: 1
+      max-operations-in-seal: 10
+      max-operations-in-proposal: 100
+    - type: genesis-account
       account-keys:
         keys:
             - publickey: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7-0115:0.0.1
@@ -22,8 +24,8 @@ init-operations:
         threshold: 100
       balance: "99999999999999999999"
 
-config:
-    is-dev: true
+policy:
+    threshold: 100
     timeout-waiting-proposal: 5s
     interval-broadcasting-init-ballot: 1s
     interval-broadcasting-proposal: 1s
@@ -32,11 +34,14 @@ config:
     timespan-valid-ballot: 1m0s
     timeout-process-proposal: 10s
 
-component:
-    fee-amount:
-        type: fixed
-        amount: 1
-    digest:
-        storage: mongodb://127.0.0.1:27017/mc_digest
-        network:
-            bind: https://localhost:54322
+nodes:
+
+fee-amount:
+    type: fixed
+    amount: 1
+
+digest:
+    storage: mongodb://127.0.0.1:27017/mc_digest
+    network:
+        bind: https://localhost:54322
+        url: https://localhost:54322

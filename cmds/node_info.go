@@ -1,35 +1,71 @@
 package cmds
 
 import (
-	"net/url"
-
-	"github.com/spikeekips/mitum/launcher"
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type NodeInfoCommand struct {
-	BaseCommand
-	URL    *url.URL `arg:"" name:"node url" help:"remote mitum url (default: ${node_url})" required:"" default:"${node_url}"` // nolint
-	Pretty bool     `name:"pretty" help:"pretty format"`
+	*mitumcmds.NodeInfoCommand
 }
 
-func (cmd *NodeInfoCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
-	_ = cmd.BaseCommand.Run(flags, version, log)
-
-	var channel network.Channel
-	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
-		return err
-	} else {
-		channel = ch
+func NewNodeInfoCommand() NodeInfoCommand {
+	var co *mitumcmds.NodeInfoCommand
+	{
+		i := mitumcmds.NewNodeInfoCommand()
+		co = &i
+	}
+	cmd := NodeInfoCommand{
+		NodeInfoCommand: co,
 	}
 
-	if n, err := channel.NodeInfo(); err != nil {
-		return err
-	} else {
-		cmd.pretty(cmd.Pretty, n)
+	return cmd
+}
+
+func (cmd *NodeInfoCommand) Run(version util.Version) error {
+	if cmd.Encoders() == nil {
+		if _, err := cmd.LoadEncoders(Hinters); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return cmd.NodeInfoCommand.Run(version)
+}
+
+func NodeInfoHandler(
+	handler network.NodeInfoHandler,
+	fa currency.FeeAmount,
+	fga func() *currency.Account,
+	fgb func() *currency.Amount,
+) network.NodeInfoHandler {
+	return func() (network.NodeInfo, error) {
+		var ni network.NodeInfoV0
+		if i, err := handler(); err != nil {
+			return nil, err
+		} else if j, ok := i.(network.NodeInfoV0); !ok {
+			return nil, xerrors.Errorf("unsupported NodeInfo, %T", i)
+		} else {
+			ni = j
+		}
+
+		var ga currency.Account
+		if i := fga(); i == nil {
+			return ni, nil
+		} else {
+			ga = *i
+		}
+
+		var gb currency.Amount
+		if i := fgb(); i == nil {
+			return ni, nil
+		} else {
+			gb = *i
+		}
+
+		return digest.NewNodeInfo(ni, fa, ga, gb), nil
+	}
 }

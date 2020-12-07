@@ -30,6 +30,10 @@ type HTTP2Server struct {
 }
 
 func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, error) {
+	if err := network.CheckBindIsOpen("tcp", bind, time.Second*1); err != nil {
+		return nil, xerrors.Errorf("failed to open digest server: %w", err)
+	}
+
 	idleTimeout := time.Second * 10
 	sv := &HTTP2Server{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

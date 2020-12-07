@@ -5,27 +5,19 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type VerifyKeyCommand struct {
-	*BaseCommand
+	BaseCommand
 	Key    StringLoad `arg:"" name:"key" help:"key" required:""`
 	Quite  bool       `name:"quite" short:"q" help:"keep silence"`
 	JSON   bool       `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool       `name:"pretty" help:"pretty format"`
 }
 
-func NewVerifyKeyCommand() VerifyKeyCommand {
-	return VerifyKeyCommand{
-		BaseCommand: NewBaseCommand("key-verify"),
-	}
-}
-
-func (cmd *VerifyKeyCommand) Run(version util.Version) error {
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *VerifyKeyCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	var pk key.Key
 	if k, err := loadKey(cmd.Key.Bytes()); err != nil {

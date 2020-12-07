@@ -3,27 +3,19 @@ package cmds
 import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SignSealCommand struct {
-	*BaseCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Seal       FileLoad       `help:"seal" optional:""`
 }
 
-func NewSignSealCommand() SignSealCommand {
-	return SignSealCommand{
-		BaseCommand: NewBaseCommand("sign-seal"),
-	}
-}
-
-func (cmd *SignSealCommand) Run(version util.Version) error {
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *SignSealCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	var sl seal.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {

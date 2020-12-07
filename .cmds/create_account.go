@@ -6,17 +6,17 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type CreateAccountCommand struct {
-	*BaseCommand
+	BaseCommand
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
 	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
 	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
@@ -27,24 +27,17 @@ type CreateAccountCommand struct {
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Memo       string         `name:"memo" help:"memo"`
 	Seal       FileLoad       `help:"seal" optional:""`
-	sender     base.Address
-	keys       currency.Keys
+
+	sender base.Address
+	keys   currency.Keys
 }
 
-func NewCreateAccountCommand() CreateAccountCommand {
-	return CreateAccountCommand{
-		BaseCommand: NewBaseCommand("create-account-operation"),
-	}
-}
-
-func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dupl
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *CreateAccountCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error { // nolint:dupl
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	if err := cmd.parseFlags(); err != nil {
 		return err
-	} else if a, err := cmd.Sender.Encode(jenc); err != nil {
+	} else if a, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {
 		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
 	} else {
 		cmd.sender = a
@@ -140,59 +133,4 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 	} else {
 		return op, nil
 	}
-}
-
-func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
-	if len(bytes.TrimSpace(b)) < 1 {
-		return nil, xerrors.Errorf("empty input")
-	}
-
-	if sl, err := seal.DecodeSeal(jenc, b); err != nil {
-		return nil, err
-	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, xerrors.Errorf("invalid seal: %w", err)
-	} else {
-		return sl, nil
-	}
-}
-
-func loadSealAndAddOperation(
-	b []byte,
-	privatekey key.Privatekey,
-	networkID base.NetworkID,
-	op operation.Operation,
-) (operation.Seal, error) {
-	if b == nil {
-		if bs, err := operation.NewBaseSeal(
-			privatekey,
-			[]operation.Operation{op},
-			networkID,
-		); err != nil {
-			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
-		} else {
-			return bs, nil
-		}
-	}
-
-	var sl operation.Seal
-	if s, err := loadSeal(b, networkID); err != nil {
-		return nil, err
-	} else if so, ok := s.(operation.Seal); !ok {
-		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
-	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
-	} else {
-		sl = so
-	}
-
-	// NOTE add operation to existing seal
-	sl = sl.(operation.SealUpdater).SetOperations([]operation.Operation{op}).(operation.Seal)
-
-	if s, err := signSeal(sl, privatekey, networkID); err != nil {
-		return nil, err
-	} else {
-		sl = s.(operation.Seal)
-	}
-
-	return sl, nil
 }

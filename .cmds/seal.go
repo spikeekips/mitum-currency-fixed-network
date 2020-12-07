@@ -8,14 +8,3 @@ type SealCommand struct {
 	Sign          SignSealCommand      `cmd:"" name:"sign" help:"sign seal"`
 	SignFact      SignFactCommand      `cmd:"" name:"sign-fact" help:"sign facts of operation seal"`
 }
-
-func NewSealCommand() SealCommand {
-	return SealCommand{
-		Send:          NewSendCommand(),
-		CreateAccount: NewCreateAccountCommand(),
-		Transfer:      NewTransferCommand(),
-		KeyUpdater:    NewKeyUpdaterCommand(),
-		Sign:          NewSignSealCommand(),
-		SignFact:      NewSignFactCommand(),
-	}
-}

@@ -3,20 +3,15 @@ package cmds
 import (
 	"net/url"
 
-	"github.com/alecthomas/kong"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
-var SendVars = kong.Vars{
-	"node_url": "https://localhost",
-}
-
 type SendCommand struct {
-	*BaseCommand
+	BaseCommand
 	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
 	Seal       FileLoad       `help:"seal" optional:""`
@@ -25,16 +20,8 @@ type SendCommand struct {
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey for sign"`
 }
 
-func NewSendCommand() SendCommand {
-	return SendCommand{
-		BaseCommand: NewBaseCommand("send-seal"),
-	}
-}
-
-func (cmd *SendCommand) Run(version util.Version) error {
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *SendCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	var sl seal.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
@@ -55,7 +42,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 		cmd.Log().Debug().Msg("seal signed")
 	}
 
-	cmd.pretty(cmd.Pretty, sl)
+	prettyPrint(cmd.Pretty, sl)
 
 	if cmd.DryRun {
 		return nil
@@ -76,7 +63,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 
 func (cmd *SendCommand) send(sl seal.Seal) error {
 	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs); err != nil {
+	if ch, err := launcher.LoadNodeChannel(cmd.URL, encs); err != nil {
 		return err
 	} else {
 		channel = ch

@@ -15,8 +15,8 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
@@ -55,7 +55,7 @@ func (t *baseTest) SetupSuite() {
 	t.DBType = "mongodb"
 	t.StorageSupportTest.SetupSuite()
 
-	for _, ht := range contestlib.Hinters {
+	for _, ht := range process.DefaultHinters {
 		_ = t.Encs.AddHinter(ht)
 	}
 

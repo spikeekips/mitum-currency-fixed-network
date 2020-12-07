@@ -12,12 +12,3 @@ type KeyCommand struct {
 	Address KeyAddressCommand  `cmd:"" help:"generate address from key"`
 	Sign    SignKeyCommand     `cmd:"" help:"signature signing"`
 }
-
-func NewKeyCommand() KeyCommand {
-	return KeyCommand{
-		New:     NewGenerateKeyCommand(),
-		Verify:  NewVerifyKeyCommand(),
-		Address: NewKeyAddressCommand(),
-		Sign:    NewSignKeyCommand(),
-	}
-}

@@ -9,13 +9,27 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
+	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
+
+	"github.com/spikeekips/mitum-currency/currency"
 )
+
+type MainFlags struct {
+	*contestlib.LogFlags
+	Log     []string      `help:"log file"`
+	Version struct{}      `cmd:"" help:"print version"` // TODO set ldflags
+	Init    InitCommand   `cmd:"" help:"initialize"`
+	Run     RunCommand    `cmd:"" help:"run node"`
+	Node    NodeCommand   `cmd:"" name:"node" help:"various node commands"`
+	Seal    SealCommand   `cmd:"" name:"seal" help:"generate seal"`
+	Key     KeyCommand    `cmd:"" name:"key" help:"key"`
+	Digest  DigestCommand `cmd:"" name:"digest" help:"run digest server"`
+	Bench   BenchCommand  `cmd:"" name:"bench" help:"benchmark"`
+}
 
 type KeyFlag struct {
 	Key currency.Key
@@ -23,7 +37,7 @@ type KeyFlag struct {
 
 func (v *KeyFlag) UnmarshalText(b []byte) error {
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
+		if c, err := loadFromStdInput(); err != nil {
 			return err
 		} else {
 			b = c
@@ -36,7 +50,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	}
 
 	var pk key.Publickey
-	if k, err := key.DecodeKey(jenc, l[0]); err != nil {
+	if k, err := key.DecodeKey(defaultJSONEnc, l[0]); err != nil {
 		return xerrors.Errorf("invalid public key, %q for --key: %w", l[0], err)
 	} else if priv, ok := k.(key.Privatekey); ok {
 		pk = priv.Publickey()
@@ -58,55 +72,6 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	} else {
 		v.Key = k
 	}
-
-	return nil
-}
-
-type StringLoad []byte
-
-func (v *StringLoad) UnmarshalText(b []byte) error {
-	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
-			return err
-		} else {
-			*v = c
-
-			return nil
-		}
-	}
-
-	*v = b
-
-	return nil
-}
-
-func (v StringLoad) Bytes() []byte {
-	return []byte(v)
-}
-
-func (v StringLoad) String() string {
-	return string(v)
-}
-
-type PrivatekeyFlag struct {
-	key.Privatekey
-	notEmpty bool
-}
-
-func (v PrivatekeyFlag) Empty() bool {
-	return !v.notEmpty
-}
-
-func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
-	if k, err := key.DecodePrivatekey(jenc, string(b)); err != nil {
-		return xerrors.Errorf("invalid private key, %q: %w", string(b), err)
-	} else if err := k.IsValid(nil); err != nil {
-		return err
-	} else {
-		*v = PrivatekeyFlag{Privatekey: k}
-	}
-
-	v.notEmpty = true
 
 	return nil
 }
@@ -133,6 +98,29 @@ func (v *AddressFlag) String() string {
 
 func (v *AddressFlag) Encode(enc encoder.Encoder) (base.Address, error) {
 	return v.ad.Encode(enc)
+}
+
+type PrivatekeyFlag struct {
+	key.Privatekey
+	notEmpty bool
+}
+
+func (v PrivatekeyFlag) Empty() bool {
+	return !v.notEmpty
+}
+
+func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
+	if k, err := key.DecodePrivatekey(defaultJSONEnc, string(b)); err != nil {
+		return xerrors.Errorf("invalid private key, %q: %w", string(b), err)
+	} else if err := k.IsValid(nil); err != nil {
+		return err
+	} else {
+		*v = PrivatekeyFlag{Privatekey: k}
+	}
+
+	v.notEmpty = true
+
+	return nil
 }
 
 type AmountFlag struct {
@@ -167,7 +155,7 @@ type FileLoad []byte
 
 func (v *FileLoad) UnmarshalText(b []byte) error {
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
+		if c, err := loadFromStdInput(); err != nil {
 			return err
 		} else {
 			*v = c
@@ -190,5 +178,31 @@ func (v FileLoad) Bytes() []byte {
 }
 
 func (v FileLoad) String() string {
+	return string(v)
+}
+
+type StringLoad []byte
+
+func (v *StringLoad) UnmarshalText(b []byte) error {
+	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
+		if c, err := loadFromStdInput(); err != nil {
+			return err
+		} else {
+			*v = c
+
+			return nil
+		}
+	}
+
+	*v = b
+
+	return nil
+}
+
+func (v StringLoad) Bytes() []byte {
+	return []byte(v)
+}
+
+func (v StringLoad) String() string {
 	return string(v)
 }

@@ -5,29 +5,21 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type SignKeyCommand struct {
-	*BaseCommand
+	BaseCommand
 	Key   StringLoad `arg:"" name:"privatekey" help:"privatekey" required:""`
 	Base  string     `arg:"" name:"signature base" help:"signature base for signing" required:""`
 	Quite bool       `name:"quite" short:"q" help:"keep silence"`
 }
 
-func NewSignKeyCommand() SignKeyCommand {
-	return SignKeyCommand{
-		BaseCommand: NewBaseCommand("key-sign"),
-	}
-}
-
-func (cmd *SignKeyCommand) Run(version util.Version) error {
-	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
-	}
+func (cmd *SignKeyCommand) Run(flags *MainFlags, version util.Version, log logging.Logger) error {
+	_ = cmd.BaseCommand.Run(flags, version, log)
 
 	var priv key.Privatekey
 	if k, err := loadKey(cmd.Key.Bytes()); err != nil {
@@ -60,16 +52,4 @@ func (cmd *SignKeyCommand) Run(version util.Version) error {
 	}
 
 	return nil
-}
-
-func loadKey(b []byte) (key.Key, error) {
-	s := strings.TrimSpace(string(b))
-
-	if pk, err := key.DecodeKey(jenc, s); err != nil {
-		return nil, err
-	} else if err := pk.IsValid(nil); err != nil {
-		return nil, err
-	} else {
-		return pk, nil
-	}
 }
