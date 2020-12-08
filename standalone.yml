@@ -11,10 +11,6 @@ network:
     url: quic://127.0.0.1:54321
 
 genesis-operations:
-    - type: set-policy
-      number-of-acting-suffrage-nodes: 1
-      max-operations-in-seal: 10
-      max-operations-in-proposal: 100
     - type: genesis-account
       account-keys:
         keys:
@@ -26,6 +22,8 @@ genesis-operations:
 
 policy:
     threshold: 100
+    max-operations-in-seal: 10
+    max-operations-in-proposal: 100
     timeout-waiting-proposal: 5s
     interval-broadcasting-init-ballot: 1s
     interval-broadcasting-proposal: 1s
