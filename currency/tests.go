@@ -6,8 +6,10 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -75,7 +77,7 @@ type baseTestOperationProcessor struct { // nolint: unused
 	baseTest
 }
 
-func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*isaac.Statepool, isaac.OperationProcessor) {
+func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*storage.Statepool, prprocessor.OperationProcessor) {
 	base := map[string]state.State{}
 	for _, l := range s {
 		for _, st := range l {
@@ -83,7 +85,7 @@ func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*isaac.State
 		}
 	}
 
-	pool, err := isaac.NewStatepoolWithBase(t.Storage(nil, nil), base)
+	pool, err := storage.NewStatepoolWithBase(t.Storage(nil, nil), base)
 	t.NoError(err)
 
 	opr := (&OperationProcessor{}).New(pool)

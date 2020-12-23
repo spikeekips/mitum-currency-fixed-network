@@ -47,9 +47,9 @@ func (t *testHandlerNodeInfo) TestBasic() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		nil,
 		config,
 		nodes,
+		nil,
 	)
 
 	handlers := t.handlers(st, DummyCache{})
@@ -94,10 +94,10 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 		t.Equal(ab, bb)
 	}
 
-	t.Equal(len(a.Suffrage()), len(b.Suffrage()))
-	for i := range a.Suffrage() {
-		an := a.Suffrage()[i]
-		bn := b.Suffrage()[i]
+	t.Equal(len(a.Nodes()), len(b.Nodes()))
+	for i := range a.Nodes() {
+		an := a.Nodes()[i]
+		bn := b.Nodes()[i]
 
 		t.True(an.Address().Equal(bn.Address()))
 		t.True(an.Publickey().Equal(bn.Publickey()))

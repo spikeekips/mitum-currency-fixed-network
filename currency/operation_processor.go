@@ -4,8 +4,9 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -17,7 +18,7 @@ type OperationProcessor struct {
 	feeAmount           FeeAmount
 	getFeeReceiver      func() (base.Address, error)
 	feeReceiver         base.Address
-	pool                *isaac.Statepool
+	pool                *storage.Statepool
 	fee                 Amount
 	amountPool          map[string]AmountState
 	processedSenders    map[string]struct{}
@@ -38,7 +39,7 @@ func NewOperationProcessor(feeAmount FeeAmount, getFeeReceiver func() (base.Addr
 	}
 }
 
-func (opr *OperationProcessor) New(pool *isaac.Statepool) isaac.OperationProcessor {
+func (opr *OperationProcessor) New(pool *storage.Statepool) prprocessor.OperationProcessor {
 	var feeReceiver base.Address
 	if opr.getFeeReceiver != nil {
 		if a, err := opr.getFeeReceiver(); err == nil {

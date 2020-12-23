@@ -29,7 +29,7 @@ var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 			"load_genesis_account", cmd.hookLoadGenesisAccount).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 			"set_currency_network_handlers", cmd.hookSetNetworkHandlers).SetOverride(true),
-		pm.NewHook(pm.HookPrefixPost, process.ProcessNameProposalProcessor,
+		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
 			"apply_fee", cmd.hookApplyFee).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, ProcessNameDigestAPI,
 			"set_digest_api_handlers", cmd.hookDigestAPIHandlers).SetOverride(true),
@@ -256,21 +256,18 @@ func (cmd *RunCommand) hookApplyFee(ctx context.Context) (context.Context, error
 		return ctx, xerrors.Errorf("empty fee receiver func")
 	}
 
-	var proposalProcessor isaac.ProposalProcessor
-	if err := process.LoadProposalProcessorContextValue(ctx, &proposalProcessor); err != nil {
-		return ctx, err
-	}
-
-	if err := initializeProposalProcessor(
-		proposalProcessor,
+	if c, err := initializeProposalProcessor(
+		ctx,
 		currency.NewOperationProcessor(design.FeeAmount, design.ReceiverFunc),
 	); err != nil {
 		return ctx, err
+	} else {
+		ctx = c
 	}
 
 	cmd.Log().Debug().Interface("fee_amount", json.RawMessage([]byte(design.FeeAmount.Verbose()))).Msg("fee applied")
 
-	return context.WithValue(ctx, process.ContextValueProposalProcessor, proposalProcessor), nil
+	return ctx, nil
 }
 
 func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Context, error) {

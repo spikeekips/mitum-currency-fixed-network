@@ -11,8 +11,8 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -422,7 +422,7 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	t.T().Log("trying to process")
 	started = time.Now()
 
-	co, err := isaac.NewConcurrentOperationsProcessor(100, pool, oppHintSet)
+	co, err := prprocessor.NewConcurrentOperationsProcessor(100, pool, oppHintSet)
 	t.NoError(err)
 	co.Start(context.Background(), nil)
 

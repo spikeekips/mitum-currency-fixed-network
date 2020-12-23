@@ -16,7 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -365,18 +365,25 @@ func (cmd *BaseNodeCommand) checkFeeReceiver(
 	}, nil
 }
 
-func initializeProposalProcessor(dp isaac.ProposalProcessor, opr isaac.OperationProcessor) error {
+func initializeProposalProcessor(ctx context.Context, opr prprocessor.OperationProcessor) (context.Context, error) {
+	var oprs *hint.Hintmap
+	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
+		return ctx, err
+	} else if oprs == nil {
+		oprs = hint.NewHintmap()
+	}
+
 	for _, hinter := range []hint.Hinter{
 		currency.CreateAccounts{},
 		currency.KeyUpdater{},
 		currency.Transfers{},
 	} {
-		if _, err := dp.AddOperationProcessor(hinter, opr); err != nil {
-			return err
+		if err := oprs.Add(hinter, opr); err != nil {
+			return ctx, err
 		}
 	}
 
-	return nil
+	return context.WithValue(ctx, process.ContextValueOperationProcessors, oprs), nil
 }
 
 func (cmd *BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.Context, error) {

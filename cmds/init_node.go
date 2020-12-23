@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/isaac"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
@@ -20,7 +19,7 @@ var (
 
 var InitCommandHooks = func(cmd *InitCommand) []pm.Hook {
 	return []pm.Hook{
-		pm.NewHook(pm.HookPrefixPost, process.ProcessNameProposalProcessor,
+		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
 			"apply_fee", cmd.hookApplyNilFee).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameGenerateGenesisBlock,
 			"save_genesis_info", cmd.hookSaveGenesisInfo).SetOverride(true),
@@ -59,22 +58,16 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 }
 
 func (cmd *InitCommand) hookApplyNilFee(ctx context.Context) (context.Context, error) {
-	var proposalProcessor isaac.ProposalProcessor
-	if err := process.LoadProposalProcessorContextValue(ctx, &proposalProcessor); err != nil {
-		return ctx, err
-	}
-
 	// NOTE NilFeeAmount will be applied whatever design defined
-	if err := initializeProposalProcessor(
-		proposalProcessor,
-		currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil),
-	); err != nil {
+	if c, err := initializeProposalProcessor(ctx, currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil)); err != nil {
 		return ctx, err
+	} else {
+		ctx = c
 	}
 
 	cmd.Log().Debug().Msg("nil fee amount applied for init")
 
-	return context.WithValue(ctx, process.ContextValueProposalProcessor, proposalProcessor), nil
+	return ctx, nil
 }
 
 func (cmd *InitCommand) hookSaveGenesisInfo(ctx context.Context) (context.Context, error) {

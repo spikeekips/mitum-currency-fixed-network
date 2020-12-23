@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -51,7 +51,7 @@ func (t *testGenesisAccountOperation) TestNew() {
 
 	op := t.newOperaton(keys, amount)
 
-	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
+	sp, err := storage.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys)
@@ -90,7 +90,7 @@ func (t *testGenesisAccountOperation) TestMultipleTarget() {
 
 	op := t.newOperaton(keys, amount)
 
-	sp, err := isaac.NewStatepool(t.Storage(nil, nil))
+	sp, err := storage.NewStatepool(t.Storage(nil, nil))
 	t.NoError(err)
 
 	err = op.Process(sp.Get, sp.Set)
