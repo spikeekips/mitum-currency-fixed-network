@@ -59,7 +59,10 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 
 func (cmd *InitCommand) hookApplyNilFee(ctx context.Context) (context.Context, error) {
 	// NOTE NilFeeAmount will be applied whatever design defined
-	if c, err := initializeProposalProcessor(ctx, currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil)); err != nil {
+	if c, err := initializeProposalProcessor(
+		ctx,
+		currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil),
+	); err != nil {
 		return ctx, err
 	} else {
 		ctx = c

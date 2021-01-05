@@ -368,8 +368,12 @@ func (cmd *BaseNodeCommand) checkFeeReceiver(
 func initializeProposalProcessor(ctx context.Context, opr prprocessor.OperationProcessor) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
-		return ctx, err
-	} else if oprs == nil {
+		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+			return ctx, err
+		}
+	}
+
+	if oprs == nil {
 		oprs = hint.NewHintmap()
 	}
 
