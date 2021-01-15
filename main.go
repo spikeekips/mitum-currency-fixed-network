@@ -23,8 +23,9 @@ var (
 type mainflags struct {
 	Node cmds.NodeCommand `cmd:"" help:"node"`
 	// TODO Blocks mitumcmds.BlocksCommand `cmd:"" help:"get block data from node"`
-	Key  cmds.KeyCommand  `cmd:"" help:"key"`
-	Seal cmds.SealCommand `cmd:"" help:"seal"`
+	Key     cmds.KeyCommand  `cmd:"" help:"key"`
+	Seal    cmds.SealCommand `cmd:"" help:"seal"`
+	Version VerCommand       `cmd:"" help:"version"`
 }
 
 func main() {
@@ -37,10 +38,13 @@ func main() {
 		nodeCommand = i
 	}
 
+	verCommand := VerCommand{}
+
 	flags := mainflags{
-		Node: nodeCommand,
-		Key:  cmds.NewKeyCommand(),
-		Seal: cmds.NewSealCommand(),
+		Node:    nodeCommand,
+		Key:     cmds.NewKeyCommand(),
+		Seal:    cmds.NewSealCommand(),
+		Version: verCommand,
 	}
 
 	var kctx *kong.Context
@@ -68,4 +72,7 @@ func main() {
 	}
 
 	os.Exit(0)
+}
+
+type VerCommand struct {
 }
