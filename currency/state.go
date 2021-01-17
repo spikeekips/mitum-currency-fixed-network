@@ -19,7 +19,7 @@ var (
 )
 
 func StateAddressKey(a base.Address) string {
-	return fmt.Sprintf("%s-%x", a.Raw(), a.Hint().Type())
+	return fmt.Sprintf("%s-%x", a.Raw(), [2]byte(a.Hint().Type()))
 }
 
 func StateKeyAccount(a base.Address) string {
