@@ -60,7 +60,7 @@ func loadBalance(decoder func(interface{}) error, encs *encoder.Encoders) (state
 	if _, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs); err != nil {
 		return nil, err
 	} else if st, ok := hinter.(state.State); !ok {
-		return nil, xerrors.Errorf("not currency.Amount: %T", hinter)
+		return nil, xerrors.Errorf("not currency.Big: %T", hinter)
 	} else {
 		return st, nil
 	}

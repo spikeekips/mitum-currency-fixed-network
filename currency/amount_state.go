@@ -5,31 +5,34 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	AmountStateType = hint.MustNewType(0xa0, 0x11, "mitum-currency-amount-state")
+	AmountStateType = hint.MustNewType(0xa0, 0x23, "mitum-currency-amount-state")
 	AmountStateHint = hint.MustHint(AmountStateType, "0.0.1")
 )
 
 type AmountState struct {
 	state.State
-	add Amount
-	fee Amount
+	cid CurrencyID
+	add Big
+	fee Big
 }
 
-func NewAmountState(st state.State) AmountState {
+func NewAmountState(st state.State, cid CurrencyID) AmountState {
 	if sst, ok := st.(AmountState); ok {
 		return sst
 	}
 
 	return AmountState{
 		State: st,
-		add:   ZeroAmount,
-		fee:   ZeroAmount,
+		cid:   cid,
+		add:   ZeroBig,
+		fee:   ZeroBig,
 	}
 }
 
@@ -42,8 +45,8 @@ func (st AmountState) IsValid(b []byte) error {
 		return err
 	}
 
-	if st.fee.Compare(ZeroAmount) < 0 {
-		return xerrors.Errorf("invalid fee, %v", st.fee)
+	if !st.fee.OverNil() {
+		return xerrors.Errorf("invalid fee; under zero, %v", st.fee)
 	}
 
 	return nil
@@ -61,30 +64,44 @@ func (st AmountState) GenerateHash() valuehash.Hash {
 }
 
 func (st AmountState) Merge(base state.State) (state.State, error) {
-	if b, err := StateAmountValue(base); err != nil {
-		return nil, err
+	var am Amount
+	if b, err := StateBalanceValue(base); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			am = NewZeroAmount(st.cid)
+		} else {
+			return nil, err
+		}
 	} else {
-		return SetStateAmountValue(st.AddFee(base.(AmountState).fee), b.Add(st.add))
+		am = b
 	}
+
+	return SetStateBalanceValue(
+		st.AddFee(base.(AmountState).fee),
+		am.WithBig(am.Big().Add(st.add)),
+	)
 }
 
-func (st AmountState) Add(a Amount) AmountState {
-	st.add = st.add.Add(a)
-
-	return st
+func (st AmountState) Currency() CurrencyID {
+	return st.cid
 }
 
-func (st AmountState) Fee() Amount {
+func (st AmountState) Fee() Big {
 	return st.fee
 }
 
-func (st AmountState) AddFee(fee Amount) AmountState {
+func (st AmountState) AddFee(fee Big) AmountState {
 	st.fee = st.fee.Add(fee)
 
 	return st
 }
 
-func (st AmountState) Sub(a Amount) AmountState {
+func (st AmountState) Add(a Big) AmountState {
+	st.add = st.add.Add(a)
+
+	return st
+}
+
+func (st AmountState) Sub(a Big) AmountState {
 	st.add = st.add.Sub(a)
 
 	return st
@@ -135,8 +152,8 @@ func (st AmountState) SetOperation(ops []valuehash.Hash) state.State {
 func (st AmountState) Clear() state.State {
 	st.State = st.State.Clear()
 
-	st.add = ZeroAmount
-	st.fee = ZeroAmount
+	st.add = ZeroBig
+	st.fee = ZeroBig
 
 	return st
 }

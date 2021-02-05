@@ -20,24 +20,21 @@ cryptocurrency blockchain network (at your own risk).
 * simple transaction: creating account, transfer balance.
 * supports multiple keypairs: *btc*, *ethereum*, *stellar* keypairs.
 * *mongodb*: as mitum does, *mongodb* is the primary storage.
+* supports multiple currencies
 
 #### Installation
 
 > NOTE: at this time, *mitum* and *mitum-currency* is actively developed, so
 before building mitum-currency, you will be better with building the latest
-mitum source. 
+mitum source.
 > `$ git clone https://github.com/spikeekips/mitum`
 >
 > and then, add `replace github.com/spikeekips/mitum => <your mitum source directory>` to `go.mod` of *mitum-currency*.
 
-```sh
-$ go get -u github.com/spikeekips/mitum-currency
-```
-
-Or, build it from source
+Build it from source
 ```sh
 $ cd mitum-currency
-$ go build
+$ go build -ldflags="-X 'main.Version=v0.0.1'" -o ./mc ./main.go
 ```
 
 #### Run
@@ -47,15 +44,14 @@ At the first time, you can simply start node with example configuration.
 > To start, you need to run *mongodb* on localhost(port, 27017).
 
 ```
-$ cd mitum-currency
-$ mitum-currency init ./standalone.yml
-$ mitum-currency run  ./standalone.yml
+$ ./mc node init ./standalone.yml
+$ ./mc node run ./standalone.yml
 ```
 
-> Please check `$ mitum-currency --help` for detailed usage.
+> Please check `$ ./mc --help` for detailed usage.
 
 #### Test
 
 ```sh
-$ go clean -testcache; time go test -race -tags 'test' -v -timeout 1m ./... -run .
+$ go clean -testcache; time go test -race -tags 'test' -v -timeout 20m ./... -run .
 ```

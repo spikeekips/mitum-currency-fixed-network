@@ -53,7 +53,7 @@ func (t *testBuilder) TestUnknownFactTemplate() {
 	_, err = bl.FactTemplate(currency.Transfers{}.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.GenesisAccount{}.Hint())
+	_, err = bl.FactTemplate(currency.GenesisCurrencies{}.Hint())
 	t.Contains(err.Error(), "unknown operation")
 }
 
@@ -99,6 +99,34 @@ func (t *testBuilder) TestFactTemplateTransfers() {
 	t.IsType(currency.TransfersFact{}, uhal.Interface())
 }
 
+func (t *testBuilder) TestFactTemplateCurrencyRegister() {
+	bl := NewBuilder(t.JSONEnc, t.networkID)
+
+	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	t.NoError(err)
+	t.NotEmpty(hal.Extras())
+
+	b, err := t.JSONEnc.Marshal(hal)
+	t.NoError(err)
+	uhal := t.decodeHal(b)
+
+	t.IsType(currency.CurrencyRegisterFact{}, uhal.Interface())
+}
+
+func (t *testBuilder) TestFactTemplateCurrencyPolicyUpdater() {
+	bl := NewBuilder(t.JSONEnc, t.networkID)
+
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	t.NoError(err)
+	t.NotEmpty(hal.Extras())
+
+	b, err := t.JSONEnc.Marshal(hal)
+	t.NoError(err)
+	uhal := t.decodeHal(b)
+
+	t.IsType(currency.CurrencyPolicyUpdaterFact{}, uhal.Interface())
+}
+
 func (t *testBuilder) TestBuildFactCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
@@ -113,30 +141,16 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 
 	newPub := key.MustNewBTCPrivatekey().Publickey()
 	newSender := currency.Address("new-mother")
-	newAmount := currency.NewAmount(99)
+	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
+	newCurrencyID := currency.CurrencyID("XXX")
 
-	b = bytes.ReplaceAll(
-		rhal.RawInterface(),
-		[]byte(templateSender.String()),
-		[]byte(newSender.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templatePublickey.String()),
-		[]byte(newPub.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateAmount.String()),
-		[]byte(newAmount.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateTokenEncoded),
-		[]byte(newTokenEncoded),
-	)
+	b = bytes.ReplaceAll(rhal.RawInterface(), []byte(templateSender.String()), []byte(newSender.String()))
+	b = bytes.ReplaceAll(b, []byte(templatePublickey.String()), []byte(newPub.String()))
+	b = bytes.ReplaceAll(b, []byte(templateBig.String()), []byte(newBig.String()))
+	b = bytes.ReplaceAll(b, []byte(templateTokenEncoded), []byte(newTokenEncoded))
+	b = bytes.ReplaceAll(b, []byte(templateCurrencyID), newCurrencyID.Bytes())
 
 	uhal, err := bl.BuildFact(b)
 	t.NoError(err)
@@ -150,7 +164,9 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 
 	t.True(ufact.Sender().Equal(newSender))
 	t.Equal(ufact.Token(), newToken)
-	t.Equal(newAmount, ufact.Items()[0].Amount())
+	t.Equal(1, len(ufact.Items()[0].Amounts()))
+	t.Equal(newBig, ufact.Items()[0].Amounts()[0].Big())
+	t.Equal(newCurrencyID, ufact.Items()[0].Amounts()[0].Currency())
 
 	_, same := ufact.Items()[0].Keys().Key(newPub)
 	t.True(same)
@@ -177,22 +193,12 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 	newSender := currency.Address("new-mother")
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
+	newCurrencyID := currency.CurrencyID("XXX")
 
-	b = bytes.ReplaceAll(
-		rhal.RawInterface(),
-		[]byte(templateSender.String()),
-		[]byte(newSender.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templatePublickey.String()),
-		[]byte(newPub.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateTokenEncoded),
-		[]byte(newTokenEncoded),
-	)
+	b = bytes.ReplaceAll(rhal.RawInterface(), []byte(templateSender.String()), []byte(newSender.String()))
+	b = bytes.ReplaceAll(b, []byte(templatePublickey.String()), []byte(newPub.String()))
+	b = bytes.ReplaceAll(b, []byte(templateTokenEncoded), []byte(newTokenEncoded))
+	b = bytes.ReplaceAll(b, []byte(templateCurrencyID), newCurrencyID.Bytes())
 
 	uhal, err := bl.BuildFact(b)
 	t.NoError(err)
@@ -208,6 +214,7 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 
 	_, same := ufact.Keys().Key(newPub)
 	t.True(same)
+	t.Equal(newCurrencyID, ufact.Currency())
 
 	sb, found := uhal.Extras()["signature_base"]
 	t.True(found)
@@ -229,35 +236,21 @@ func (t *testBuilder) TestBuildFactTransfers() {
 
 	newSender := currency.Address("new-mother")
 	newReceiver := currency.Address("new-father")
-	newAmount := currency.NewAmount(99)
+	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
+	newCurrencyID := currency.CurrencyID("XXX")
 
-	b = bytes.ReplaceAll(
-		rhal.RawInterface(),
-		[]byte(templateSender.String()),
-		[]byte(newSender.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateReceiver.String()),
-		[]byte(newReceiver.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateAmount.String()),
-		[]byte(newAmount.String()),
-	)
-	b = bytes.ReplaceAll(
-		b,
-		[]byte(templateTokenEncoded),
-		[]byte(newTokenEncoded),
-	)
+	b = bytes.ReplaceAll(rhal.RawInterface(), []byte(templateSender.String()), []byte(newSender.String()))
+	b = bytes.ReplaceAll(b, []byte(templateReceiver.String()), []byte(newReceiver.String()))
+	b = bytes.ReplaceAll(b, []byte(templateBig.String()), []byte(newBig.String()))
+	b = bytes.ReplaceAll(b, []byte(templateTokenEncoded), []byte(newTokenEncoded))
+	b = bytes.ReplaceAll(b, []byte(templateCurrencyID), newCurrencyID.Bytes())
 
 	{ // add new item
 		r := currency.MustAddress(util.UUID().String())
 
-		item := currency.NewTransferItem(r, currency.NewAmount(10))
+		item := currency.NewTransfersItemSingleAmount(r, currency.MustNewAmount(currency.NewBig(10), t.cid))
 		ib, err := jsonenc.Marshal(item)
 		t.NoError(err)
 		b = bytes.ReplaceAll(
@@ -280,7 +273,103 @@ func (t *testBuilder) TestBuildFactTransfers() {
 	t.True(ufact.Sender().Equal(newSender))
 	t.True(ufact.Items()[1].Receiver().Equal(newReceiver))
 	t.Equal(ufact.Token(), newToken)
-	t.Equal(newAmount, ufact.Items()[1].Amount())
+	t.Equal(1, len(ufact.Items()[1].Amounts()))
+	t.Equal(newBig, ufact.Items()[1].Amounts()[0].Big())
+	t.Equal(newCurrencyID, ufact.Items()[1].Amounts()[0].Currency())
+
+	sb, found := uhal.Extras()["signature_base"]
+	t.True(found)
+
+	_ = t.buildOperation(uop, sb.([]byte))
+}
+
+func (t *testBuilder) TestBuildFactCurrencyRegister() {
+	bl := NewBuilder(t.JSONEnc, t.networkID)
+
+	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	t.NoError(err)
+
+	b, err := t.JSONEnc.Marshal(hal)
+	t.NoError(err)
+	rhal := t.decodeHal(b)
+
+	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
+
+	newSender := currency.Address("new-mother")
+	newReceiver := currency.Address("new-father")
+	newBig := currency.NewBig(99)
+	newToken := util.UUID().Bytes()
+	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
+	newCurrencyID := currency.CurrencyID("XXX")
+
+	b = bytes.ReplaceAll(rhal.RawInterface(), []byte(templateSender.String()), []byte(newSender.String()))
+	b = bytes.ReplaceAll(b, []byte(templateReceiver.String()), []byte(newReceiver.String()))
+	b = bytes.ReplaceAll(b, []byte(templateBig.String()), []byte(newBig.String()))
+	b = bytes.ReplaceAll(b, []byte(templateTokenEncoded), []byte(newTokenEncoded))
+	b = bytes.ReplaceAll(b, []byte(templateCurrencyID), newCurrencyID.Bytes())
+
+	uhal, err := bl.BuildFact(b)
+	t.NoError(err)
+
+	uop, ok := uhal.Interface().(currency.CurrencyRegister)
+	t.True(ok)
+	err = uop.IsValid(nil)
+	t.Contains(err.Error(), "malformed signature")
+
+	ufact := uop.Fact().(currency.CurrencyRegisterFact)
+
+	t.Equal(ufact.Token(), newToken)
+	t.True(ufact.Currency().GenesisAccount().Equal(newReceiver))
+	t.Equal(ufact.Currency().Currency(), newCurrencyID)
+	t.Equal(ufact.Currency().Big(), newBig)
+	t.Equal(ufact.Currency().Policy().NewAccountMinBalance(), newBig)
+	t.Equal(currency.NewNilFeeer(), ufact.Currency().Policy().Feeer())
+
+	sb, found := uhal.Extras()["signature_base"]
+	t.True(found)
+
+	_ = t.buildOperation(uop, sb.([]byte))
+}
+
+func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
+	bl := NewBuilder(t.JSONEnc, t.networkID)
+
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	t.NoError(err)
+
+	b, err := t.JSONEnc.Marshal(hal)
+	t.NoError(err)
+	rhal := t.decodeHal(b)
+
+	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
+
+	newSender := currency.Address("new-mother")
+	newReceiver := currency.Address("new-father")
+	newBig := currency.NewBig(99)
+	newToken := util.UUID().Bytes()
+	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
+	newCurrencyID := currency.CurrencyID("XXX")
+
+	b = bytes.ReplaceAll(rhal.RawInterface(), []byte(templateSender.String()), []byte(newSender.String()))
+	b = bytes.ReplaceAll(b, []byte(templateReceiver.String()), []byte(newReceiver.String()))
+	b = bytes.ReplaceAll(b, []byte(templateBig.String()), []byte(newBig.String()))
+	b = bytes.ReplaceAll(b, []byte(templateTokenEncoded), []byte(newTokenEncoded))
+	b = bytes.ReplaceAll(b, []byte(templateCurrencyID), newCurrencyID.Bytes())
+
+	uhal, err := bl.BuildFact(b)
+	t.NoError(err)
+
+	uop, ok := uhal.Interface().(currency.CurrencyPolicyUpdater)
+	t.True(ok)
+	err = uop.IsValid(nil)
+	t.Contains(err.Error(), "malformed signature")
+
+	ufact := uop.Fact().(currency.CurrencyPolicyUpdaterFact)
+
+	t.Equal(ufact.Token(), newToken)
+	t.Equal(ufact.Currency(), newCurrencyID)
+	t.Equal(ufact.Policy().NewAccountMinBalance(), newBig)
+	t.Equal(currency.NewNilFeeer(), ufact.Policy().Feeer())
 
 	sb, found := uhal.Extras()["signature_base"]
 	t.True(found)

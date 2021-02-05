@@ -3,14 +3,17 @@ package cmds
 import (
 	"context"
 
-	"github.com/spikeekips/mitum-currency/digest"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 const (
@@ -47,17 +50,17 @@ func init() {
 }
 
 func ProcessDigester(ctx context.Context) (context.Context, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
 	var st *digest.Storage
 	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
 		if xerrors.Is(err, config.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
-		return ctx, err
-	}
-
-	var log logging.Logger
-	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
@@ -135,6 +138,11 @@ func digestFollowup(ctx context.Context, height base.Height) error {
 
 	var blockFS *storage.BlockFS
 	if err := process.LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+		return err
+	}
+
+	var cp *currency.CurrencyPool
+	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
 		return err
 	}
 

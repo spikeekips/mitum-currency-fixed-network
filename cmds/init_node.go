@@ -4,12 +4,15 @@ import (
 	"context"
 
 	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
+	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
-	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/hint"
 	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -18,11 +21,20 @@ var (
 )
 
 var InitCommandHooks = func(cmd *InitCommand) []pm.Hook {
+	genesisOperationHandlers := map[string]process.HookHandlerGenesisOperations{
+		"genesis-currencies": genesisOperationsHandlerGenesisCurrencies,
+	}
+
+	for k, v := range process.DefaultHookHandlersGenesisOperations {
+		genesisOperationHandlers[k] = v
+	}
+
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
-			"apply_fee", cmd.hookApplyNilFee).SetOverride(true),
-		pm.NewHook(pm.HookPrefixPost, process.ProcessNameGenerateGenesisBlock,
-			"save_genesis_info", cmd.hookSaveGenesisInfo).SetOverride(true),
+			"initialize_proposal_processor", cmd.hookInitializeProposalProcessor).SetOverride(true),
+		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
+			process.HookNameConfigGenesisOperations, process.HookGenesisOperationFunc(genesisOperationHandlers)).
+			SetOverride(true),
 	}
 }
 
@@ -57,36 +69,112 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 	return cmd, nil
 }
 
-func (cmd *InitCommand) hookApplyNilFee(ctx context.Context) (context.Context, error) {
-	// NOTE NilFeeAmount will be applied whatever design defined
-	if c, err := initializeProposalProcessor(
-		ctx,
-		currency.NewOperationProcessor(currency.NewNilFeeAmount(), nil),
-	); err != nil {
-		return ctx, err
-	} else {
-		ctx = c
+func (cmd *InitCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+	var oprs *hint.Hintmap
+	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
+		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+			return ctx, err
+		}
 	}
 
-	cmd.Log().Debug().Msg("nil fee amount applied for init")
+	if oprs == nil {
+		oprs = hint.NewHintmap()
+
+		ctx = context.WithValue(ctx, process.ContextValueOperationProcessors, oprs)
+	}
 
 	return ctx, nil
 }
 
-func (cmd *InitCommand) hookSaveGenesisInfo(ctx context.Context) (context.Context, error) {
-	var st storage.Storage
-	if err := process.LoadStorageContextValue(ctx, &st); err != nil {
-		return ctx, err
+func genesisOperationsHandlerGenesisCurrencies(
+	ctx context.Context,
+	m map[string]interface{},
+) (operation.Operation, error) {
+	var conf config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
+		return nil, err
 	}
 
-	var genesis block.Block
-	if err := process.LoadGenesisBlockContextValue(ctx, &genesis); err != nil {
-		return ctx, err
+	var de *GenesisCurrenciesDesign
+	if b, err := yaml.Marshal(m); err != nil {
+		return nil, err
+	} else if err := yaml.Unmarshal(b, &de); err != nil {
+		return nil, err
 	}
 
-	if _, _, err := cmd.saveGenesisAccountInfo(st, genesis); err != nil {
-		return ctx, xerrors.Errorf("failed to save genesis account for init: %w", err)
+	if err := de.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	cds := make([]currency.CurrencyDesign, len(de.Currencies))
+	for i := range de.Currencies {
+		c := de.Currencies[i]
+
+		if j, err := loadCurrencyDesign(*c, de.AccountKeys.Address); err != nil {
+			return nil, err
+		} else {
+			cds[i] = j
+		}
+	}
+
+	if op, err := currency.NewGenesisCurrencies(
+		conf.Privatekey(),
+		de.AccountKeys.Keys,
+		cds,
+		conf.NetworkID(),
+	); err != nil {
+		return nil, err
+	} else if err := op.IsValid(conf.NetworkID()); err != nil {
+		return nil, err
 	} else {
-		return ctx, nil
+		return op, nil
 	}
+}
+
+func loadCurrencyDesign(de CurrencyDesign, ga base.Address) (currency.CurrencyDesign, error) {
+	var po currency.CurrencyPolicy
+	if j, err := loadGenesisCurrenciesFeeer(*de.Feeer, ga); err != nil {
+		return currency.CurrencyDesign{}, err
+	} else {
+		po = currency.NewCurrencyPolicy(de.NewAccountMinBalance, j)
+	}
+
+	cd := currency.NewCurrencyDesign(de.Balance, nil, po)
+	if err := cd.IsValid(nil); err != nil {
+		return currency.CurrencyDesign{}, err
+	}
+
+	return cd, nil
+}
+
+func loadGenesisCurrenciesFeeer(de FeeerDesign, ga base.Address) (currency.Feeer, error) {
+	var feeer currency.Feeer
+	switch de.Type {
+	case currency.FeeerNil, "":
+		return currency.NewNilFeeer(), nil
+	case currency.FeeerFixed:
+		feeer = currency.NewFixedFeeer(ga, de.Extras["fixed_amount"].(currency.Big))
+	case currency.FeeerRatio:
+		var max currency.Big
+		if i, found := de.Extras["ratio_max"]; !found {
+			max = currency.UnlimitedMaxFeeAmount
+		} else {
+			max = i.(currency.Big)
+		}
+
+		feeer = currency.NewRatioFeeer(
+			ga,
+			de.Extras["ratio_ratio"].(float64),
+			de.Extras["ratio_min"].(currency.Big),
+			max,
+		)
+	default:
+		return nil, xerrors.Errorf("unknown type of feeer, %q", de.Type)
+	}
+
+	if err := feeer.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	return feeer, nil
 }

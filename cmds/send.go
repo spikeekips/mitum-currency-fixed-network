@@ -4,11 +4,12 @@ import (
 	"net/url"
 
 	"github.com/alecthomas/kong"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 var SendVars = kong.Vars{

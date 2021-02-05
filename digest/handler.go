@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
@@ -27,6 +28,8 @@ var (
 
 var (
 	HandlerPathNodeInfo                   = `/`
+	HandlerPathCurrencies                 = `/currency`
+	HandlerPathCurrency                   = `/currency/{currencyid:.*}`
 	HandlerPathManifests                  = `/block/manifests`
 	HandlerPathOperations                 = `/block/operations`
 	HandlerPathOperation                  = `/block/operation/{hash:(?i)[0-9a-z][0-9a-z]+}`
@@ -66,6 +69,7 @@ type Handlers struct {
 	enc             encoder.Encoder
 	storage         *Storage
 	cache           Cache
+	cp              *currency.CurrencyPool
 	nodeInfoHandler network.NodeInfoHandler
 	send            func(interface{}) (seal.Seal, error)
 	router          *mux.Router
@@ -80,6 +84,7 @@ func NewHandlers(
 	enc encoder.Encoder,
 	st *Storage,
 	cache Cache,
+	cp *currency.CurrencyPool,
 ) *Handlers {
 	return &Handlers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -90,6 +95,7 @@ func NewHandlers(
 		enc:          enc,
 		storage:      st,
 		cache:        cache,
+		cp:           cp,
 		router:       mux.NewRouter(),
 		routes:       map[string]*mux.Route{},
 		itemsLimiter: defaultItemsLimiter,
@@ -121,6 +127,10 @@ func (hd *Handlers) Handler() http.Handler {
 }
 
 func (hd *Handlers) setHandlers() {
+	_ = hd.setHandler(HandlerPathCurrencies, hd.handleCurrencies, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathCurrency, hd.handleCurrency, true).
+		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathManifests, hd.handleManifests, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathOperations, hd.handleOperations, true).

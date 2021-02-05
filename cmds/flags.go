@@ -9,12 +9,13 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
+
+	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type KeyFlag struct {
@@ -135,17 +136,17 @@ func (v *AddressFlag) Encode(enc encoder.Encoder) (base.Address, error) {
 	return v.ad.Encode(enc)
 }
 
-type AmountFlag struct {
-	currency.Amount
+type BigFlag struct {
+	currency.Big
 }
 
-func (v *AmountFlag) UnmarshalText(b []byte) error {
-	if a, err := currency.NewAmountFromString(string(b)); err != nil {
-		return xerrors.Errorf("invalid amount string, %q: %w", string(b), err)
+func (v *BigFlag) UnmarshalText(b []byte) error {
+	if a, err := currency.NewBigFromString(string(b)); err != nil {
+		return xerrors.Errorf("invalid big string, %q: %w", string(b), err)
 	} else if err := a.IsValid(nil); err != nil {
 		return err
 	} else {
-		*v = AmountFlag{Amount: a}
+		*v = BigFlag{Big: a}
 	}
 
 	return nil
@@ -191,4 +192,23 @@ func (v FileLoad) Bytes() []byte {
 
 func (v FileLoad) String() string {
 	return string(v)
+}
+
+type CurrencyIDFlag struct {
+	CID currency.CurrencyID
+}
+
+func (v *CurrencyIDFlag) UnmarshalText(b []byte) error {
+	cid := currency.CurrencyID(string(b))
+	if err := cid.IsValid(nil); err != nil {
+		return err
+	} else {
+		v.CID = cid
+
+		return nil
+	}
+}
+
+func (v *CurrencyIDFlag) String() string {
+	return v.CID.String()
 }

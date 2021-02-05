@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
 )
 
@@ -50,16 +51,24 @@ func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 func (hd *Handlers) buildNodeInfoHal(ni network.NodeInfo) (Hal, error) {
 	var hal Hal = NewBaseHal(ni, NewHalLink(HandlerPathNodeInfo, nil))
 
-	if blk := ni.LastBlock(); blk != nil {
-		if bh, err := hd.buildBlockHalByHeight(blk.Height()); err != nil {
-			return nil, err
-		} else {
-			for k, v := range bh.Links() {
-				if !strings.HasPrefix(k, "block:") {
-					k = "block:" + k
-				}
-				hal = hal.AddLink(k, v)
+	hal = hal.AddLink("currency", NewHalLink(HandlerPathCurrencies, nil)).
+		AddLink("currency:{currencyid}", NewHalLink(HandlerPathCurrency, nil).SetTemplated())
+
+	var blk block.Manifest
+	if i := ni.LastBlock(); i == nil {
+		return hal, nil
+	} else {
+		blk = i
+	}
+
+	if bh, err := hd.buildBlockHalByHeight(blk.Height()); err != nil {
+		return nil, err
+	} else {
+		for k, v := range bh.Links() {
+			if !strings.HasPrefix(k, "block:") {
+				k = "block:" + k
 			}
+			hal = hal.AddLink(k, v)
 		}
 	}
 

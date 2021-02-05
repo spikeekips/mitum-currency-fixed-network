@@ -29,17 +29,19 @@ tags:
   description: account state and it's operations
 - name: builder
   description: build operation and broadcast it
+- name: currency
+  description: currency information
 
 paths:
   /:
     get:
       tags:
       - node-info
-      summary: Getting node information
+      summary: Node information
       operationId: node-info
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -71,9 +73,9 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of block by block height
+      summary: Block by block height
       description: >-
-        Getting hal document of *block* by height. Basically the hal document of response does include the links for components of *block* like *manifest*.
+        Basically the hal document of response does include the links for components of *block* like *manifest*.
       operationId: block-by-height
       parameters:
         - name: height
@@ -84,7 +86,7 @@ paths:
             $ref: '#/components/schemas/Height'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -116,9 +118,9 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of block by block hash
+      summary: Block by block hash
       description: >-
-        Getting hal document of *block* by *hash*. The basic structure of it is same with `/block/{height}`.
+        *block* by *hash*. The basic structure of it is same with `/block/{height}`.
       operationId: block-by-hash
       parameters:
         - name: block_hash
@@ -129,7 +131,7 @@ paths:
             type: string
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -161,9 +163,9 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of block manifest by block height
+      summary: Block manifest by block height
       description: >-
-        Getting hal document of *block* *manifest* by height.
+        *block* *manifest* by height.
       operationId: manifest-by-height
       parameters:
         - name: height
@@ -174,7 +176,7 @@ paths:
             $ref: '#/components/schemas/Height'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -212,9 +214,9 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of block manifest by block hash
+      summary: Block manifest by block hash
       description: >-
-        Getting hal document of *block* *manifest* by hash.
+        *block* *manifest* by hash.
       operationId: manifest-by-hash
       parameters:
         - name: block_hash
@@ -225,7 +227,7 @@ paths:
             type: string
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -263,9 +265,9 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of operation by it's fact hash.
+      summary: Operation by it's fact hash.
       description: >-
-        Getting hal document of operation by it's **fact** *hash*, not it's own *hash*.
+        operation by it's **fact** *hash*, not it's own *hash*.
       operationId: operation
       parameters:
         - name: operation_fact_hash
@@ -277,7 +279,7 @@ paths:
             type: string
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -315,7 +317,7 @@ paths:
     get:
       tags:
       - block
-      summary: Getting hal document of all the manifest
+      summary: All the manifest
       operationId: manifests
       parameters:
         - name: offset
@@ -324,7 +326,7 @@ paths:
             type: string
             example: "2"
           description: >-
-            Getting *manifest*s after *offset*, usually it is block *height*.
+            *manifest*s after *offset*, usually it is block *height*.
         - name: reverse
           in: query
           schema:
@@ -332,10 +334,10 @@ paths:
             example: false
             default: false
           description: >-
-            Getting *manifest*s by reverse order.
+            *manifest*s by reverse order.
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -387,11 +389,93 @@ paths:
                 type: integer
                 format: int64
 
+  /block/{height}/operations:
+    get:
+      tags:
+      - block
+      summary: All the operations of block
+      operationId: operations-by-height
+      parameters:
+        - name: height
+          in: path
+          description: block height
+          required: true
+          schema:
+            $ref: '#/components/schemas/Height'
+        - name: offset
+          in: query
+          schema:
+            type: string
+            example: "2,0"
+          description: >-
+            *operation*s after *offset*.
+        - name: reverse
+          in: query
+          schema:
+            type: boolean
+            example: false
+            default: false
+          description: >-
+            *operation*s by reverse order.
+      responses:
+        500:
+          description: problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "...."
+                      detail:
+                        type: string
+                        example: "...."
+        404:
+          description: no more operations
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "operations not found"
+                      detail:
+                        type: string
+                        example: "...."
+        200:
+          description: hal document of operations
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/OperationsByHeightHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
   /block/operations:
     get:
       tags:
       - block
-      summary: Getting hal document of all the operations
+      summary: All the operations
       operationId: operations
       parameters:
         - name: offset
@@ -400,7 +484,7 @@ paths:
             type: string
             example: "2,0"
           description: >-
-            Getting *operation*s after *offset*.
+            *operation*s after *offset*.
         - name: reverse
           in: query
           schema:
@@ -408,10 +492,10 @@ paths:
             example: false
             default: false
           description: >-
-            Getting *operation*s by reverse order.
+            *operation*s by reverse order.
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -467,21 +551,21 @@ paths:
     get:
       tags:
       - account
-      summary: Getting hal document of the latest state of account
+      summary: The latest state of account
       description: >-
-        Getting hal document of the latest state of account. It contains the *keys* of account and it's *balance*.
+        The latest state of account. It contains the *keys* of account and it's *balance*.
       operationId: account
       parameters:
         - name: address
           in: path
-          description: >-
-              *address* of account.
+          description: >
+            *address* of account.
           required: true
           schema:
-            type: string
+            $ref: '#/components/schemas/AccountAddress'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -519,25 +603,25 @@ paths:
     get:
       tags:
       - account
-      summary: Getting hal document of the operations, which are related with the account
+      summary: Operations, which are related with the account
       description: >-
-        Getting hal document of the operations, which are related with the account.
+        Operations, which are related with the account.
       operationId: account-operations
       parameters:
         - name: address
           in: path
-          description: >-
-              *address* of account.
+          description: >
+            *address* of account.
           required: true
           schema:
-            type: string
+            $ref: '#/components/schemas/AccountAddress'
         - name: offset
           in: query
           schema:
             type: string
             example: "2,0"
           description: >-
-            Getting *operation*s after *offset*.
+            *operation*s after *offset*.
         - name: reverse
           in: query
           schema:
@@ -545,10 +629,10 @@ paths:
             example: false
             default: false
           description: >-
-            Getting *operation*s by reverse order.
+            *operation*s by reverse order.
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -608,7 +692,7 @@ paths:
       operationId: operation-builder
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -654,9 +738,11 @@ paths:
             - create-accounts
             - key-updater
             - transfers
+            - currency-register
+            - currency-policy-updater
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
@@ -705,13 +791,13 @@ paths:
               $ref: '#/components/schemas/CreateAccountsFact'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         400:
-          description: found some problems in request.
+          description: problems in request.
           content:
             application/problem+json:
               schema:
@@ -738,13 +824,13 @@ paths:
               $ref: '#/components/schemas/CreateAccounts'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         400:
-          description: found some problems in request.
+          description: problems in request.
           content:
             application/problem+json:
               schema:
@@ -773,19 +859,21 @@ paths:
           application/json:
             schema:
               oneOf:
+                - $ref: '#/components/schemas/Seal'
                 - $ref: '#/components/schemas/CreateAccounts'
                 - $ref: '#/components/schemas/KeyUpdater'
                 - $ref: '#/components/schemas/Transfers'
-                - $ref: '#/components/schemas/Seal'
+                - $ref: '#/components/schemas/CurrencyRegister'
+                - $ref: '#/components/schemas/CurrencyPolicyUpdater'
       responses:
         500:
-          description: found some problems in processing.
+          description: problems in processing.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         400:
-          description: found some problems in request.
+          description: problems in request.
           content:
             application/problem+json:
               schema:
@@ -796,6 +884,85 @@ paths:
             application/hal+json:
               schema:
                 $ref: '#/components/schemas/OperationTemplateCreateAccountsHAL'
+
+  /currency:
+    get:
+      tags:
+      - currency
+      summary: Currencies information
+      operationId: currencies
+      responses:
+        500:
+          description: problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of currencies
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CurrenciesHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
+
+  /currency/{currency_id}:
+    get:
+      tags:
+      - currency
+      summary: Currency information
+      operationId: currency
+      parameters:
+        - name: currency_id
+          in: path
+          description: currency unique id(or name)
+          required: true
+          schema:
+            $ref: '#/components/schemas/CurrencyID'
+      responses:
+        500:
+          description: problems in processing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        200:
+          description: hal document of currency of *currency_id*
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CurrencyHAL'
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Remaining:
+              description: remains request count
+              schema:
+                type: integer
+                format: int32
+            X-Rate-Reset:
+              description: timestamp to reset limit
+              schema:
+                type: integer
+                format: int64
 
 components:
   schemas:
@@ -1140,8 +1307,7 @@ components:
               example: 0170:0.0.1
               default: 0170:0.0.1
         address:
-          type: string
-          example: mc-node-010a:0.0.1
+          $ref: '#/components/schemas/NodeAddress'
         publickey:
           type: string
           format: publickey
@@ -1162,8 +1328,6 @@ components:
       - url
       - policy
       - suffrage
-      - genesis
-      - fee_amount
       properties:
         _hint:
           allOf:
@@ -1221,40 +1385,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Node'
-        fee_amount:
-          description: >-
-           - if type is "fixed", *amount* should be set. It is the amount of fee.
-
-           - if type is "ratio", *ratio* should be set.
-
-           - if type is "ratio", *min* should be set. It is the minimum amount of fee.
-          type: object
-          properties:
-            type:
-              type: string
-              enum:
-              - fixed
-              - ratio
-            amount:
-              $ref: '#/components/schemas/Amount'
-            ratio:
-              type: number
-              format: float
-              description: if type is "ratio", the ratio of fee
-            min:
-              $ref: '#/components/schemas/Amount'
-        genesis:
-          type: object
-          required:
-          - account
-          - balance
-          properties:
-            account:
-              $ref: '#/components/schemas/Account'
-            balance:
-              allOf:
-                - $ref: '#/components/schemas/Amount'
-              description: the initial balance
 
     Manifest:
       type: object
@@ -1318,11 +1448,6 @@ components:
         height of *block*.
       type: integer
       format: int64
-    Amount:
-      description: >-
-        The amount of currency. It is big number, represented by string.
-      type: string
-      example: "33"
 
     AccountKey:
       description: >-
@@ -1422,9 +1547,9 @@ components:
           description: hash account
           example: CkNB7yu1YbAU5c8LFRV6HbFiuj9azQ3LCwuTuxMREbkd
         address:
-          type: string
-          description: account address
-          example: B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1
+          allOf:
+            - $ref: '#/components/schemas/AccountAddress'
+            - description: account address
         keys:
           type: object
           properties:
@@ -1456,22 +1581,6 @@ components:
               type: integer
               format: int32
               example: 100
-
-    AccountValue:
-      allOf:
-        - $ref: '#/components/schemas/Account'
-        - type: object
-          required:
-          - balance
-          - height
-          - previous_height
-          properties:
-            balance:
-              $ref: '#/components/schemas/Amount'
-            height:
-              $ref: '#/components/schemas/Height'
-            previous_height:
-              $ref: '#/components/schemas/Height'
 
     ManifestHAL:
       allOf:
@@ -1618,7 +1727,7 @@ components:
                           example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1
                 operations:
                   description: >-
-                    Getting *operation*s, which are related of the account.
+                    *operation*s, which are related of the account.
                   allOf:
                     - $ref: '#/components/schemas/HALLink'
                     - type: object
@@ -1628,7 +1737,7 @@ components:
                           example: /account/B5ev8dDUpAdkCUnm8N2RQwUM86kcCLQqhCBd78FTxhtv-a000:0.0.1/operations
                 operations:{offset}:
                   description: >-
-                    Getting *operation*s, which are related of the account after offset.
+                    *operation*s, which are related of the account after offset.
                   allOf:
                     - $ref: '#/components/schemas/HALLink'
                     - type: object
@@ -1642,7 +1751,7 @@ components:
                           example: true
                 operations:{offset,reverse}:
                   description: >-
-                    Getting *operation*s, which are related of the account after offset by reverse order.
+                    *operation*s, which are related of the account after offset by reverse order.
                   allOf:
                     - $ref: '#/components/schemas/HALLink'
                     - type: object
@@ -1768,44 +1877,6 @@ components:
         memo:
           type: string
           example: "show me and find me"
-
-    OperationValue:
-      type: object
-      required:
-      - _hint
-      - hash
-      - operation
-      - height
-      - confirmed_at
-      - in_state
-      properties:
-        _hint:
-          allOf:
-            - $ref: '#/components/schemas/Hint'
-            - type: string
-              example: 0150:0.0.1
-              default: 0150:0.0.1
-        hash:
-          description: operation value hash, not operation hash
-          type: string
-          format: hash
-          example: 6GymxmuvhgUfAKWYQUKKveYh1H8b981vQaZcMsbWqykS
-        operation:
-          oneOf:
-            - $ref: '#/components/schemas/CreateAccounts'
-            - $ref: '#/components/schemas/KeyUpdater'
-            - $ref: '#/components/schemas/Transfers'
-            - $ref: '#/components/schemas/GenesisAccount'
-        height:
-          $ref: '#/components/schemas/Height'
-        confirmed_at:
-          type: string
-          format: date-time
-          example: "2020-10-13T14:37:20Z"
-        in_state:
-          description: Whether the operation is in block or not. If `false`, the operation is processed, but ignored with it's own problem.
-          type: boolean
-          example: true
 
     OperationHAL:
       allOf:
@@ -2001,6 +2072,47 @@ components:
                           type: string
                           example: /block/operations?reverse=1
 
+    OperationsByHeightHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _embedded:
+              type: array
+              items:
+                $ref: '#/components/schemas/OperationHAL'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/254/operations
+                next:
+                  description: >-
+                    next operations with *offset*.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/254/operations?offset=0
+                reverse:
+                  description: >-
+                    operations by reverse oder of self.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /block/254/operations?reverse=1
+
     OperationBuilderHAL:
       allOf:
         - $ref: '#/components/schemas/HAL'
@@ -2062,6 +2174,36 @@ components:
                           type: boolean
                           default: true
                           example: true
+                operation-fact:{currency-register}:
+                  description: >-
+                    request the template of *currency-register* operation.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /builder/operation/fact/template/currency-register
+                          example: /builder/operation/fact/template/currency-register
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+                operation-fact:{currency-policy-updater}:
+                  description: >-
+                    request the template of *currency-policy-updater* operation.
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /builder/operation/fact/template/currency-policy-updater
+                          example: /builder/operation/fact/template/currency-policy-updater
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
 
     CreateAccounts:
       allOf:
@@ -2087,13 +2229,21 @@ components:
             fact:
               $ref: '#/components/schemas/TransfersFact'
 
-    GenesisAccount:
+    CurrencyRegister:
       allOf:
         - $ref: '#/components/schemas/Operation'
         - type: object
           properties:
             fact:
-              $ref: '#/components/schemas/GenesisAccountFact'
+              $ref: '#/components/schemas/CurrencyRegisterFact'
+
+    CurrencyPolicyUpdater:
+      allOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: object
+          properties:
+            fact:
+              $ref: '#/components/schemas/CurrencyPolicyUpdaterFact'
 
     CreateAccountsFact:
       allOf:
@@ -2122,10 +2272,9 @@ components:
               format: bytes
               example: cmFpc2VkIGJ5
             sender:
-              description: >-
-                Replace your own sender address.
-              type: string
-              example: mother-a000:0.0.1
+              allOf:
+                - $ref: '#/components/schemas/AccountAddress'
+                - description: Replace your own sender address.
             items:
               type: array
               items:
@@ -2136,11 +2285,12 @@ components:
                 properties:
                   keys:
                     $ref: '#/components/schemas/AccountKeys'
-                  amount:
-                    description: >-
-                      The initial balance of account.
-                    allOf:
-                      - $ref: '#/components/schemas/Amount'
+                  amounts:
+                    type: array
+                    items:
+                      description: The initial balance of account.
+                      allOf:
+                        - $ref: '#/components/schemas/Amount'
 
     KeyUpdaterFact:
       allOf:
@@ -2152,6 +2302,7 @@ components:
           - token
           - target
           - keys
+          - currency
           properties:
             _hint:
               allOf:
@@ -2172,12 +2323,15 @@ components:
               format: bytes
               example: cmFpc2VkIGJ5
             target:
-              description: >-
-                Replace your own account owner address.
-              type: string
-              example: mother-a000:0.0.1
+              allOf:
+                - $ref: '#/components/schemas/AccountAddress'
+                - description: Replace your own account owner address.
             keys:
               $ref: '#/components/schemas/AccountKeys'
+            currency:
+              allOf:
+                - $ref: '#/components/schemas/AccountKeys'
+                - description: currency for fee
 
     TransfersFact:
       allOf:
@@ -2209,10 +2363,9 @@ components:
               format: bytes
               example: cmFpc2VkIGJ5
             sender:
-              description: >-
-                Replace your own sender address.
-              type: string
-              example: mother-a000:0.0.1
+              allOf:
+                - $ref: '#/components/schemas/AccountAddress'
+                - description: Replace your own sender address.
             items:
               type: array
               items:
@@ -2222,16 +2375,17 @@ components:
                 - amount
                 properties:
                   receiver:
-                    type: string
-                    description: >-
-                      Receiver account address.
-                  amount:
-                    description: >-
-                      The amount to transfer.
                     allOf:
-                      - $ref: '#/components/schemas/Amount'
+                      - $ref: '#/components/schemas/AccountAddress'
+                      - description: Receiver account address.
+                  amounts:
+                    type: array
+                    items:
+                      description: The amount to transfer.
+                      allOf:
+                        - $ref: '#/components/schemas/Amount'
 
-    GenesisAccountFact:
+    CurrencyRegisterFact:
       allOf:
         - $ref: '#/components/schemas/BaseFact'
         - type: object
@@ -2239,24 +2393,65 @@ components:
           - _hint
           - hash
           - token
-          - genesis_node_key
-          - keys
+          - currency
           properties:
             _hint:
               allOf:
                 - $ref: '#/components/schemas/Hint'
                 - type: string
-                  example: a007:0.0.1
-                  default: a007:0.0.1
-            genesis_node_key:
+                  example: a028:0.0.1
+                  default: a028:0.0.1
+            hash:
               description: >-
-                The *publickey* of the node, which generates genesis block.
+                The value of hash will be generated automatically by builder. *Don't need to edit*.
               type: string
-              example: 04805444d3eb37090874c13d5620657b33a7f2c98f631ca2c2f87ff6ebace5cf0c0fbf860ea6003a7ad01d57f8e5582aa2aad1345d5d2bf5c2e703e340ff7b690d-0115:0.0.1
-            keys:
-              type: array
-              items:
-                $ref: '#/components/schemas/AccountKey'
+              format: hash
+              example: 4jhzcudKgtoPGR6rA7Fuxmfwz3C8KGiP5MEKXuBXcW9j
+            token:
+              description: >-
+                Replace your own token. *token* value should be encoded by base64.
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+            currency:
+              allOf:
+                - $ref: '#/components/schemas/CurrencyDesign'
+
+    CurrencyPolicyUpdaterFact:
+      allOf:
+        - $ref: '#/components/schemas/BaseFact'
+        - type: object
+          required:
+          - _hint
+          - hash
+          - token
+          - currency
+          - policy
+          properties:
+            _hint:
+              allOf:
+                - $ref: '#/components/schemas/Hint'
+                - type: string
+                  example: a028:0.0.1
+                  default: a028:0.0.1
+            hash:
+              description: >-
+                The value of hash will be generated automatically by builder. *Don't need to edit*.
+              type: string
+              format: hash
+              example: 4jhzcudKgtoPGR6rA7Fuxmfwz3C8KGiP5MEKXuBXcW9j
+            token:
+              description: >-
+                Replace your own token. *token* value should be encoded by base64.
+              type: string
+              format: bytes
+              example: cmFpc2VkIGJ5
+            currency:
+              allOf:
+                - $ref: '#/components/schemas/CurrencyID'
+            policy:
+              allOf:
+                - $ref: '#/components/schemas/CurrencyPolicy'
 
     OperationTemplateCreateAccountsFactHAL:
       allOf:
@@ -2287,23 +2482,23 @@ components:
                   type: object
                   properties:
                     token:
-                      description: >-
+                      description: >
                         *base64* encoded **example** bytes
                       type: string
                       example: cmFpc2VkIGJ5
                     sender:
-                      description: >-
-                        **example** sender *address*
-                      type: string
-                      example: "mother-a000:0.0.1"
+                      allOf:
+                        - $ref: '#/components/schemas/AccountAddress'
+                        - description: >
+                            **example** sender *address*
                     items.keys.keys.key:
-                      description: >-
+                      description: >
                         **example** new account *publickey*
                       type: string
                       format: publickey
                       example: "oRHdEPPrgbfNxUp6TWsC35DmWu1zbLCW9rp41Z8npF8H-0113:0.0.1"
                     items.amount:
-                      description: >-
+                      description: >
                         **example** amount of new account
                       type: string
                       example: "-333"
@@ -2354,10 +2549,10 @@ components:
                       type: string
                       example: cmFpc2VkIGJ5
                     target:
-                      description: >-
-                        **example** key owner *address*
-                      type: string
-                      example: "mother-a000:0.0.1"
+                      allOf:
+                        - $ref: '#/components/schemas/AccountAddress'
+                        - description: >
+                            **example** key owner *address*
                     keys.keys.key:
                       description: >-
                         **example** new account *publickey*
@@ -2411,15 +2606,15 @@ components:
                       type: string
                       example: cmFpc2VkIGJ5
                     sender:
-                      description: >-
-                        **example** sender *address*
-                      type: string
-                      example: "mother-a000:0.0.1"
+                      allOf:
+                        - $ref: '#/components/schemas/AccountAddress'
+                        - description: >
+                            **example** sender *address*
                     items.receiver:
-                      description: >-
-                        **example** receiver address
-                      type: string
-                      example: "father-a000:0.0.1"
+                      allOf:
+                        - $ref: '#/components/schemas/AccountAddress'
+                        - description: >
+                            **example** receiver address
                     items.amount:
                       description: >-
                         **example** amount to transfer
@@ -2437,6 +2632,107 @@ components:
                           type: string
                           example: /builder/operation/fact/template/transfers
                           default: /builder/operation/fact/template/transfers
+
+    OperationTemplateCurrencyRegisterFactHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-currency-register-operation-fact
+                  example: mitum-currency-currency-register-operation-fact
+                hint:
+                  type: string
+                  default: a028:0.0.1
+                  example: a028:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/CurrencyRegisterFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new fact can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    token:
+                      description: >-
+                        *base64* encoded **example** bytes
+                      type: string
+                      example: cmFpc2VkIGJ5
+                    currency:
+                      allOf:
+                        - $ref: '#/components/schemas/CurrencyDesign'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact/template/currency-register
+                          default: /builder/operation/fact/template/currency-register
+
+    OperationTemplateCurrencyPolicyUpdaterFactHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-currency-policy-updater-operation-fact
+                  example: mitum-currency-currency-policy-updater-operation-fact
+                hint:
+                  type: string
+                  default: a034:0.0.1
+                  example: a034:0.0.1
+            _embedded:
+              $ref: '#/components/schemas/CurrencyPolicyUpdaterFact'
+            _extras:
+              type: object
+              required:
+              - default
+              properties:
+                default:
+                  description: >-
+                    Simply new fact can be generated by replacing the default value by your own values.
+                  type: object
+                  properties:
+                    token:
+                      description: >-
+                        *base64* encoded **example** bytes
+                      type: string
+                      example: cmFpc2VkIGJ5
+                    currency:
+                      allOf:
+                        - $ref: '#/components/schemas/CurrencyID'
+                    policy:
+                      allOf:
+                        - $ref: '#/components/schemas/CurrencyPolicy'
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          example: /builder/operation/fact/template/currency-policy-updater
+                          default: /builder/operation/fact/template/currency-policy-updater
 
     OperationTemplateCreateAccountsHAL:
       allOf:
@@ -2537,5 +2833,288 @@ components:
                           type: string
                           example: /builder/operation/sign
                           default: /builder/operation/sign
+
+
+    CurrenciesHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+            _links:
+              type: object
+              properties:
+                self:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /currency/
+                          example: /currency/
+                currency:{currency_id}:
+                  allOf:
+                    - $ref: '#/components/schemas/HALLink'
+                    - type: object
+                      properties:
+                        href:
+                          type: string
+                          default: /currency/XXX
+                          example: /currency/XXX
+                        templated:
+                          type: boolean
+                          default: true
+                          example: true
+
+    CurrencyHAL:
+      allOf:
+        - $ref: '#/components/schemas/HAL'
+        - type: object
+          properties:
+             hint:
+              type: object
+              properties:
+                name:
+                  type: string
+                  default: mitum-currency-currency-design
+                  example: mitum-currency-currency-design
+                hint:
+                  type: string
+                  default: a030:0.0.1
+                  example: a030:0.0.1
+             _embedded:
+                $ref: '#/components/schemas/CurrencyDesign'
+             _links:
+                type: object
+                properties:
+                  self:
+                    allOf:
+                      - $ref: '#/components/schemas/HALLink'
+                      - type: object
+                        properties:
+                          href:
+                            type: string
+                            default: /currency/XXX
+                            example: /currency/XXX
+
+    CurrencyID:
+      description: currency unique id(or name)
+      type: string
+      example: XXX
+
+    AccountValue:
+      allOf:
+        - $ref: '#/components/schemas/Account'
+        - type: object
+          required:
+          - balance
+          - height
+          - previous_height
+          properties:
+            balance:
+              $ref: '#/components/schemas/Amount'
+            height:
+              $ref: '#/components/schemas/Height'
+            previous_height:
+              $ref: '#/components/schemas/Height'
+
+    OperationValue:
+      type: object
+      required:
+      - _hint
+      - hash
+      - operation
+      - height
+      - confirmed_at
+      - in_state
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              example: 0150:0.0.1
+              default: 0150:0.0.1
+        hash:
+          description: operation value hash, not operation hash
+          type: string
+          format: hash
+          example: 6GymxmuvhgUfAKWYQUKKveYh1H8b981vQaZcMsbWqykS
+        operation:
+          oneOf:
+            - $ref: '#/components/schemas/CreateAccounts'
+            - $ref: '#/components/schemas/KeyUpdater'
+            - $ref: '#/components/schemas/Transfers'
+            - $ref: '#/components/schemas/CurrencyRegister'
+            - $ref: '#/components/schemas/CurrencyPolicyUpdater'
+        height:
+          $ref: '#/components/schemas/Height'
+        confirmed_at:
+          type: string
+          format: date-time
+          example: "2020-10-13T14:37:20Z"
+        in_state:
+          description: Whether the operation is in block or not. If `false`, the operation is processed, but ignored with it's own problem.
+          type: boolean
+          example: true
+
+    CurrencyDesign:
+      type: object
+      required:
+      - _hint
+      - amount
+      - genesis_account
+      - policy
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a030:0.0.1
+              example: a030:0.0.1
+        amount:
+          $ref: '#/components/schemas/Amount'
+        genesis_account:
+          allOf:
+            - $ref: '#/components/schemas/AccountAddress'
+            - description: genesis account address, which will hold genesis balance
+        policy:
+          $ref: '#/components/schemas/CurrencyPolicy'
+
+    Amount:
+      type: object
+      required:
+      - _hint
+      - hash
+      - amount
+      - currency
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a022:0.0.1
+              example: a022:0.0.1
+        hash:
+          type: string
+          format: hash
+          example: yaJGkXgizfaB3HEAf9LWdWBC3Sh954pzuc2tNTM9PHG
+        amount:
+          type: string
+          description: amount
+          example: 33
+          default: 33
+        currency:
+          $ref: '#/components/schemas/CurrencyID'
+
+    CurrencyPolicy:
+      description: currency policy
+      type: object
+      required:
+      - _hint
+      - new_account_min_balance
+      - feeer
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a036:0.0.1
+              example: a036:0.0.1
+        _hash:
+          type: string
+          format: hash
+          example: yaJGkXgizfaB3HEAf9LWdWBC3Sh954pzuc2tNTM9PHG
+        new_account_min_balance:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: minimum balance for new account
+        feeer:
+          description: fee policy
+          type: object
+          oneOf:
+            - $ref: '#/components/schemas/NilFeeer'
+            - $ref: '#/components/schemas/FixedFeeer'
+            - $ref: '#/components/schemas/RatioFeeer'
+
+    NilFeeer:
+      description: fee policy, which does not charge fee
+      type: object
+      required:
+      - _hint
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a031:0.0.1
+              example: a031:0.0.1
+        type:
+          type: string
+          example: 'nil'
+          default: 'nil'
+
+    FixedFeeer:
+      description: fee policy, which does charge fixed amount
+      type: object
+      required:
+      - _hint
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a032:0.0.1
+              example: a032:0.0.1
+        type:
+          type: string
+          example: 'fixed'
+          default: 'fixed'
+        receiver:
+          allOf:
+            - $ref: '#/components/schemas/AccountAddress'
+            - description: accound address for receving collected fee
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: fee amount
+
+    RatioFeeer:
+      description: fee policy, which does charge fee by transfer amount
+      type: object
+      required:
+      - _hint
+      properties:
+        _hint:
+          allOf:
+            - $ref: '#/components/schemas/Hint'
+            - type: string
+              default: a033:0.0.1
+              example: a033:0.0.1
+        type:
+          type: string
+          example: 'ratio'
+          default: 'ratio'
+        receiver:
+          allOf:
+            - $ref: '#/components/schemas/AccountAddress'
+            - description: accound address for receving collected fee
+        min:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: minimum amounf of fee
+        max:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: maximum amounf of fee
+
+    NodeAddress:
+      description: node address
+      type: string
+      example: 'node0-a000:0.0.1'
+
+    AccountAddress:
+      description: account address
+      type: string
+      example: 'mc-node-010a:0.0.1'
 
 # vi: ft=yaml tw=100 ts=2 sw=2 expandtab smarttab

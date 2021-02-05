@@ -3,14 +3,15 @@ package cmds
 import (
 	"context"
 
-	"github.com/spikeekips/mitum-currency/digest"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
-	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 const ProcessNameDigestStorage = "digest_storage"
@@ -39,8 +40,8 @@ func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	var mst storage.Storage
-	if err := process.LoadStorageContextValue(ctx, &mst); err != nil {
+	var mst *mongodbstorage.Storage
+	if err := LoadStorageContextValue(ctx, &mst); err != nil {
 		return ctx, err
 	}
 
@@ -58,15 +59,13 @@ func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 	}
 }
 
-func loadDigestStorage(st storage.Storage, readonly bool) (*digest.Storage, error) {
+func loadDigestStorage(st *mongodbstorage.Storage, readonly bool) (*digest.Storage, error) {
 	var mst, ost *mongodbstorage.Storage
-	if s, ok := st.(*mongodbstorage.Storage); !ok {
-		return nil, xerrors.Errorf("digest needs *mongodbstorage.Storage, not %T", st)
-	} else if rst, err := s.Readonly(); err != nil {
+	if rst, err := st.Readonly(); err != nil {
 		return nil, err
 	} else {
 		mst = rst
-		ost = s
+		ost = st
 	}
 
 	var nst *digest.Storage

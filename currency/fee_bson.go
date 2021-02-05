@@ -3,38 +3,38 @@ package currency
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ft FeeOperationFact) MarshalBSON() ([]byte, error) {
+func (fact FeeOperationFact) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(
-		bsonenc.MergeBSONM(bsonenc.NewHintedDoc(ft.Hint()),
+		bsonenc.MergeBSONM(bsonenc.NewHintedDoc(fact.Hint()),
 			bson.M{
-				"hash":       ft.h,
-				"token":      ft.token,
-				"fee_amount": ft.fa,
-				"receiver":   ft.receiver,
-				"fee":        ft.fee,
+				"hash":    fact.h,
+				"token":   fact.token,
+				"amounts": fact.amounts,
 			}))
 }
 
 type FeeOperationFactBSONUnpacker struct {
-	H  valuehash.Bytes     `bson:"hash"`
-	TK []byte              `bson:"token"`
-	FA string              `bson:"fee_amount"`
-	RC base.AddressDecoder `bson:"receiver"`
-	FE Amount              `bson:"fee"`
+	H  valuehash.Bytes `bson:"hash"`
+	TK []byte          `bson:"token"`
+	AM []bson.Raw      `bson:"amounts"`
 }
 
-func (ft *FeeOperationFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (fact *FeeOperationFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uft FeeOperationFactBSONUnpacker
 	if err := enc.Unmarshal(b, &uft); err != nil {
 		return err
 	}
 
-	return ft.unpack(enc, uft.H, uft.TK, uft.FA, uft.RC, uft.FE)
+	bam := make([][]byte, len(uft.AM))
+	for i := range uft.AM {
+		bam[i] = uft.AM[i]
+	}
+
+	return fact.unpack(enc, uft.H, uft.TK, bam)
 }
 
 func (op FeeOperation) MarshalBSON() ([]byte, error) {

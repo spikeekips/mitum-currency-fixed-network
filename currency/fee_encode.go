@@ -8,26 +8,25 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ft *FeeOperationFact) unpack(
+func (fact *FeeOperationFact) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	token []byte,
-	fa string,
-	breceiver base.AddressDecoder,
-	fee Amount,
+	bam [][]byte,
 ) error {
-	var receiver base.Address
-	if a, err := breceiver.Encode(enc); err != nil {
-		return err
-	} else {
-		receiver = a
+	fact.h = h
+	fact.token = token
+
+	amounts := make([]Amount, len(bam))
+	for i := range bam {
+		if j, err := DecodeAmount(enc, bam[i]); err != nil {
+			return err
+		} else {
+			amounts[i] = j
+		}
 	}
 
-	ft.h = h
-	ft.token = token
-	ft.fa = fa
-	ft.receiver = receiver
-	ft.fee = fee
+	fact.amounts = amounts
 
 	return nil
 }

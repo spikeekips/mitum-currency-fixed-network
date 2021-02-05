@@ -17,7 +17,7 @@ type baseTestHandlers struct {
 }
 
 func (t *baseTestHandlers) handlers(st *Storage, cache Cache) *Handlers {
-	handlers := NewHandlers(t.networkID, t.Encs, t.JSONEnc, st, cache)
+	handlers := NewHandlers(t.networkID, t.Encs, t.JSONEnc, st, cache, nil)
 	t.NoError(handlers.Initialize())
 
 	return handlers

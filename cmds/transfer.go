@@ -9,23 +9,18 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/localtime"
 
 	currency "github.com/spikeekips/mitum-currency/currency"
 )
 
 type TransferCommand struct {
 	*BaseCommand
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
-	Receiver   AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:""`
-	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
-	Token      string         `help:"token for operation" optional:""`
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
-	Memo       string         `name:"memo" help:"memo"`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       FileLoad       `help:"seal" optional:""`
-
+	OperationFlags
+	Sender   AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
+	Receiver AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:""`
+	Currency CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:""`
+	Big      BigFlag        `arg:"" name:"big" help:"big to send" required:""`
+	Seal     FileLoad       `help:"seal" optional:""`
 	sender   base.Address
 	receiver base.Address
 }
@@ -43,13 +38,6 @@ func (cmd *TransferCommand) Run(version util.Version) error {
 
 	if err := cmd.parseFlags(); err != nil {
 		return err
-	} else if sender, err := cmd.Sender.Encode(jenc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
-	} else if receiver, err := cmd.Receiver.Encode(jenc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
-	} else {
-		cmd.sender = sender
-		cmd.receiver = receiver
 	}
 
 	var op operation.Operation
@@ -74,15 +62,24 @@ func (cmd *TransferCommand) Run(version util.Version) error {
 }
 
 func (cmd *TransferCommand) parseFlags() error {
-	if len(cmd.Token) < 1 {
-		cmd.Token = localtime.String(localtime.Now())
+	if err := cmd.OperationFlags.IsValid(nil); err != nil {
+		return err
+	}
+
+	if sender, err := cmd.Sender.Encode(jenc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else if receiver, err := cmd.Receiver.Encode(jenc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else {
+		cmd.sender = sender
+		cmd.receiver = receiver
 	}
 
 	return nil
 }
 
 func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
-	var items []currency.TransferItem
+	var items []currency.TransfersItem
 	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
 		var sl seal.Seal
 		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
@@ -102,7 +99,12 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 		}
 	}
 
-	item := currency.NewTransferItem(cmd.receiver, cmd.Amount.Amount)
+	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
+	if err := am.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	item := currency.NewTransfersItemSingleAmount(cmd.receiver, am)
 	if err := item.IsValid(nil); err != nil {
 		return nil, err
 	} else {

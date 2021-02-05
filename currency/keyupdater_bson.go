@@ -9,14 +9,15 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ft KeyUpdaterFact) MarshalBSON() ([]byte, error) {
+func (fact KeyUpdaterFact) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(
-		bsonenc.MergeBSONM(bsonenc.NewHintedDoc(ft.Hint()),
+		bsonenc.MergeBSONM(bsonenc.NewHintedDoc(fact.Hint()),
 			bson.M{
-				"hash":   ft.h,
-				"token":  ft.token,
-				"target": ft.target,
-				"keys":   ft.keys,
+				"hash":     fact.h,
+				"token":    fact.token,
+				"target":   fact.target,
+				"keys":     fact.keys,
+				"currency": fact.currency,
 			}))
 }
 
@@ -25,15 +26,16 @@ type KeyUpdaterFactBSONUnpacker struct {
 	TK []byte              `bson:"token"`
 	TG base.AddressDecoder `bson:"target"`
 	KS bson.Raw            `bson:"keys"`
+	CR string              `bson:"currency"`
 }
 
-func (ft *KeyUpdaterFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var utf KeyUpdaterFactBSONUnpacker
-	if err := bson.Unmarshal(b, &utf); err != nil {
+func (fact *KeyUpdaterFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var ufact KeyUpdaterFactBSONUnpacker
+	if err := bson.Unmarshal(b, &ufact); err != nil {
 		return err
 	}
 
-	return ft.unpack(enc, utf.H, utf.TK, utf.TG, utf.KS)
+	return fact.unpack(enc, ufact.H, ufact.TK, ufact.TG, ufact.KS, ufact.CR)
 }
 
 func (op KeyUpdater) MarshalBSON() ([]byte, error) {

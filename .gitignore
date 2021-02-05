@@ -21,3 +21,4 @@ tests/*/*/coverage/
 /go.local.mod
 /go.local.sum
 /mitum-currency
+/mc-blockfs

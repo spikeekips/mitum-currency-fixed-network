@@ -2,21 +2,23 @@ package cmds
 
 import (
 	"context"
-	"encoding/json"
 
-	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum-currency/digest"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/storage"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"golang.org/x/xerrors"
+	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 var RunCommandProcesses []pm.Process
@@ -24,13 +26,11 @@ var RunCommandProcesses []pm.Process
 var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameStorage,
-			"set_storage", cmd.hookLoadStorage).SetOverride(true),
-		pm.NewHook(pm.HookPrefixPost, process.ProcessNameStorage,
-			"load_genesis_account", cmd.hookLoadGenesisAccount).SetOverride(true),
+			"set_storage", cmd.hookLoadCurrencies).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 			"set_currency_network_handlers", cmd.hookSetNetworkHandlers).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
-			"apply_fee", cmd.hookApplyFee).SetOverride(true),
+			"initialize_proposal_processor", cmd.hookInitializeProposalProcessor).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, ProcessNameDigestAPI,
 			"set_digest_api_handlers", cmd.hookDigestAPIHandlers).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, ProcessNameDigester,
@@ -55,9 +55,6 @@ func init() {
 type RunCommand struct {
 	*mitumcmds.RunCommand
 	*BaseNodeCommand
-	storage        storage.Storage
-	genesisAccount *currency.Account
-	genesisBalance *currency.Amount
 }
 
 func NewRunCommand(dryrun bool) (RunCommand, error) {
@@ -92,18 +89,44 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 	return cmd, nil
 }
 
-func (cmd *RunCommand) hookLoadStorage(ctx context.Context) (context.Context, error) {
-	cmd.storage = (storage.Storage)(nil)
-	if err := process.LoadStorageContextValue(ctx, &cmd.storage); err != nil {
+func (cmd *RunCommand) hookLoadCurrencies(ctx context.Context) (context.Context, error) {
+	cmd.Log().Debug().Msg("loading currencies from mitum storage")
+
+	var st *mongodbstorage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 
-	return ctx, nil
+	cp := currency.NewCurrencyPool()
+
+	if err := digest.LoadCurrenciesFromStorage(st, base.NilHeight, func(sta state.State) (bool, error) {
+		if err := cp.Set(sta); err != nil {
+			return false, err
+		} else {
+			cmd.Log().Debug().Interface("currency", sta).Msg("currency loaded from mitum storage")
+
+			return true, nil
+		}
+	}); err != nil {
+		return ctx, err
+	}
+
+	return context.WithValue(ctx, ContextValueCurrencyPool, cp), nil
 }
 
 func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context, error) {
 	var cs *isaac.ConsensusStates
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
+		return ctx, err
+	}
+
+	var st *mongodbstorage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
+		return ctx, err
+	}
+
+	var cp *currency.CurrencyPool
+	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
 		return ctx, err
 	}
 
@@ -115,102 +138,40 @@ func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context
 	}
 
 	if cs := cs.StateHandler(base.StateConsensus); cs != nil {
-		cs.(*isaac.StateConsensusHandler).WhenBlockSaved(cmd.whenBlockSaved(di))
+		cs.(*isaac.StateConsensusHandler).WhenBlockSaved(cmd.whenBlockSaved(st, cp, di))
 	}
 	if cs := cs.StateHandler(base.StateSyncing); cs != nil {
-		cs.(*isaac.StateSyncingHandler).WhenBlockSaved(cmd.whenBlockSaved(di))
+		cs.(*isaac.StateSyncingHandler).WhenBlockSaved(cmd.whenBlockSaved(st, cp, di))
 	}
 
 	return ctx, nil
 }
 
-func (cmd *RunCommand) hookLoadGenesisAccount(ctx context.Context) (context.Context, error) {
-	cmd.Log().Debug().Msg("tryingo to load genesis info")
-
-	var enc *jsonenc.Encoder
-	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
-		return ctx, err
-	}
-
-	var st storage.Storage
-	if err := process.LoadStorageContextValue(ctx, &st); err != nil {
-		return ctx, err
-	}
-
-	var blockFS *storage.BlockFS
-	if err := process.LoadBlockFSContextValue(ctx, &blockFS); err != nil {
-		return nil, err
-	}
-
-	var ga *currency.Account
-	var gb *currency.Amount
-	if ac, ab, exists, err := cmd.loadGenesisAccount(enc, st, blockFS); err != nil {
-		return ctx, err
-	} else if exists {
-		ga = &ac
-		gb = &ab
-	}
-
-	if ga == nil || gb == nil {
-		cmd.Log().Debug().Msg("genesis info not loaded")
-	} else {
-		cmd.genesisAccount = ga
-		cmd.genesisBalance = gb
-
-		cmd.Log().Debug().
-			Interface("account", *cmd.genesisAccount).Interface("balance", *cmd.genesisBalance).
-			Msg("genesis info loaded")
-	}
-
-	return ctx, nil
-}
-
-func (cmd *RunCommand) whenBlockSaved(di *digest.Digester) func([]block.Block) {
+func (cmd *RunCommand) whenBlockSaved(
+	st *mongodbstorage.Storage,
+	cp *currency.CurrencyPool,
+	di *digest.Digester,
+) func([]block.Block) {
 	return func(blocks []block.Block) {
-		if err := cmd.checkGenesisInfo(blocks); err != nil {
-			cmd.Log().Error().Err(err).Msg("failed to check genesis account info")
-
-			return
-		}
-
 		if di != nil {
 			go func() {
 				di.Digest(blocks)
 			}()
 		}
-	}
-}
 
-func (cmd *RunCommand) checkGenesisInfo(blocks []block.Block) error {
-	if cmd.genesisBalance != nil && cmd.genesisBalance.Compare(currency.ZeroAmount) > 0 {
-		return nil
-	}
+		go func() {
+			if err := digest.LoadCurrenciesFromStorage(st, blocks[0].Height(), func(sta state.State) (bool, error) {
+				if err := cp.Set(sta); err != nil {
+					return false, err
+				} else {
+					cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum storage")
 
-	// NOTE catch genesis block
-	var genesisBlock block.Block
-	for _, blk := range blocks {
-		if blk.Height() == base.Height(0) {
-			genesisBlock = blk
-
-			break
-		}
-	}
-
-	if genesisBlock == nil {
-		return nil
-	}
-
-	cmd.Log().Debug().Msg("trying to find genesis block")
-
-	if ga, gb, err := cmd.saveGenesisAccountInfo(cmd.storage, genesisBlock); err != nil {
-		cmd.Log().Error().Err(err).Msg("failed to save genesis account to node info")
-
-		return err
-	} else {
-		cmd.genesisAccount = &ga
-		cmd.genesisBalance = &gb
-
-		return nil
+					return true, nil
+				}
+			}); err != nil {
+				cmd.Log().Error().Err(err).Msg("failed to load currency designs from storage")
+			}
+		}()
 	}
 }
 
@@ -220,54 +181,69 @@ func (cmd *RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Cont
 		return ctx, err
 	}
 
-	var design FeeDesign
-	var fa currency.FeeAmount
-	switch err := LoadFeeDesignContextValue(ctx, &design); {
-	case err != nil:
-		return ctx, err
-	case design.FeeAmount == nil:
-		return ctx, xerrors.Errorf("empty fee amount")
-	default:
-		fa = design.FeeAmount
-	}
-
 	nt.SetNodeInfoHandler(NodeInfoHandler(
 		nt.NodeInfoHandler(),
-		fa,
-		func() *currency.Account {
-			return cmd.genesisAccount
-		},
-		func() *currency.Amount {
-			return cmd.genesisBalance
-		},
 	))
 
 	return ctx, nil
 }
 
-func (cmd *RunCommand) hookApplyFee(ctx context.Context) (context.Context, error) {
-	var design FeeDesign
-	switch err := LoadFeeDesignContextValue(ctx, &design); {
-	case err != nil:
+func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
-	case design.FeeAmount == nil:
-		return ctx, xerrors.Errorf("empty fee amount")
-	case design.ReceiverFunc == nil:
-		return ctx, xerrors.Errorf("empty fee receiver func")
 	}
 
-	if c, err := initializeProposalProcessor(
-		ctx,
-		currency.NewOperationProcessor(design.FeeAmount, design.ReceiverFunc),
-	); err != nil {
+	var local *isaac.Local
+	if err := process.LoadLocalContextValue(ctx, &local); err != nil {
+		return ctx, err
+	}
+
+	var cp *currency.CurrencyPool
+	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
+		return ctx, err
+	}
+
+	opr := currency.NewOperationProcessor(cp)
+
+	if _, err := opr.SetProcessor(currency.CreateAccounts{}, currency.NewCreateAccountsProcessor(cp)); err != nil {
+		return ctx, err
+	} else if _, err := opr.SetProcessor(currency.KeyUpdater{}, currency.NewKeyUpdaterProcessor(cp)); err != nil {
+		return ctx, err
+	} else if _, err := opr.SetProcessor(currency.Transfers{}, currency.NewTransfersProcessor(cp)); err != nil {
+		return ctx, err
+	}
+
+	pubs := make([]key.Publickey, len(suffrage.Nodes()))
+	pubs[0] = local.Node().Publickey()
+	var i int = 1
+	local.Nodes().Traverse(func(n network.Node) bool {
+		pubs[i] = n.Publickey()
+		i++
+
+		return true
+	})
+
+	var threshold base.Threshold
+	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), local.Policy().ThresholdRatio()); err != nil {
 		return ctx, err
 	} else {
-		ctx = c
+		threshold = i
 	}
 
-	cmd.Log().Debug().Interface("fee_amount", json.RawMessage([]byte(design.FeeAmount.Verbose()))).Msg("fee applied")
+	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
+		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
+	); err != nil {
+		return ctx, err
+	}
 
-	return ctx, nil
+	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdater{},
+		currency.NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold),
+	); err != nil {
+		return ctx, err
+	}
+
+	return initializeProposalProcessor(ctx, opr)
 }
 
 func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Context, error) {
@@ -345,6 +321,11 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
+	var cp *currency.CurrencyPool
+	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
+		return nil, err
+	}
+
 	rns := make([]network.Node, local.Nodes().Len()+1)
 	// TODO create new local network channel for remote digest,
 	rns[0] = local.Node()
@@ -359,7 +340,7 @@ func (cmd *RunCommand) setDigestHandlers(
 		})
 	}
 
-	handlers := digest.NewHandlers(conf.NetworkID(), encs, jenc, st, cache).
+	handlers := digest.NewHandlers(conf.NetworkID(), encs, jenc, st, cache, cp).
 		SetNodeInfoHandler(nt.NodeInfoHandler())
 
 	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rns))

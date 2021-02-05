@@ -5,14 +5,13 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func (no FeeDesign) MarshalJSON() ([]byte, error) {
-	m := no.extras
+func (no FeeerDesign) MarshalJSON() ([]byte, error) {
+	m := no.Extras
 	if m == nil {
 		m = map[string]interface{}{}
 	}
 
 	m["type"] = no.Type
-	m["receiver"] = no.Receiver
 
 	return jsonenc.Marshal(m)
 }

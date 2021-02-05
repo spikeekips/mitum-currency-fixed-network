@@ -1,12 +1,13 @@
 package cmds
 
 import (
-	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum-currency/digest"
+	"golang.org/x/xerrors"
+
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 type NodeInfoCommand struct {
@@ -38,9 +39,6 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 
 func NodeInfoHandler(
 	handler network.NodeInfoHandler,
-	fa currency.FeeAmount,
-	fga func() *currency.Account,
-	fgb func() *currency.Amount,
 ) network.NodeInfoHandler {
 	return func() (network.NodeInfo, error) {
 		var ni network.NodeInfoV0
@@ -52,20 +50,6 @@ func NodeInfoHandler(
 			ni = j
 		}
 
-		var ga currency.Account
-		if i := fga(); i == nil {
-			return ni, nil
-		} else {
-			ga = *i
-		}
-
-		var gb currency.Amount
-		if i := fgb(); i == nil {
-			return ni, nil
-		} else {
-			gb = *i
-		}
-
-		return digest.NewNodeInfo(ni, fa, ga, gb), nil
+		return digest.NewNodeInfo(ni), nil
 	}
 }

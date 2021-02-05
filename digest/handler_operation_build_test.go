@@ -107,7 +107,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 
 	newSender := currency.Address("new-Mother")
 	newReceiver := currency.Address("new-Father")
-	newAmount := currency.NewAmount(99)
+	newBig := currency.NewBig(99)
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
@@ -126,8 +126,13 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	)
 	b = bytes.ReplaceAll(
 		b,
-		[]byte(templateAmount.String()),
-		[]byte(newAmount.String()),
+		[]byte(templateBig.String()),
+		[]byte(newBig.String()),
+	)
+	b = bytes.ReplaceAll(
+		b,
+		[]byte(templateCurrencyID.String()),
+		[]byte(t.cid.String()),
 	)
 	b = bytes.ReplaceAll(
 		b,

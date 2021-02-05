@@ -5,17 +5,15 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ulule/limiter/v3"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/ulule/limiter/v3"
-	"github.com/ulule/limiter/v3/drivers/store/memory"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -91,106 +89,143 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 	return nil
 }
 
-type GenesisAccountDesign struct {
-	AccountKeys   *AccountKeysDesign `yaml:"account-keys"`
-	BalanceString string             `yaml:"balance"`
-	Balance       currency.Amount    `yaml:"-"`
+type GenesisCurrenciesDesign struct {
+	AccountKeys *AccountKeysDesign `yaml:"account-keys"`
+	Currencies  []*CurrencyDesign  `yaml:"currencies"`
 }
 
-func (gad *GenesisAccountDesign) IsValid([]byte) error {
-	if err := gad.AccountKeys.IsValid(nil); err != nil {
+func (de *GenesisCurrenciesDesign) IsValid([]byte) error {
+	if de.AccountKeys == nil {
+		return xerrors.Errorf("empty account-keys")
+	}
+
+	if err := de.AccountKeys.IsValid(nil); err != nil {
 		return err
 	}
 
-	if am, err := currency.NewAmountFromString(gad.BalanceString); err != nil {
-		return err
-	} else {
-		gad.Balance = am
+	for i := range de.Currencies {
+		if err := de.Currencies[i].IsValid(nil); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-type FeeDesign struct {
-	Type           string
-	ReceiverString string             `yaml:"receiver,omitempty"`
-	Receiver       base.Address       `yaml:"-"`
-	FeeAmount      currency.FeeAmount `yaml:"-"`
-	ReceiverFunc   func() (base.Address, error)
-	extras         map[string]interface{}
+type CurrencyDesign struct {
+	CurrencyString             *string         `yaml:"currency"`
+	BalanceString              *string         `yaml:"balance"`
+	NewAccountMinBalanceString *string         `yaml:"new-account-min-balance"`
+	Feeer                      *FeeerDesign    `yaml:"feeer"`
+	Balance                    currency.Amount `yaml:"-"`
+	NewAccountMinBalance       currency.Big    `yaml:"-"`
 }
 
-func (no *FeeDesign) UnmarshalYAML(value *yaml.Node) error {
-	var m struct {
-		Type     string
-		Receiver string
-		Extras   map[string]interface{} `yaml:",inline"`
+func (de *CurrencyDesign) IsValid([]byte) error {
+	var cid currency.CurrencyID
+	if de.CurrencyString == nil {
+		return xerrors.Errorf("empty currency")
+	} else {
+		cid = currency.CurrencyID(*de.CurrencyString)
+		if err := cid.IsValid(nil); err != nil {
+			return err
+		}
 	}
 
-	if err := value.Decode(&m); err != nil {
+	if de.BalanceString != nil {
+		if b, err := currency.NewBigFromString(*de.BalanceString); err != nil {
+			return err
+		} else {
+			de.Balance = currency.NewAmount(b, cid)
+			if err := de.Balance.IsValid(nil); err != nil {
+				return err
+			}
+		}
+	}
+
+	if de.NewAccountMinBalanceString == nil {
+		de.NewAccountMinBalance = currency.ZeroBig
+	} else {
+		if b, err := currency.NewBigFromString(*de.NewAccountMinBalanceString); err != nil {
+			return err
+		} else {
+			de.NewAccountMinBalance = b
+		}
+	}
+
+	if de.Feeer == nil {
+		de.Feeer = &FeeerDesign{}
+	} else if err := de.Feeer.IsValid(nil); err != nil {
 		return err
 	}
 
-	var fa currency.FeeAmount
-	switch t := m.Type; t {
-	case "":
-		fa = currency.NewNilFeeAmount()
-	case "fixed":
-		if f, err := no.loadFixedFeeAmount(m.Extras); err != nil {
+	return nil
+}
+
+// FeeerDesign is used for genesis currencies and naturally it's receiver is genesis account
+type FeeerDesign struct {
+	Type   string
+	Extras map[string]interface{} `yaml:",inline"`
+}
+
+func (no *FeeerDesign) IsValid([]byte) error {
+	switch t := no.Type; t {
+	case currency.FeeerNil, "":
+	case currency.FeeerFixed:
+		if err := no.checkFixed(no.Extras); err != nil {
 			return err
-		} else {
-			fa = f
 		}
-	case "ratio":
-		if f, err := no.loadRatioFeeAmount(m.Extras); err != nil {
+	case currency.FeeerRatio:
+		if err := no.checkRatio(no.Extras); err != nil {
 			return err
-		} else {
-			fa = f
 		}
 	default:
-		return xerrors.Errorf("unknown type of fee-amount, %v", t)
+		return xerrors.Errorf("unknown type of feeer, %v", t)
 	}
-
-	no.Type = m.Type
-	no.ReceiverString = m.Receiver
-	no.FeeAmount = fa
-	no.extras = m.Extras
 
 	return nil
 }
 
-func (no FeeDesign) loadFixedFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
+func (no FeeerDesign) checkFixed(c map[string]interface{}) error {
 	if a, found := c["amount"]; !found {
-		return nil, xerrors.Errorf("fixed fee-amount needs `amount`")
+		return xerrors.Errorf("fixed needs `amount`")
 	} else {
-		if n, err := currency.NewAmountFromInterface(a); err != nil {
-			return nil, xerrors.Errorf("invalid amount value, %v of fee-amount: %w", a, err)
+		if n, err := currency.NewBigFromInterface(a); err != nil {
+			return xerrors.Errorf("invalid amount value, %v of fixed: %w", a, err)
 		} else {
-			return currency.NewFixedFeeAmount(n), nil
+			no.Extras["fixed_amount"] = n
 		}
+
+		return nil
 	}
 }
 
-func (no FeeDesign) loadRatioFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
-	var ratio float64
+func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
 	if a, found := c["ratio"]; !found {
-		return nil, xerrors.Errorf("ratio fee-amount needs `ratio`")
+		return xerrors.Errorf("ratio needs `ratio`")
 	} else if f, ok := a.(float64); !ok {
-		return nil, xerrors.Errorf("invalid ratio value type, %T of fee-amount; should be float64", a)
+		return xerrors.Errorf("invalid ratio value type, %T of ratio; should be float64", a)
 	} else {
-		ratio = f
+		no.Extras["ratio_ratio"] = f
 	}
 
-	var min currency.Amount
 	if a, found := c["min"]; !found {
-		return nil, xerrors.Errorf("ratio fee-amount needs `min`")
-	} else if n, err := currency.NewAmountFromInterface(a); err != nil {
-		return nil, xerrors.Errorf("invalid min value, %v of fee-amount: %w", a, err)
+		return xerrors.Errorf("ratio needs `min`")
+	} else if n, err := currency.NewBigFromInterface(a); err != nil {
+		return xerrors.Errorf("invalid min value, %v of ratio: %w", a, err)
 	} else {
-		min = n
+		no.Extras["ratio_min"] = n
 	}
 
-	return currency.NewRatioFeeAmount(ratio, min)
+	if a, found := c["max"]; found {
+		if n, err := currency.NewBigFromInterface(a); err != nil {
+			return xerrors.Errorf("invalid max value, %v of ratio: %w", a, err)
+		} else {
+			no.Extras["ratio_max"] = n
+		}
+	}
+
+	return nil
 }
 
 type DigestDesign struct {

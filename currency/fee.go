@@ -22,67 +22,72 @@ var (
 )
 
 type FeeOperationFact struct {
-	h        valuehash.Hash
-	token    []byte
-	fa       string
-	receiver base.Address
-	fee      Amount
+	h       valuehash.Hash
+	token   []byte
+	amounts []Amount
 }
 
-func NewFeeOperationFact(feeAmount FeeAmount, height base.Height, receiver base.Address, sum Amount) FeeOperationFact {
-	ft := FeeOperationFact{
-		token:    height.Bytes(),
-		fa:       feeAmount.Verbose(),
-		receiver: receiver,
-		fee:      sum,
+func NewFeeOperationFact(height base.Height, ams map[CurrencyID]Big) FeeOperationFact {
+	amounts := make([]Amount, len(ams))
+	var i int
+	for cid := range ams {
+		amounts[i] = NewAmount(ams[cid], cid)
+		i++
 	}
-	ft.h = valuehash.NewSHA256(ft.Bytes())
 
-	return ft
+	// TODO replace random bytes with height
+	fact := FeeOperationFact{
+		token:   height.Bytes(), // for unique token
+		amounts: amounts,
+	}
+	fact.h = valuehash.NewSHA256(fact.Bytes())
+
+	return fact
 }
 
-func (ft FeeOperationFact) Hint() hint.Hint {
+func (fact FeeOperationFact) Hint() hint.Hint {
 	return FeeOperationFactHint
 }
 
-func (ft FeeOperationFact) Hash() valuehash.Hash {
-	return ft.h
+func (fact FeeOperationFact) Hash() valuehash.Hash {
+	return fact.h
 }
 
-func (ft FeeOperationFact) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		ft.token,
-		ft.receiver.Bytes(),
-		ft.fee.Bytes(),
-	)
+func (fact FeeOperationFact) Bytes() []byte {
+	bs := make([][]byte, len(fact.amounts)+1)
+	bs[0] = fact.token
+
+	for i := range fact.amounts {
+		bs[i+1] = fact.amounts[i].Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
 }
 
-func (ft FeeOperationFact) IsValid([]byte) error {
-	if len(ft.token) < 1 {
+func (fact FeeOperationFact) IsValid([]byte) error {
+	if len(fact.token) < 1 {
 		return xerrors.Errorf("empty token for FeeOperationFact")
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		ft.h,
-		ft.receiver,
-		ft.fee,
-	}, nil, false); err != nil {
+	if err := fact.h.IsValid(nil); err != nil {
 		return err
+	}
+
+	for i := range fact.amounts {
+		if err := fact.amounts[i].IsValid(nil); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (ft FeeOperationFact) Token() []byte {
-	return ft.token
+func (fact FeeOperationFact) Token() []byte {
+	return fact.token
 }
 
-func (ft FeeOperationFact) Receiver() base.Address {
-	return ft.receiver
-}
-
-func (ft FeeOperationFact) Fee() Amount {
-	return ft.fee
+func (fact FeeOperationFact) Amounts() []Amount {
+	return fact.amounts
 }
 
 type FeeOperation struct {
@@ -148,30 +153,54 @@ func (op FeeOperation) LastSignedAt() time.Time {
 }
 
 func (op FeeOperation) Process(
+	func(key string) (state.State, bool, error),
+	func(valuehash.Hash, ...state.State) error,
+) error {
+	return nil
+}
+
+type FeeOperationProcessor struct {
+	FeeOperation
+	cp *CurrencyPool
+}
+
+func NewFeeOperationProcessor(cp *CurrencyPool, op FeeOperation) state.Processor {
+	return &FeeOperationProcessor{
+		cp:           cp,
+		FeeOperation: op,
+	}
+}
+
+func (opp *FeeOperationProcessor) Process(
 	getState func(key string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
-	fact := op.Fact().(FeeOperationFact)
-	if err := checkExistsAccountState(StateKeyAccount(fact.receiver), getState); err != nil {
-		return err
-	}
+	fact := opp.Fact().(FeeOperationFact)
 
-	var sb state.State
-	if st, err := existsAccountState(StateKeyBalance(fact.receiver), "balance of receiver", getState); err != nil {
-		return err
-	} else {
-		sb = st
-	}
-
-	if b, err := StateAmountValue(sb); err != nil {
-		return util.IgnoreError.Wrap(err)
-	} else {
-		if st, err := SetStateAmountValue(sb, b.Add(fact.Fee())); err != nil {
-			return xerrors.Errorf("failed to add fee: %w", err)
+	sts := make([]state.State, len(fact.amounts))
+	for i := range fact.amounts {
+		am := fact.amounts[i]
+		var feeer Feeer
+		if j, found := opp.cp.Feeer(am.Currency()); !found {
+			return xerrors.Errorf("unknown currency id, %q found for FeeOperation", am.Currency())
 		} else {
-			sb = st
+			feeer = j
+		}
+
+		if feeer.Receiver() == nil {
+			continue
+		}
+
+		if err := checkExistsState(StateKeyAccount(feeer.Receiver()), getState); err != nil {
+			return err
+		} else if st, _, err := getState(StateKeyBalance(feeer.Receiver(), am.Currency())); err != nil {
+			return err
+		} else {
+			rb := NewAmountState(st, am.Currency())
+
+			sts[i] = rb.Add(am.Big())
 		}
 	}
 
-	return setState(fact.Hash(), sb)
+	return setState(fact.Hash(), sts...)
 }

@@ -123,7 +123,7 @@ func (di *Digester) digest(blk block.Block) error {
 
 func DigestBlock(st *Storage, blk block.Block) error {
 	var bs *BlockStorage
-	if s, err := st.BlockStorage(blk); err != nil {
+	if s, err := NewBlockStorage(st, blk); err != nil {
 		return err
 	} else {
 		bs = s

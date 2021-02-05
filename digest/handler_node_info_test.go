@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -55,11 +54,7 @@ func (t *testHandlerNodeInfo) TestBasic() {
 	handlers := t.handlers(st, DummyCache{})
 
 	handlers.SetNodeInfoHandler(func() (network.NodeInfo, error) {
-		var ga currency.Account
-		var gb currency.Amount
-		var fa currency.FeeAmount
-
-		return NewNodeInfo(ni, fa, ga, gb), nil
+		return NewNodeInfo(ni), nil
 	})
 
 	self, err := handlers.router.Get("root").URL()

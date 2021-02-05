@@ -1,14 +1,14 @@
 package currency
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -19,77 +19,85 @@ var (
 )
 
 type KeyUpdaterFact struct {
-	h      valuehash.Hash
-	token  []byte
-	target base.Address
-	keys   Keys
+	h        valuehash.Hash
+	token    []byte
+	target   base.Address
+	keys     Keys
+	currency CurrencyID
 }
 
-func NewKeyUpdaterFact(token []byte, target base.Address, keys Keys) KeyUpdaterFact {
-	ft := KeyUpdaterFact{
-		token:  token,
-		target: target,
-		keys:   keys,
+func NewKeyUpdaterFact(token []byte, target base.Address, keys Keys, currency CurrencyID) KeyUpdaterFact {
+	fact := KeyUpdaterFact{
+		token:    token,
+		target:   target,
+		keys:     keys,
+		currency: currency,
 	}
-	ft.h = ft.GenerateHash()
+	fact.h = fact.GenerateHash()
 
-	return ft
+	return fact
 }
 
-func (ft KeyUpdaterFact) Hint() hint.Hint {
+func (fact KeyUpdaterFact) Hint() hint.Hint {
 	return KeyUpdaterFactHint
 }
 
-func (ft KeyUpdaterFact) Hash() valuehash.Hash {
-	return ft.h
+func (fact KeyUpdaterFact) Hash() valuehash.Hash {
+	return fact.h
 }
 
-func (ft KeyUpdaterFact) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(ft.Bytes())
+func (fact KeyUpdaterFact) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(fact.Bytes())
 }
 
-func (ft KeyUpdaterFact) Bytes() []byte {
+func (fact KeyUpdaterFact) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		ft.token,
-		ft.target.Bytes(),
-		ft.keys.Bytes(),
+		fact.token,
+		fact.target.Bytes(),
+		fact.keys.Bytes(),
+		fact.currency.Bytes(),
 	)
 }
 
-func (ft KeyUpdaterFact) IsValid([]byte) error {
-	if len(ft.token) < 1 {
+func (fact KeyUpdaterFact) IsValid([]byte) error {
+	if len(fact.token) < 1 {
 		return xerrors.Errorf("empty token for KeyUpdaterFact")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
-		ft.h,
-		ft.target,
-		ft.keys,
+		fact.h,
+		fact.target,
+		fact.keys,
+		fact.currency,
 	}, nil, false); err != nil {
 		return err
 	}
 
-	if !ft.h.Equal(ft.GenerateHash()) {
+	if !fact.h.Equal(fact.GenerateHash()) {
 		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
 }
 
-func (ft KeyUpdaterFact) Token() []byte {
-	return ft.token
+func (fact KeyUpdaterFact) Token() []byte {
+	return fact.token
 }
 
-func (ft KeyUpdaterFact) Target() base.Address {
-	return ft.target
+func (fact KeyUpdaterFact) Target() base.Address {
+	return fact.target
 }
 
-func (ft KeyUpdaterFact) Keys() Keys {
-	return ft.keys
+func (fact KeyUpdaterFact) Keys() Keys {
+	return fact.keys
 }
 
-func (ft KeyUpdaterFact) Addresses() ([]base.Address, error) {
-	return []base.Address{ft.target}, nil
+func (fact KeyUpdaterFact) Currency() CurrencyID {
+	return fact.currency
+}
+
+func (fact KeyUpdaterFact) Addresses() ([]base.Address, error) {
+	return []base.Address{fact.target}, nil
 }
 
 type KeyUpdater struct {
@@ -144,77 +152,4 @@ func (op KeyUpdater) AddFactSigns(fs ...operation.FactSign) (operation.FactSignU
 	op.BaseOperation = op.SetHash(op.GenerateHash())
 
 	return op, nil
-}
-
-func (op KeyUpdater) Process(
-	func(key string) (state.State, bool, error),
-	func(valuehash.Hash, ...state.State) error,
-) error {
-	return nil
-}
-
-type KeyUpdaterProcessor struct {
-	KeyUpdater
-	fa  FeeAmount
-	sa  state.State
-	sb  AmountState
-	fee Amount
-}
-
-func (op *KeyUpdaterProcessor) PreProcess(
-	getState func(key string) (state.State, bool, error),
-	_ func(valuehash.Hash, ...state.State) error,
-) (state.Processor, error) {
-	fact := op.Fact().(KeyUpdaterFact)
-
-	if st, err := existsAccountState(StateKeyAccount(fact.target), "target keys", getState); err != nil {
-		return nil, err
-	} else {
-		op.sa = st
-	}
-
-	if st, err := existsAccountState(StateKeyBalance(fact.target), "balance of target", getState); err != nil {
-		return nil, err
-	} else {
-		op.sb = NewAmountState(st)
-	}
-
-	if err := checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
-		return nil, util.IgnoreError.Errorf("invalid signing: %w", err)
-	}
-
-	if ks, err := StateKeysValue(op.sa); err != nil {
-		return nil, util.IgnoreError.Wrap(err)
-	} else if ks.Equal(fact.Keys()) {
-		return nil, util.IgnoreError.Errorf("same Keys with the existing")
-	}
-
-	if fee, err := op.fa.Fee(ZeroAmount); err != nil {
-		return nil, util.IgnoreError.Wrap(err)
-	} else {
-		switch b, err := StateAmountValue(op.sb); {
-		case err != nil:
-			return nil, util.IgnoreError.Wrap(err)
-		case b.Compare(fee) < 0:
-			return nil, util.IgnoreError.Errorf("insufficient balance with fee")
-		default:
-			op.fee = fee
-		}
-	}
-
-	return op, nil
-}
-
-func (op *KeyUpdaterProcessor) Process(
-	_ func(key string) (state.State, bool, error),
-	setState func(valuehash.Hash, ...state.State) error,
-) error {
-	fact := op.Fact().(KeyUpdaterFact)
-
-	op.sb = op.sb.Sub(op.fee).AddFee(op.fee)
-	if st, err := SetStateKeysValue(op.sa, fact.keys); err != nil {
-		return err
-	} else {
-		return setState(fact.Hash(), st, op.sb)
-	}
 }

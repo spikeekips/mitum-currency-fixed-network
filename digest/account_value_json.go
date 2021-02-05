@@ -1,6 +1,8 @@
 package digest
 
 import (
+	"encoding/json"
+
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -9,9 +11,9 @@ import (
 type AccountValueJSONPacker struct {
 	jsonenc.HintedHead
 	currency.AccountPackerJSON
-	BL currency.Amount `json:"balance"`
-	HT base.Height     `json:"height"`
-	PT base.Height     `json:"previous_height"`
+	BL []currency.Amount `json:"balance"`
+	HT base.Height       `json:"height"`
+	PT base.Height       `json:"previous_height"`
 }
 
 func (va AccountValue) MarshalJSON() ([]byte, error) {
@@ -25,27 +27,30 @@ func (va AccountValue) MarshalJSON() ([]byte, error) {
 }
 
 type AccountValueJSONUnpacker struct {
-	BL currency.Amount `json:"balance"`
-	HT base.Height     `json:"height"`
-	PT base.Height     `json:"previous_height"`
+	BL []json.RawMessage `json:"balance"`
+	HT base.Height       `json:"height"`
+	PT base.Height       `json:"previous_height"`
 }
 
 func (va *AccountValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ua AccountValueJSONUnpacker
-	if err := enc.Unmarshal(b, &ua); err != nil {
+	var uva AccountValueJSONUnpacker
+	if err := enc.Unmarshal(b, &uva); err != nil {
 		return err
-	} else {
-		va.balance = ua.BL
-		va.height = ua.HT
-		va.previousHeight = ua.PT
 	}
 
-	var uac currency.Account
-	if err := enc.Decode(b, &uac); err != nil {
-		return err
-	} else {
-		va.ac = uac
+	bb := make([][]byte, len(uva.BL))
+	for i := range uva.BL {
+		bb[i] = uva.BL[i]
 	}
 
-	return nil
+	ac := new(currency.Account)
+	if err := va.unpack(enc, nil, bb, uva.HT, uva.PT); err != nil {
+		return err
+	} else if err := ac.UnpackJSON(b, enc); err != nil {
+		return err
+	} else {
+		va.ac = *ac
+
+		return nil
+	}
 }

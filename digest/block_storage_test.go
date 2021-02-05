@@ -56,7 +56,7 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 	nblk := blk.SetOperations(ops)
 
 	st, _ := t.Storage()
-	bs, err := st.BlockStorage(nblk)
+	bs, err := NewBlockStorage(st, nblk)
 	t.NoError(err)
 
 	t.NoError(bs.Prepare())
@@ -124,7 +124,7 @@ func (t *testStorage) TestBlockStorageWithStates() {
 		acs[i] = ac
 		sta := t.newAccountState(ac, blk.Height())
 
-		am := t.randomAmount()
+		am := currency.MustNewAmount(t.randomBig(), t.cid)
 		stb := t.newBalanceState(ac, blk.Height(), am)
 
 		balances[ac.Address().String()] = am
@@ -135,7 +135,7 @@ func (t *testStorage) TestBlockStorageWithStates() {
 
 	nblk := blk.SetStates(sts)
 	st, _ := t.Storage()
-	bs, err := st.BlockStorage(nblk)
+	bs, err := NewBlockStorage(st, nblk)
 	t.NoError(err)
 
 	t.NoError(bs.Prepare())
@@ -149,6 +149,85 @@ func (t *testStorage) TestBlockStorageWithStates() {
 		t.True(ac.Address().Equal(uac.Account().Address()))
 		t.Equal(blk.Height(), uac.Height())
 		t.Equal(blk.Height()-1, uac.PreviousHeight())
-		t.Equal(balances[ac.Address().String()], uac.Balance())
+		t.Equal(1, len(uac.Balance()))
+		t.compareAmount(balances[ac.Address().String()], uac.Balance()[0])
+	}
+}
+
+func (t *testStorage) TestBlockStorageWithCurrencyPool() {
+	blk, err := block.NewBlockV0(
+		block.SuffrageInfoV0{},
+		base.Height(3),
+		base.Round(1),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		localtime.Now(),
+	)
+	t.NoError(err)
+
+	// 10 accounts
+	acs := make([]currency.Account, 5)
+	sts := make([]state.State, len(acs)*2+1)
+	balances := map[string]currency.Amount{}
+	for i := 0; i < len(acs); i++ {
+		ac := t.newAccount()
+		acs[i] = ac
+		sta := t.newAccountState(ac, blk.Height())
+
+		am := currency.MustNewAmount(t.randomBig(), t.cid)
+		stb := t.newBalanceState(ac, blk.Height(), am)
+
+		balances[ac.Address().String()] = am
+
+		sts[i*2] = sta
+		sts[i*2+1] = stb
+	}
+
+	big := currency.NewBig(33)
+	cid := currency.CurrencyID("BLK")
+
+	de := currency.NewCurrencyDesign(
+		currency.MustNewAmount(big, cid),
+		currency.NewTestAddress(),
+		currency.NewCurrencyPolicy(
+			currency.NewBig(55),
+			currency.NewFixedFeeer(
+				currency.NewTestAddress(),
+				currency.NewBig(99),
+			),
+		),
+	)
+
+	{
+		st, err := state.NewStateV0(currency.StateKeyCurrencyDesign(de.Currency()), nil, blk.Height())
+		t.NoError(err)
+
+		nst, err := currency.SetStateCurrencyDesignValue(st, de)
+		t.NoError(err)
+
+		sts[len(sts)-1] = nst
+	}
+
+	nblk := blk.SetStates(sts)
+
+	st, _ := t.Storage()
+	bs, err := NewBlockStorage(st, nblk)
+	t.NoError(err)
+
+	t.NoError(bs.Prepare())
+	t.NoError(bs.Commit(context.Background()))
+
+	for _, ac := range acs {
+		uac, found, err := st.Account(ac.Address())
+		t.NoError(err)
+		t.True(found)
+
+		t.True(ac.Address().Equal(uac.Account().Address()))
+		t.Equal(blk.Height(), uac.Height())
+		t.Equal(blk.Height()-1, uac.PreviousHeight())
+		t.Equal(1, len(uac.Balance()))
+		t.compareAmount(balances[ac.Address().String()], uac.Balance()[0])
 	}
 }

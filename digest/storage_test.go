@@ -520,10 +520,10 @@ func (t *testStorage) TestAccountsWithBadState() {
 	ac := t.newAccount()
 
 	height := base.Height(33)
-	st := t.newBalanceState(ac, height, t.randomAmount())
+	st := t.newBalanceState(ac, height, currency.MustNewAmount(t.randomBig(), t.cid))
 
 	_, err := NewAccountValue(st)
-	t.Contains(err.Error(), "not state for currency.Account, string")
+	t.Contains(err.Error(), "not state for currency.Account")
 }
 
 func (t *testStorage) TestAccount() {
@@ -541,7 +541,7 @@ func (t *testStorage) TestAccount() {
 	t.NoError(err)
 	t.insertDoc(st, defaultColNameAccount, docA)
 
-	am := t.randomAmount()
+	am := currency.MustNewAmount(t.randomBig(), t.cid)
 	stB := t.newBalanceState(ac, height, am)
 	docB, err := NewBalanceDoc(stB, t.BSONEnc)
 	t.NoError(err)
@@ -554,7 +554,8 @@ func (t *testStorage) TestAccount() {
 	t.True(ac.Address().Equal(urs.ac.Address()))
 	t.Equal(stA.Height(), urs.height)
 	t.Equal(stA.PreviousHeight(), urs.previousHeight)
-	t.Equal(am, urs.balance)
+	t.Equal(1, len(urs.balance))
+	t.compareAmount(am, urs.balance[0])
 }
 
 func (t *testStorage) TestAccountBalanceUpdated() {
@@ -575,19 +576,19 @@ func (t *testStorage) TestAccountBalanceUpdated() {
 
 	var stB0, stB1 state.State
 	{
-		stB0 = t.newBalanceState(ac, height, t.randomAmount())
-		_, err := currency.StateAmountValue(stB0)
+		stB0 = t.newBalanceState(ac, height, currency.MustNewAmount(t.randomBig(), t.cid))
+		_, err := currency.StateBalanceValue(stB0)
 		t.NoError(err)
 		docB, err := NewBalanceDoc(stB0, t.BSONEnc)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameBalance, docB)
 	}
 
-	lastamount := t.randomAmount()
+	lastAmount := currency.MustNewAmount(t.randomBig(), t.cid)
 	{
 		height = height + 3
 
-		stB1 = t.newBalanceState(ac, height, lastamount)
+		stB1 = t.newBalanceState(ac, height, lastAmount)
 		docB, err := NewBalanceDoc(stB1, t.BSONEnc)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameBalance, docB)
@@ -600,7 +601,54 @@ func (t *testStorage) TestAccountBalanceUpdated() {
 	t.True(ac.Address().Equal(urs.ac.Address()))
 	t.Equal(stB1.Height(), urs.height)
 	t.Equal(stB1.PreviousHeight(), urs.previousHeight)
-	t.Equal(lastamount, urs.balance)
+	t.Equal(1, len(urs.balance))
+	t.compareAmount(lastAmount, urs.balance[0])
+}
+
+func (t *testStorage) TestAccountMultiCurrencies() {
+	st, _ := t.Storage()
+
+	height := base.Height(33)
+	ac := t.newAccount()
+
+	stA := t.newAccountState(ac, height)
+
+	va, err := NewAccountValue(stA)
+	t.NoError(err)
+
+	docA, err := NewAccountDoc(va, t.BSONEnc)
+	t.NoError(err)
+	t.insertDoc(st, defaultColNameAccount, docA)
+
+	amB := currency.MustNewAmount(t.randomBig(), t.cid)
+	stB := t.newBalanceState(ac, height, amB)
+	docB, err := NewBalanceDoc(stB, t.BSONEnc)
+	t.NoError(err)
+	t.insertDoc(st, defaultColNameBalance, docB)
+
+	cidC := currency.CurrencyID("EATME")
+	amC := currency.MustNewAmount(t.randomBig(), cidC)
+	stC := t.newBalanceState(ac, height, amC)
+	docC, err := NewBalanceDoc(stC, t.BSONEnc)
+	t.NoError(err)
+	t.insertDoc(st, defaultColNameBalance, docC)
+
+	urs, found, err := st.Account(ac.Address())
+	t.NoError(err)
+	t.True(found)
+
+	t.Equal(2, len(urs.Balance()))
+	balances := map[currency.CurrencyID]currency.Amount{}
+	for i := range urs.Balance() {
+		am := urs.Balance()[i]
+		balances[am.Currency()] = am
+	}
+
+	amD := balances[t.cid]
+	t.compareAmount(amB, amD)
+
+	amE := balances[cidC]
+	t.compareAmount(amC, amE)
 }
 
 func (t *testStorage) TestOperations() {

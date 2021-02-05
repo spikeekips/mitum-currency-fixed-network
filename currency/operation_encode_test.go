@@ -15,6 +15,8 @@ type baseTestEncode struct {
 	enc       encoder.Encoder
 	encs      *encoder.Encoders
 	newObject func() interface{}
+	encode    func(encoder.Encoder, interface{}) ([]byte, error)
+	decode    func(encoder.Encoder, []byte) (interface{}, error)
 	compare   func(interface{}, interface{})
 }
 
@@ -27,30 +29,63 @@ func (t *baseTestEncode) SetupSuite() {
 	t.encs.AddHinter(operation.BaseFactSign{})
 	t.encs.AddHinter(Key{})
 	t.encs.AddHinter(Keys{})
-
 	t.encs.AddHinter(TransfersFact{})
 	t.encs.AddHinter(Transfers{})
 	t.encs.AddHinter(CreateAccountsFact{})
 	t.encs.AddHinter(CreateAccounts{})
-	t.encs.AddHinter(GenesisAccountFact{})
-	t.encs.AddHinter(GenesisAccount{})
 	t.encs.AddHinter(KeyUpdaterFact{})
 	t.encs.AddHinter(KeyUpdater{})
 	t.encs.AddHinter(FeeOperationFact{})
 	t.encs.AddHinter(FeeOperation{})
 	t.encs.AddHinter(Account{})
+	t.encs.AddHinter(GenesisCurrenciesFact{})
+	t.encs.AddHinter(GenesisCurrencies{})
+	t.encs.AddHinter(Amount{})
+	t.encs.AddHinter(CreateAccountsItemMultiAmountsHinter)
+	t.encs.AddHinter(CreateAccountsItemSingleAmountHinter)
+	t.encs.AddHinter(TransfersItemMultiAmountsHinter)
+	t.encs.AddHinter(TransfersItemSingleAmountHinter)
+	t.encs.AddHinter(CurrencyRegisterFact{})
+	t.encs.AddHinter(CurrencyRegister{})
+	t.encs.AddHinter(CurrencyDesign{})
+	t.encs.AddHinter(NilFeeer{})
+	t.encs.AddHinter(FixedFeeer{})
+	t.encs.AddHinter(RatioFeeer{})
+	t.encs.AddHinter(CurrencyPolicyUpdaterFact{})
+	t.encs.AddHinter(CurrencyPolicyUpdater{})
+	t.encs.AddHinter(CurrencyPolicy{})
 }
 
 func (t *baseTestEncode) TestEncode() {
 	i := t.newObject()
 
-	b, err := t.enc.Marshal(i)
-	t.NoError(err)
+	var err error
 
-	hinter, err := t.enc.DecodeByHint(b)
-	t.NoError(err)
+	var b []byte
+	if t.encode != nil {
+		b, err = t.encode(t.enc, i)
+		t.NoError(err)
+	} else {
+		b, err = t.enc.Marshal(i)
+		t.NoError(err)
+	}
 
-	t.compare(i, hinter)
+	var v interface{}
+	if t.decode != nil {
+		v, err = t.decode(t.enc, b)
+		t.NoError(err)
+	} else {
+		v, err = t.enc.DecodeByHint(b)
+		t.NoError(err)
+	}
+
+	t.compare(i, v)
+}
+
+func (t *baseTestEncode) compareCurrencyDesign(a, b CurrencyDesign) {
+	t.True(a.Amount.Equal(b.Amount))
+	t.True(a.GenesisAccount().Equal(a.GenesisAccount()))
+	t.Equal(a.Policy(), b.Policy())
 }
 
 type baseTestOperationEncode struct {

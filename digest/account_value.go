@@ -16,7 +16,7 @@ var (
 
 type AccountValue struct {
 	ac             currency.Account
-	balance        currency.Amount
+	balance        []currency.Amount
 	height         base.Height
 	previousHeight base.Height
 }
@@ -47,7 +47,7 @@ func (va AccountValue) Account() currency.Account {
 	return va.ac
 }
 
-func (va AccountValue) Balance() currency.Amount {
+func (va AccountValue) Balance() []currency.Amount {
 	return va.balance
 }
 
@@ -71,7 +71,7 @@ func (va AccountValue) SetPreviousHeight(height base.Height) AccountValue {
 	return va
 }
 
-func (va AccountValue) SetBalance(balance currency.Amount) AccountValue {
+func (va AccountValue) SetBalance(balance []currency.Amount) AccountValue {
 	va.balance = balance
 
 	return va

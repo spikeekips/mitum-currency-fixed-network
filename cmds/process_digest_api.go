@@ -7,7 +7,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/spikeekips/mitum-currency/digest"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -18,7 +19,8 @@ import (
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 const (

@@ -17,12 +17,13 @@ import (
 var (
 	templatePrivateKeyString = "Kzxb3TcaxHCp9iq6ekyaNjaeRSdqzvv9JrazTV8cVsZq9U2FQSSG"
 	templatePublickey        key.Publickey
-	templateSender                           = currency.Address("mother")
-	templateReceiver                         = currency.Address("father")
-	templateToken            []byte          = []byte("raised by")
-	templateSignature        key.Signature   = key.Signature([]byte("wolves"))
-	templateAmount           currency.Amount = currency.NewAmount(-333)
-	templateSignedAtString                   = "2020-10-08T07:53:26Z"
+	templateCurrencyID       = currency.CurrencyID("xXx")
+	templateSender           = currency.Address("mother")
+	templateReceiver         = currency.Address("father")
+	templateToken            = []byte("raised by")
+	templateSignature        = key.Signature([]byte("wolves"))
+	templateBig              = currency.NewBig(-333)
+	templateSignedAtString   = "2020-10-08T07:53:26Z"
 	templateSignedAt         time.Time
 )
 
@@ -53,6 +54,10 @@ func (bl Builder) FactTemplate(ht hint.Hint) (Hal, error) {
 		return bl.templateKeyUpdaterFact(), nil
 	case currency.TransfersType:
 		return bl.templateTransfersFact(), nil
+	case currency.CurrencyRegisterType:
+		return bl.templateCurrencyRegisterFact(), nil
+	case currency.CurrencyPolicyUpdaterType:
+		return bl.templateCurrencyPolicyUpdaterFact(), nil
 	default:
 		return nil, xerrors.Errorf("unknown operation, %v", ht.Verbose())
 	}
@@ -65,7 +70,10 @@ func (bl Builder) templateCreateAccountsFact() Hal {
 	fact := currency.NewCreateAccountsFact(
 		templateToken,
 		templateSender,
-		[]currency.CreateAccountItem{currency.NewCreateAccountItem(nkeys, templateAmount)},
+		[]currency.CreateAccountsItem{currency.NewCreateAccountsItemSingleAmount(
+			nkeys,
+			currency.NewAmount(templateBig, templateCurrencyID),
+		)},
 	)
 
 	hal := NewBaseHal(fact, HalLink{})
@@ -73,7 +81,8 @@ func (bl Builder) templateCreateAccountsFact() Hal {
 		"token":               templateToken,
 		"sender":              templateSender,
 		"items.keys.keys.key": templatePublickey,
-		"items.amount":        templateAmount,
+		"items.big":           templateBig,
+		"currency":            templateCurrencyID,
 	})
 }
 
@@ -85,6 +94,7 @@ func (bl Builder) templateKeyUpdaterFact() Hal {
 		templateToken,
 		templateSender,
 		nkeys,
+		templateCurrencyID,
 	)
 
 	hal := NewBaseHal(fact, HalLink{})
@@ -92,6 +102,7 @@ func (bl Builder) templateKeyUpdaterFact() Hal {
 		"token":         templateToken,
 		"target":        templateSender,
 		"keys.keys.key": templatePublickey,
+		"currency":      templateCurrencyID,
 	})
 }
 
@@ -99,7 +110,10 @@ func (bl Builder) templateTransfersFact() Hal {
 	fact := currency.NewTransfersFact(
 		templateToken,
 		templateSender,
-		[]currency.TransferItem{currency.NewTransferItem(templateReceiver, templateAmount)},
+		[]currency.TransfersItem{currency.NewTransfersItemSingleAmount(
+			templateReceiver,
+			currency.NewAmount(templateBig, templateCurrencyID),
+		)},
 	)
 
 	hal := NewBaseHal(fact, HalLink{})
@@ -108,7 +122,41 @@ func (bl Builder) templateTransfersFact() Hal {
 		"token":          templateToken,
 		"sender":         templateSender,
 		"items.receiver": templateReceiver,
-		"items.amount":   templateAmount,
+		"items.big":      templateBig,
+		"items.currency": templateCurrencyID,
+	})
+}
+
+func (bl Builder) templateCurrencyRegisterFact() Hal {
+	po := currency.NewCurrencyPolicy(templateBig, currency.NewNilFeeer())
+	de := currency.NewCurrencyDesign(
+		currency.NewAmount(templateBig, templateCurrencyID),
+		templateReceiver,
+		po,
+	)
+	fact := currency.NewCurrencyRegisterFact(templateToken, de)
+
+	hal := NewBaseHal(fact, HalLink{})
+
+	return hal.AddExtras("default", map[string]interface{}{
+		"token":                    templateToken,
+		"amount.amount":            templateBig,
+		"amount.currency":          templateCurrencyID,
+		"currency.genesis_account": templateReceiver,
+		"currency.policy.new_account_min_balance": templateBig,
+	})
+}
+
+func (bl Builder) templateCurrencyPolicyUpdaterFact() Hal {
+	po := currency.NewCurrencyPolicy(templateBig, currency.NewNilFeeer())
+	fact := currency.NewCurrencyPolicyUpdaterFact(templateToken, templateCurrencyID, po)
+
+	hal := NewBaseHal(fact, HalLink{})
+
+	return hal.AddExtras("default", map[string]interface{}{
+		"token":                          templateToken,
+		"currency":                       templateCurrencyID,
+		"policy.new_account_min_balance": templateBig,
 	})
 }
 
@@ -129,6 +177,10 @@ func (bl Builder) BuildFact(b []byte) (Hal, error) {
 		return bl.buildFactKeyUpdater(t)
 	case currency.TransfersFact:
 		return bl.buildFactTransfers(t)
+	case currency.CurrencyRegisterFact:
+		return bl.buildFactCurrencyRegister(t)
+	case currency.CurrencyPolicyUpdaterFact:
+		return bl.buildFactCurrencyPolicyUpdater(t)
 	default:
 		return nil, xerrors.Errorf("unknown fact, %T", fact)
 	}
@@ -142,18 +194,22 @@ func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal
 		token = t
 	}
 
-	items := make([]currency.CreateAccountItem, len(fact.Items()))
+	items := make([]currency.CreateAccountsItem, len(fact.Items()))
 	for i := range fact.Items() {
 		item := fact.Items()[i]
+		if len(item.Amounts()) < 1 {
+			return nil, xerrors.Errorf("empty Amounts")
+		}
 
 		if ks, err := currency.NewKeys(item.Keys().Keys(), item.Keys().Threshold()); err != nil {
 			return nil, err
 		} else {
-			items[i] = currency.NewCreateAccountItem(ks, item.Amount())
+			items[i] = currency.NewCreateAccountsItemSingleAmount(ks, item.Amounts()[0])
 		}
 	}
 
 	nfact := currency.NewCreateAccountsFact(token, fact.Sender(), items)
+	nfact = nfact.Rebulild()
 	if err := bl.isValidFactCreateAccounts(nfact); err != nil {
 		return nil, err
 	}
@@ -195,7 +251,7 @@ func (bl Builder) buildFactKeyUpdater(fact currency.KeyUpdaterFact) (Hal, error)
 		ks = k
 	}
 
-	nfact := currency.NewKeyUpdaterFact(token, fact.Target(), ks)
+	nfact := currency.NewKeyUpdaterFact(token, fact.Target(), ks, fact.Currency())
 	if err := bl.isValidFactKeyUpdater(nfact); err != nil {
 		return nil, err
 	}
@@ -231,6 +287,7 @@ func (bl Builder) buildFactTransfers(fact currency.TransfersFact) (Hal, error) {
 	}
 
 	nfact := currency.NewTransfersFact(token, fact.Sender(), fact.Items())
+	nfact = nfact.Rebulild()
 	if err := bl.isValidFactTransfers(nfact); err != nil {
 		return nil, err
 	}
@@ -238,6 +295,76 @@ func (bl Builder) buildFactTransfers(fact currency.TransfersFact) (Hal, error) {
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
 	if op, err := currency.NewTransfers(
+		nfact,
+		[]operation.FactSign{
+			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
+		},
+		"",
+	); err != nil {
+		return nil, err
+	} else {
+		hal = hal.SetInterface(op)
+	}
+
+	return hal.
+		AddExtras("default", map[string]interface{}{
+			"fact_signs.signer":    templatePublickey,
+			"fact_signs.signature": templateSignature,
+		}).
+		AddExtras("signature_base", operation.NewBytesForFactSignature(nfact, bl.networkID)), nil
+}
+
+func (bl Builder) buildFactCurrencyRegister(fact currency.CurrencyRegisterFact) (Hal, error) {
+	var token []byte
+	if t, err := bl.checkToken(fact.Token()); err != nil {
+		return nil, err
+	} else {
+		token = t
+	}
+
+	nfact := currency.NewCurrencyRegisterFact(token, fact.Currency())
+	if err := bl.isValidFactCurrencyRegister(nfact); err != nil {
+		return nil, err
+	}
+
+	var hal Hal
+	hal = NewBaseHal(nil, HalLink{})
+	if op, err := currency.NewCurrencyRegister(
+		nfact,
+		[]operation.FactSign{
+			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
+		},
+		"",
+	); err != nil {
+		return nil, err
+	} else {
+		hal = hal.SetInterface(op)
+	}
+
+	return hal.
+		AddExtras("default", map[string]interface{}{
+			"fact_signs.signer":    templatePublickey,
+			"fact_signs.signature": templateSignature,
+		}).
+		AddExtras("signature_base", operation.NewBytesForFactSignature(nfact, bl.networkID)), nil
+}
+
+func (bl Builder) buildFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpdaterFact) (Hal, error) {
+	var token []byte
+	if t, err := bl.checkToken(fact.Token()); err != nil {
+		return nil, err
+	} else {
+		token = t
+	}
+
+	nfact := currency.NewCurrencyPolicyUpdaterFact(token, fact.Currency(), fact.Policy())
+	if err := bl.isValidFactCurrencyPolicyUpdater(nfact); err != nil {
+		return nil, err
+	}
+
+	var hal Hal
+	hal = NewBaseHal(nil, HalLink{})
+	if op, err := currency.NewCurrencyPolicyUpdater(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
@@ -321,6 +448,38 @@ func (bl Builder) isValidFactTransfers(fact currency.TransfersFact) error {
 	return nil
 }
 
+func (bl Builder) isValidFactCurrencyRegister(fact currency.CurrencyRegisterFact) error {
+	if err := fact.IsValid(nil); err != nil {
+		return err
+	}
+
+	if bytes.Equal(fact.Token(), templateToken) {
+		return xerrors.Errorf("Please set token; token same with template default")
+	}
+
+	if fact.Currency().GenesisAccount().Equal(templateReceiver) {
+		return xerrors.Errorf("Please set genesis_account; genesis_account is same with template default")
+	}
+
+	if fact.Currency().Policy().NewAccountMinBalance().Equal(templateBig) {
+		return xerrors.Errorf("Please set new_account_min_balance; new_account_min_balance is same with template default")
+	}
+
+	return nil
+}
+
+func (bl Builder) isValidFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpdaterFact) error {
+	if err := fact.IsValid(nil); err != nil {
+		return err
+	}
+
+	if bytes.Equal(fact.Token(), templateToken) {
+		return xerrors.Errorf("Please set token; token same with template default")
+	}
+
+	return nil
+}
+
 func (bl Builder) BuildOperation(b []byte) (Hal, error) {
 	var op operation.Operation
 	if hinter, err := bl.enc.DecodeByHint(b); err != nil {
@@ -341,6 +500,10 @@ func (bl Builder) BuildOperation(b []byte) (Hal, error) {
 			hal, err = bl.buildKeyUpdater(t)
 		case currency.Transfers:
 			hal, err = bl.buildTransfers(t)
+		case currency.CurrencyRegister:
+			hal, err = bl.buildCurrencyRegister(t)
+		case currency.CurrencyPolicyUpdater:
+			hal, err = bl.buildCurrencyPolicyUpdater(t)
 		default:
 			return xerrors.Errorf("unknown operation.Operation, %T", t)
 		}
@@ -401,6 +564,38 @@ func (bl Builder) buildTransfers(op currency.Transfers) (Hal, error) {
 	} else if err := nop.IsValid(bl.networkID); err != nil {
 		return nil, err
 	} else if err := bl.isValidFactTransfers(nop.Fact().(currency.TransfersFact)); err != nil {
+		return nil, err
+	} else {
+		return NewBaseHal(nop, HalLink{}), nil
+	}
+}
+
+func (bl Builder) buildCurrencyRegister(op currency.CurrencyRegister) (Hal, error) {
+	fs := bl.updateFactSigns(op.Signs())
+
+	if nop, err := currency.NewCurrencyRegister(op.Fact().(currency.CurrencyRegisterFact), fs, op.Memo); err != nil {
+		return nil, err
+	} else if err := nop.IsValid(bl.networkID); err != nil {
+		return nil, err
+	} else if err := bl.isValidFactCurrencyRegister(nop.Fact().(currency.CurrencyRegisterFact)); err != nil {
+		return nil, err
+	} else {
+		return NewBaseHal(nop, HalLink{}), nil
+	}
+}
+
+func (bl Builder) buildCurrencyPolicyUpdater(op currency.CurrencyPolicyUpdater) (Hal, error) {
+	fs := bl.updateFactSigns(op.Signs())
+
+	if nop, err := currency.NewCurrencyPolicyUpdater(
+		op.Fact().(currency.CurrencyPolicyUpdaterFact),
+		fs,
+		op.Memo,
+	); err != nil {
+		return nil, err
+	} else if err := nop.IsValid(bl.networkID); err != nil {
+		return nil, err
+	} else if err := bl.isValidFactCurrencyPolicyUpdater(nop.Fact().(currency.CurrencyPolicyUpdaterFact)); err != nil {
 		return nil, err
 	} else {
 		return NewBaseHal(nop, HalLink{}), nil

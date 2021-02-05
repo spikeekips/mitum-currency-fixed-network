@@ -25,9 +25,10 @@ func (t *testHandlerAccount) TestAccount() {
 
 	ac := t.newAccount()
 	height := base.Height(33)
-	amount := t.randomAmount()
 
-	va, _ := t.insertAccount(st, height, ac, amount)
+	am := currency.MustNewAmount(t.randomBig(), t.cid)
+
+	va, _ := t.insertAccount(st, height, ac, am)
 
 	handlers := t.handlers(st, DummyCache{})
 

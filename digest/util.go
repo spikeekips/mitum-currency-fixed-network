@@ -25,11 +25,11 @@ func IsAccountState(st state.State) (currency.Account, bool, error) {
 
 func IsBalanceState(st state.State) (currency.Amount, bool, error) {
 	if !currency.IsStateBalanceKey(st.Key()) {
-		return currency.NilAmount, false, nil
+		return currency.Amount{}, false, nil
 	}
 
-	if am, err := currency.StateAmountValue(st); err != nil {
-		return currency.NilAmount, false, err
+	if am, err := currency.StateBalanceValue(st); err != nil {
+		return currency.Amount{}, false, err
 	} else {
 		return am, true, nil
 	}

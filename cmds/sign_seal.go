@@ -1,9 +1,10 @@
 package cmds
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type SignSealCommand struct {

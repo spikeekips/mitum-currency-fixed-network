@@ -3,9 +3,10 @@ package cmds
 import (
 	"os"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type VerifyKeyCommand struct {

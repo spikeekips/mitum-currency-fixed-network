@@ -10,8 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -30,6 +32,10 @@ type BlockStorage struct {
 }
 
 func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+	if st.Readonly() {
+		return nil, xerrors.Errorf("readonly mode")
+	}
+
 	var nst *Storage
 	if n, err := st.New(); err != nil {
 		return nil, err
@@ -91,6 +97,13 @@ func (bs *BlockStorage) Commit(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (bs *BlockStorage) Close() error {
+	bs.Lock()
+	defer bs.Unlock()
+
+	return bs.close()
 }
 
 func (bs *BlockStorage) prepareOperationsTree() error {
@@ -155,39 +168,50 @@ func (bs *BlockStorage) prepareAccounts() error {
 		return nil
 	}
 
-	var accountsModels []mongo.WriteModel
-	var balancesModels []mongo.WriteModel
+	var accountModels []mongo.WriteModel
+	var balanceModels []mongo.WriteModel
 	for i := range bs.block.States() {
 		st := bs.block.States()[i]
-		if _, ok, err := IsAccountState(st); err != nil {
-			return err
-		} else if ok {
-			if rs, err := NewAccountValue(st); err != nil {
-				return err
-			} else if doc, err := NewAccountDoc(rs, bs.st.storage.Encoder()); err != nil {
+		switch {
+		case currency.IsStateAccountKey(st.Key()):
+			if j, err := bs.handleAccountState(st); err != nil {
 				return err
 			} else {
-				accountsModels = append(accountsModels, mongo.NewInsertOneModel().SetDocument(doc))
+				accountModels = append(accountModels, j...)
 			}
-
+		case currency.IsStateBalanceKey(st.Key()):
+			if j, err := bs.handleBalanceState(st); err != nil {
+				return err
+			} else {
+				balanceModels = append(balanceModels, j...)
+			}
+		default:
 			continue
-		}
-
-		if _, ok, err := IsBalanceState(st); err != nil {
-			return err
-		} else if ok {
-			if doc, err := NewBalanceDoc(st, bs.st.storage.Encoder()); err != nil {
-				return err
-			} else {
-				balancesModels = append(balancesModels, mongo.NewInsertOneModel().SetDocument(doc))
-			}
 		}
 	}
 
-	bs.accountModels = accountsModels
-	bs.balanceModels = balancesModels
+	bs.accountModels = accountModels
+	bs.balanceModels = balanceModels
 
 	return nil
+}
+
+func (bs *BlockStorage) handleAccountState(st state.State) ([]mongo.WriteModel, error) {
+	if rs, err := NewAccountValue(st); err != nil {
+		return nil, err
+	} else if doc, err := NewAccountDoc(rs, bs.st.storage.Encoder()); err != nil {
+		return nil, err
+	} else {
+		return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
+	}
+}
+
+func (bs *BlockStorage) handleBalanceState(st state.State) ([]mongo.WriteModel, error) {
+	if doc, err := NewBalanceDoc(st, bs.st.storage.Encoder()); err != nil {
+		return nil, err
+	} else {
+		return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
+	}
 }
 
 func (bs *BlockStorage) writeModels(ctx context.Context, col string, models []mongo.WriteModel) error {
@@ -232,13 +256,6 @@ func (bs *BlockStorage) writeModelsChunk(ctx context.Context, col string, models
 	}
 
 	return nil
-}
-
-func (bs *BlockStorage) Close() error {
-	bs.Lock()
-	defer bs.Unlock()
-
-	return bs.close()
 }
 
 func (bs *BlockStorage) close() error {

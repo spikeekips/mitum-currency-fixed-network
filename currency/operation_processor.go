@@ -8,56 +8,66 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
+)
+
+type GetNewProcessor func(state.Processor) (state.Processor, error)
+
+type DuplicationType string
+
+const (
+	DuplicationTypeSender   DuplicationType = "sender"
+	DuplicationTypeCurrency DuplicationType = "currency"
 )
 
 type OperationProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	feeAmount           FeeAmount
-	getFeeReceiver      func() (base.Address, error)
-	feeReceiver         base.Address
-	pool                *storage.Statepool
-	fee                 Amount
-	amountPool          map[string]AmountState
-	processedSenders    map[string]struct{}
-	processedNewAddress map[string]struct{}
+	processorHintSet     *hint.Hintmap
+	cp                   *CurrencyPool
+	pool                 *storage.Statepool
+	fee                  map[CurrencyID]Big
+	amountPool           map[string]AmountState
+	duplicated           map[string]DuplicationType
+	duplicatedNewAddress map[string]struct{}
 }
 
-func NewOperationProcessor(feeAmount FeeAmount, getFeeReceiver func() (base.Address, error)) *OperationProcessor {
-	if getFeeReceiver == nil {
-		feeAmount = NewNilFeeAmount()
-	}
-
+func NewOperationProcessor(cp *CurrencyPool) *OperationProcessor {
 	return &OperationProcessor{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
-		feeAmount:      feeAmount,
-		getFeeReceiver: getFeeReceiver,
+		processorHintSet: hint.NewHintmap(),
+		cp:               cp,
 	}
 }
 
 func (opr *OperationProcessor) New(pool *storage.Statepool) prprocessor.OperationProcessor {
-	var feeReceiver base.Address
-	if opr.getFeeReceiver != nil {
-		if a, err := opr.getFeeReceiver(); err == nil {
-			feeReceiver = a
-		}
-	}
-
 	return &OperationProcessor{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
-		feeAmount:           opr.feeAmount,
-		feeReceiver:         feeReceiver,
-		pool:                pool,
-		fee:                 ZeroAmount,
-		amountPool:          map[string]AmountState{},
-		processedSenders:    map[string]struct{}{},
-		processedNewAddress: map[string]struct{}{},
+		processorHintSet:     opr.processorHintSet,
+		cp:                   opr.cp,
+		pool:                 pool,
+		fee:                  map[CurrencyID]Big{},
+		amountPool:           map[string]AmountState{},
+		duplicated:           map[string]DuplicationType{},
+		duplicatedNewAddress: map[string]struct{}{},
+	}
+}
+
+func (opr *OperationProcessor) SetProcessor(
+	hinter hint.Hinter,
+	newProcessor GetNewProcessor,
+) (prprocessor.OperationProcessor, error) {
+	if err := opr.processorHintSet.Add(hinter, newProcessor); err != nil {
+		return nil, err
+	} else {
+		return opr, nil
 	}
 }
 
@@ -65,53 +75,31 @@ func (opr *OperationProcessor) setState(op valuehash.Hash, sts ...state.State) e
 	opr.Lock()
 	defer opr.Unlock()
 
-	sum := NewAmount(0)
 	for i := range sts {
 		if t, ok := sts[i].(AmountState); ok {
-			if t.Fee().Compare(ZeroAmount) <= 0 {
-				continue
-			} else {
-				sum = sum.Add(t.Fee())
+			if t.Fee().OverZero() {
+				var f Big = ZeroBig
+				if i, found := opr.fee[t.Currency()]; found {
+					f = i
+				}
+
+				opr.fee[t.Currency()] = f.Add(t.Fee())
 			}
 		}
 	}
-
-	opr.fee = opr.fee.Add(sum)
 
 	return opr.pool.Set(op, sts...)
 }
 
 func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
 	var sp state.Processor
-	var sender string
-	var addresses []base.Address
-
-	switch t := op.(type) {
-	case Transfers:
-		fact := t.Fact().(TransfersFact)
-		sender = fact.Sender().String()
-		sp = &TransfersProcessor{Transfers: t, fa: opr.feeAmount}
-	case CreateAccounts:
-		fact := t.Fact().(CreateAccountsFact)
-		if as, err := fact.Targets(); err != nil {
-			return nil, util.IgnoreError.Errorf("failed to get Addresses")
-		} else if err := opr.checkNewAddressDuplication(as); err != nil {
-			return nil, err
-		} else {
-			addresses = as
-		}
-
-		sender = fact.Sender().String()
-		sp = &CreateAccountsProcessor{CreateAccounts: t, fa: opr.feeAmount}
-	case KeyUpdater:
-		sender = t.Fact().(KeyUpdaterFact).Target().String()
-		sp = &KeyUpdaterProcessor{KeyUpdater: t, fa: opr.feeAmount}
-	default:
+	switch i, known, err := opr.getNewProcessor(op); {
+	case err != nil:
+		return nil, util.IgnoreError.Wrap(err)
+	case !known:
 		return op, nil
-	}
-
-	if err := opr.checkSenderDuplication(sender); err != nil {
-		return nil, err
+	default:
+		sp = i
 	}
 
 	var pop state.Processor
@@ -121,21 +109,22 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		pop = pr
 	}
 
-	opr.Lock()
-	opr.processedSenders[sender] = struct{}{}
-	for i := range addresses {
-		opr.processedNewAddress[addresses[i].String()] = struct{}{}
+	if err := opr.checkDuplication(op); err != nil {
+		return nil, util.IgnoreError.Errorf("duplication found: %w", err)
 	}
-	opr.Unlock()
 
 	return pop, nil
 }
 
 func (opr *OperationProcessor) Process(op state.Processor) error {
 	switch op.(type) {
-	case *TransfersProcessor, *CreateAccountsProcessor, *KeyUpdaterProcessor:
+	case *TransfersProcessor,
+		*CreateAccountsProcessor,
+		*KeyUpdaterProcessor,
+		*CurrencyRegisterProcessor,
+		*CurrencyPolicyUpdaterProcessor:
 		return opr.process(op)
-	case Transfers, CreateAccounts, KeyUpdater:
+	case Transfers, CreateAccounts, KeyUpdater, CurrencyRegister, CurrencyPolicyUpdater:
 		if pr, err := opr.PreProcess(op); err != nil {
 			return err
 		} else {
@@ -163,25 +152,74 @@ func (opr *OperationProcessor) process(op state.Processor) error {
 	return sp.Process(opr.pool.Get, opr.setState)
 }
 
-func (opr *OperationProcessor) checkSenderDuplication(sender string) error {
-	opr.RLock()
-	defer opr.RUnlock()
+func (opr *OperationProcessor) checkDuplication(op state.Processor) error {
+	opr.Lock()
+	defer opr.Unlock()
 
-	if _, found := opr.processedSenders[sender]; found {
-		return util.IgnoreError.Errorf("violates only one sender in proposal")
+	var did string
+	var didtype DuplicationType
+	var newAddresses []base.Address
+
+	switch t := op.(type) {
+	case Transfers:
+		did = t.Fact().(TransfersFact).Sender().String()
+		didtype = DuplicationTypeSender
+	case CreateAccounts:
+		fact := t.Fact().(CreateAccountsFact)
+		if as, err := fact.Targets(); err != nil {
+			return xerrors.Errorf("failed to get Addresses")
+		} else {
+			newAddresses = as
+		}
+
+		did = fact.Sender().String()
+		didtype = DuplicationTypeSender
+	case KeyUpdater:
+		did = t.Fact().(KeyUpdaterFact).Target().String()
+		didtype = DuplicationTypeSender
+	case CurrencyRegister:
+		did = t.Fact().(CurrencyRegisterFact).Currency().Currency().String()
+		didtype = DuplicationTypeCurrency
+	case CurrencyPolicyUpdater:
+		did = t.Fact().(CurrencyPolicyUpdaterFact).Currency().String()
+		didtype = DuplicationTypeCurrency
+	default:
+		return nil
+	}
+
+	if len(did) > 0 {
+		if _, found := opr.duplicated[did]; found {
+			switch didtype {
+			case DuplicationTypeSender:
+				return xerrors.Errorf("violates only one sender in proposal")
+			case DuplicationTypeCurrency:
+				return xerrors.Errorf("duplicated currency id, %q found in proposal", did)
+			default:
+				return xerrors.Errorf("violates duplication in proposal")
+			}
+		}
+
+		opr.duplicated[did] = didtype
+	}
+
+	if len(newAddresses) > 0 {
+		if err := opr.checkNewAddressDuplication(newAddresses); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (opr *OperationProcessor) checkNewAddressDuplication(as []base.Address) error {
-	opr.Lock()
-	defer opr.Unlock()
+	for i := range as {
+		if _, found := opr.duplicatedNewAddress[as[i].String()]; found {
+			return xerrors.Errorf("new address already processed")
+		}
+	}
 
 	for i := range as {
-		if _, found := opr.processedNewAddress[as[i].String()]; found {
-			return util.IgnoreError.Errorf("new address already processed")
-		}
+		opr.duplicatedNewAddress[as[i].String()] = struct{}{}
 	}
 
 	return nil
@@ -191,14 +229,11 @@ func (opr *OperationProcessor) Close() error {
 	opr.RLock()
 	defer opr.RUnlock()
 
-	if opr.feeReceiver != nil {
-		if opr.fee.Compare(ZeroAmount) < 1 {
-			return nil
-		}
+	if opr.cp != nil && len(opr.fee) > 0 {
+		op := NewFeeOperation(NewFeeOperationFact(opr.pool.Height(), opr.fee))
 
-		fact := NewFeeOperationFact(opr.feeAmount, opr.pool.Height(), opr.feeReceiver, opr.fee)
-		op := NewFeeOperation(fact)
-		if err := op.Process(opr.pool.Get, opr.pool.Set); err != nil {
+		pr := NewFeeOperationProcessor(opr.cp, op)
+		if err := pr.Process(opr.pool.Get, opr.pool.Set); err != nil {
 			return err
 		} else {
 			opr.pool.AddOperations(op)
@@ -213,4 +248,39 @@ func (opr *OperationProcessor) Cancel() error {
 	defer opr.RUnlock()
 
 	return nil
+}
+
+func (opr *OperationProcessor) getNewProcessor(op state.Processor) (state.Processor, bool, error) {
+	switch i, err := opr.getNewProcessorFromHintset(op); {
+	case err != nil:
+		return nil, false, err
+	case i != nil:
+		return i, true, nil
+	}
+
+	switch t := op.(type) {
+	case Transfers,
+		CreateAccounts,
+		KeyUpdater,
+		CurrencyRegister,
+		CurrencyPolicyUpdater:
+		return nil, false, xerrors.Errorf("%T needs SetProcessor", t)
+	default:
+		return op, false, nil
+	}
+}
+
+func (opr *OperationProcessor) getNewProcessorFromHintset(op state.Processor) (state.Processor, error) {
+	var f GetNewProcessor
+	if hinter, ok := op.(hint.Hinter); !ok {
+		return nil, nil
+	} else if i, found := opr.processorHintSet.Get(hinter); !found {
+		return nil, nil
+	} else if j, ok := i.(GetNewProcessor); !ok {
+		return nil, xerrors.Errorf("invalid GetNewProcessor func, %%", i)
+	} else {
+		f = j
+	}
+
+	return f(op)
 }

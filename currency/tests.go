@@ -3,6 +3,8 @@
 package currency
 
 import (
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -10,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/stretchr/testify/suite"
 )
 
 type account struct { // nolint: unused
@@ -50,6 +51,7 @@ func generateAccount() *account { // nolint: unused
 type baseTest struct { // nolint: unused
 	suite.Suite
 	isaac.StorageSupportTest
+	cid CurrencyID
 }
 
 func (t *baseTest) SetupSuite() {
@@ -67,10 +69,28 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(FeeOperationFact{})
 	_ = t.Encs.AddHinter(FeeOperation{})
 	_ = t.Encs.AddHinter(Account{})
+	_ = t.Encs.AddHinter(CurrencyDesign{})
+	_ = t.Encs.AddHinter(CurrencyPolicyUpdaterFact{})
+	_ = t.Encs.AddHinter(CurrencyPolicyUpdater{})
+	_ = t.Encs.AddHinter(CurrencyPolicy{})
+
+	t.cid = CurrencyID("SEEME")
 }
 
 func (t *baseTest) newAccount() *account {
 	return generateAccount()
+}
+
+func (t *baseTest) currencyDesign(big Big, cid CurrencyID) CurrencyDesign {
+	return NewCurrencyDesign(NewAmount(big, cid), NewTestAddress(), NewCurrencyPolicy(ZeroBig, NewNilFeeer()))
+}
+
+func (t *baseTest) compareCurrencyDesign(a, b CurrencyDesign) {
+	t.True(a.Amount.Equal(b.Amount))
+	if a.GenesisAccount() != nil {
+		t.True(a.GenesisAccount().Equal(a.GenesisAccount()))
+	}
+	t.Equal(a.Policy(), b.Policy())
 }
 
 type baseTestOperationProcessor struct { // nolint: unused
@@ -88,34 +108,9 @@ func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*storage.Sta
 	pool, err := storage.NewStatepoolWithBase(t.Storage(nil, nil), base)
 	t.NoError(err)
 
-	opr := (&OperationProcessor{}).New(pool)
+	opr := (NewOperationProcessor(nil)).New(pool)
 
 	return pool, opr
-}
-
-func (t *baseTestOperationProcessor) newAccount(exists bool, amount Amount) (*account, []state.State) {
-	ac := t.baseTest.newAccount()
-
-	if !exists {
-		return ac, nil
-	}
-
-	var st []state.State
-	st = append(st,
-		t.newStateKeys(ac.Address, ac.Keys()),
-		t.newStateBalance(ac.Address, amount),
-	)
-
-	return ac, st
-}
-
-func (t *baseTestOperationProcessor) newStateBalance(a base.Address, amount Amount) state.State {
-	key := StateKeyBalance(a)
-	value, _ := state.NewStringValue(amount.String())
-	su, err := state.NewStateV0(key, value, base.NilHeight)
-	t.NoError(err)
-
-	return su
 }
 
 func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) state.State {
@@ -138,4 +133,70 @@ func (t *baseTestOperationProcessor) newKey(pub key.Publickey, w uint) Key {
 	}
 
 	return k
+}
+
+func (t *baseTestOperationProcessor) newAccount(exists bool, amounts []Amount) (*account, []state.State) {
+	ac := t.baseTest.newAccount()
+
+	if !exists {
+		return ac, nil
+	}
+
+	var sts []state.State
+	sts = append(sts, t.newStateKeys(ac.Address, ac.Keys()))
+
+	for _, am := range amounts {
+		sts = append(sts, t.newStateAmount(ac.Address, am))
+	}
+
+	return ac, sts
+}
+
+func (t *baseTestOperationProcessor) newStateAmount(a base.Address, amount Amount) state.State {
+	key := StateKeyBalance(a, amount.Currency())
+	value, _ := state.NewHintedValue(amount)
+	su, err := state.NewStateV0(key, value, base.NilHeight)
+	t.NoError(err)
+
+	return su
+}
+
+func (t *baseTestOperationProcessor) newStateBalance(a base.Address, big Big, cid CurrencyID) state.State {
+	key := StateKeyBalance(a, cid)
+	value, _ := state.NewHintedValue(NewAmount(big, cid))
+	su, err := state.NewStateV0(key, value, base.NilHeight)
+	t.NoError(err)
+
+	return su
+}
+
+func (t *baseTestOperationProcessor) newCurrencyDesignState(cid CurrencyID, big Big, genesisAccount base.Address, feeer Feeer) state.State {
+	de := NewCurrencyDesign(NewAmount(big, cid), genesisAccount, NewCurrencyPolicy(ZeroBig, feeer))
+
+	st, err := state.NewStateV0(StateKeyCurrencyDesign(cid), nil, base.NilHeight)
+	t.NoError(err)
+
+	nst, err := SetStateCurrencyDesignValue(st, de)
+	t.NoError(err)
+
+	return nst
+}
+
+func NewTestAddress() base.Address {
+	k, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)
+	if err != nil {
+		panic(err)
+	}
+
+	keys, err := NewKeys([]Key{k}, 100)
+	if err != nil {
+		panic(err)
+	}
+
+	a, err := NewAddressFromKeys(keys)
+	if err != nil {
+		panic(err)
+	}
+
+	return a
 }

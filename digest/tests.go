@@ -49,6 +49,7 @@ type baseTest struct { // nolint: unused
 	suite.Suite
 	isaac.StorageSupportTest
 	networkID base.NetworkID
+	cid       currency.CurrencyID
 }
 
 func (t *baseTest) SetupSuite() {
@@ -59,25 +60,45 @@ func (t *baseTest) SetupSuite() {
 		_ = t.Encs.AddHinter(ht)
 	}
 
-	_ = t.Encs.AddHinter(currency.Key{})
-	_ = t.Encs.AddHinter(currency.Keys{})
-	_ = t.Encs.AddHinter(currency.Address(""))
-	_ = t.Encs.AddHinter(currency.CreateAccountsFact{})
-	_ = t.Encs.AddHinter(currency.CreateAccounts{})
-	_ = t.Encs.AddHinter(currency.TransfersFact{})
-	_ = t.Encs.AddHinter(currency.Transfers{})
-	_ = t.Encs.AddHinter(currency.KeyUpdaterFact{})
-	_ = t.Encs.AddHinter(currency.KeyUpdater{})
-	_ = t.Encs.AddHinter(currency.FeeOperationFact{})
-	_ = t.Encs.AddHinter(currency.FeeOperation{})
-	_ = t.Encs.AddHinter(currency.Account{})
 	_ = t.Encs.AddHinter(AccountValue{})
-	_ = t.Encs.AddHinter(OperationValue{})
-	_ = t.Encs.AddHinter(Problem{})
 	_ = t.Encs.AddHinter(BaseHal{})
 	_ = t.Encs.AddHinter(NodeInfo{})
+	_ = t.Encs.AddHinter(OperationValue{})
+	_ = t.Encs.AddHinter(Problem{})
+	_ = t.Encs.AddHinter(currency.Account{})
+	_ = t.Encs.AddHinter(currency.Address(""))
+	_ = t.Encs.AddHinter(currency.Amount{})
+	_ = t.Encs.AddHinter(currency.CreateAccountsFact{})
+	_ = t.Encs.AddHinter(currency.CreateAccountsItemMultiAmountsHinter)
+	_ = t.Encs.AddHinter(currency.CreateAccountsItemSingleAmountHinter)
+	_ = t.Encs.AddHinter(currency.CreateAccounts{})
+	_ = t.Encs.AddHinter(currency.CurrencyDesign{})
+	_ = t.Encs.AddHinter(currency.CurrencyPolicyUpdaterFact{})
+	_ = t.Encs.AddHinter(currency.CurrencyPolicyUpdater{})
+	_ = t.Encs.AddHinter(currency.CurrencyRegisterFact{})
+	_ = t.Encs.AddHinter(currency.CurrencyRegister{})
+	_ = t.Encs.AddHinter(currency.FeeOperationFact{})
+	_ = t.Encs.AddHinter(currency.FeeOperation{})
+	_ = t.Encs.AddHinter(currency.FixedFeeer{})
+	_ = t.Encs.AddHinter(currency.GenesisCurrenciesFact{})
+	_ = t.Encs.AddHinter(currency.GenesisCurrencies{})
+	_ = t.Encs.AddHinter(currency.KeyUpdaterFact{})
+	_ = t.Encs.AddHinter(currency.KeyUpdater{})
+	_ = t.Encs.AddHinter(currency.Keys{})
+	_ = t.Encs.AddHinter(currency.Key{})
+	_ = t.Encs.AddHinter(currency.NilFeeer{})
+	_ = t.Encs.AddHinter(currency.RatioFeeer{})
+	_ = t.Encs.AddHinter(currency.TransfersFact{})
+	_ = t.Encs.AddHinter(currency.TransfersItemMultiAmountsHinter)
+	_ = t.Encs.AddHinter(currency.TransfersItemSingleAmountHinter)
+	_ = t.Encs.AddHinter(currency.Transfers{})
+	_ = t.Encs.AddHinter(currency.CurrencyPolicy{})
+	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
+	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 
 	t.networkID = util.UUID().Bytes()
+
+	t.cid = currency.CurrencyID("SHOWME")
 }
 
 func (t *baseTest) MongodbStorage() *mongodbstorage.Storage {
@@ -94,7 +115,10 @@ func (t *baseTest) Storage() (*Storage, *mongodbstorage.Storage) {
 
 func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers {
 	token := util.UUID().Bytes()
-	items := []currency.TransferItem{currency.NewTransferItem(receiver, currency.NewAmount(10))}
+	items := []currency.TransfersItem{currency.NewTransfersItemSingleAmount(
+		receiver,
+		currency.MustNewAmount(currency.NewBig(10), t.cid),
+	)}
 	fact := currency.NewTransfersFact(token, sender, items)
 
 	pk := key.MustNewEtherPrivatekey()
@@ -139,20 +163,30 @@ func (t *baseTest) newAccountState(ac currency.Account, height base.Height) stat
 	return stu.GetState()
 }
 
-func (t *baseTest) randomAmount() currency.Amount {
-	bg := big.NewInt(100)
-	n, err := rand.Int(rand.Reader, bg)
-	t.NoError(err)
+func (t *baseTest) randomBig() currency.Big {
+	var i *big.Int
+	for {
+		bg := big.NewInt(1000)
+		n, err := rand.Int(rand.Reader, bg)
+		t.NoError(err)
 
-	return currency.NewAmount(n.Int64())
+		if n.Cmp(big.NewInt(0)) >= 0 {
+			i = n
+			break
+		}
+	}
+
+	return currency.NewBig(i.Int64())
 }
 
-func (t *baseTest) newBalanceState(ac currency.Account, height base.Height, amount currency.Amount) state.State {
-	key := currency.StateKeyBalance(ac.Address())
-	value, _ := state.NewStringValue(amount.String())
+func (t *baseTest) newBalanceState(ac currency.Account, height base.Height, am currency.Amount) state.State {
+	key := currency.StateKeyBalance(ac.Address(), am.Currency())
 
-	st, err := state.NewStateV0(key, value, base.NilHeight)
+	stv0, err := state.NewStateV0(key, nil, height-1)
 	t.NoError(err)
+	st, err := currency.SetStateBalanceValue(stv0, am)
+	t.NoError(err)
+
 	stu := state.NewStateUpdater(st)
 
 	t.NoError(stu.SetHash(stu.GenerateHash()))
@@ -197,7 +231,7 @@ func (t *baseTest) insertAccount(
 		sts[1] = s
 	}
 
-	va = va.SetBalance(am)
+	va = va.SetBalance([]currency.Amount{am})
 
 	return va, sts
 }
@@ -220,9 +254,12 @@ func (t *baseTest) compareAccountValue(a, b interface{}) {
 	t.True(ok)
 
 	t.compareAccount(ua.Account(), ub.Account())
-	t.Equal(ua.Balance(), ub.Balance())
 	t.Equal(ua.Height(), ub.Height())
 	t.Equal(ua.PreviousHeight(), ub.PreviousHeight())
+
+	for i := range ua.Balance() {
+		t.compareAmount(ua.Balance()[i], ub.Balance()[i])
+	}
 }
 
 func (t *baseTest) compareOperationValue(a, b interface{}) {
@@ -244,6 +281,16 @@ func (t *baseTest) compareOperationValue(a, b interface{}) {
 	t.Equal(ua.InState(), ub.InState())
 }
 
+func (t *baseTest) compareAmount(a, b interface{}) {
+	ua, ok := a.(currency.Amount)
+	t.True(ok)
+	ub, ok := b.(currency.Amount)
+	t.True(ok)
+
+	t.True(ua.Big().Equal(ub.Big()))
+	t.Equal(ua.Currency(), ub.Currency())
+}
+
 func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block {
 	blk, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
@@ -262,4 +309,10 @@ func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block 
 	t.NoError(bs.Commit(context.Background()))
 
 	return blk
+}
+
+func (t *baseTest) compareCurrencyDesign(a, b currency.CurrencyDesign) {
+	t.compareAmount(a.Amount, b.Amount)
+	t.True(a.GenesisAccount().Equal(a.GenesisAccount()))
+	t.Equal(a.Policy(), b.Policy())
 }

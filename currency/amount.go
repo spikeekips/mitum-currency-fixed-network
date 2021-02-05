@@ -1,141 +1,107 @@
 package currency
 
 import (
-	"math/big"
+	"fmt"
 
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	NilAmount       = NewAmount(-1)
-	NilAmountString = big.NewInt(-1).String()
-	ZeroAmount      = NewAmount(0)
+	AmountType = hint.MustNewType(0xa0, 0x22, "mitum-currency-amount")
+	AmountHint = hint.MustHint(AmountType, "0.0.1")
 )
 
 type Amount struct {
-	*big.Int
+	h   valuehash.Hash
+	big Big
+	cid CurrencyID
 }
 
-func NewAmountFromBigInt(b *big.Int) Amount {
-	return Amount{Int: b}
+func NewAmount(big Big, cid CurrencyID) Amount {
+	am := Amount{big: big, cid: cid}
+	am.h = am.GenerateHash()
+
+	return am
 }
 
-func NewAmount(i int64) Amount {
-	return NewAmountFromBigInt(big.NewInt(i))
+func NewZeroAmount(cid CurrencyID) Amount {
+	return NewAmount(NewBig(0), cid)
 }
 
-func NewAmountFromString(s string) (Amount, error) {
-	if i, ok := new(big.Int).SetString(s, 10); !ok {
-		return Amount{}, xerrors.Errorf("not proper Amount string, %q", s)
-	} else {
-		return NewAmountFromBigInt(i), nil
-	}
-}
-
-func MustAmountFromString(s string) Amount {
-	if i, ok := new(big.Int).SetString(s, 10); !ok {
-		panic(xerrors.Errorf("not proper Amount string, %q", s))
-	} else {
-		return NewAmountFromBigInt(i)
-	}
-}
-
-func NewAmountFromInterface(a interface{}) (Amount, error) {
-	switch t := a.(type) {
-	case int:
-		return NewAmount(int64(t)), nil
-	case int8:
-		return NewAmount(int64(t)), nil
-	case int32:
-		return NewAmount(int64(t)), nil
-	case int64:
-		return NewAmount(t), nil
-	case uint:
-		return NewAmount(int64(t)), nil
-	case uint8:
-		return NewAmount(int64(t)), nil
-	case uint32:
-		return NewAmount(int64(t)), nil
-	case uint64:
-		return NewAmount(int64(t)), nil
-	case string:
-		if n, err := NewAmountFromString(t); err != nil {
-			return NilAmount, xerrors.Errorf("invalid amount value, %q", t)
-		} else {
-			return n, nil
-		}
-	default:
-		return NilAmount, xerrors.Errorf("unknown type of amount value, %T", a)
-	}
-}
-
-func (a Amount) String() string {
-	if a.Int == nil {
-		return NilAmountString
-	} else {
-		return a.Int.String()
-	}
-}
-
-func (a Amount) IsZero() bool {
-	if a.Int == nil {
-		return true
+func MustNewAmount(big Big, cid CurrencyID) Amount {
+	am := NewAmount(big, cid)
+	if err := am.IsValid(nil); err != nil {
+		panic(err)
 	}
 
-	return a.Int.Cmp(ZeroAmount.Int) == 0
+	return am
 }
 
-func (a Amount) Equal(b Amount) bool {
-	if a.Int == nil {
-		return false
-	}
-
-	return a.Int.Cmp(b.Int) == 0
+func (am Amount) Hint() hint.Hint {
+	return AmountHint
 }
 
-func (a Amount) Compare(b Amount) int {
-	if a.Int == nil {
-		return -1
-	}
-
-	return a.Int.Cmp(b.Int)
+func (am Amount) Bytes() []byte {
+	return util.ConcatBytesSlice(
+		am.big.Bytes(),
+		am.cid.Bytes(),
+	)
 }
 
-func (a Amount) IsValid([]byte) error {
-	if a.Compare(ZeroAmount) < 0 {
-		return xerrors.Errorf("invalid amount; under zero")
+func (am Amount) Hash() valuehash.Hash {
+	return am.h
+}
+
+func (am Amount) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(am.Bytes())
+}
+
+func (am Amount) IsEmpty() bool {
+	return len(am.cid) < 1 || !am.big.OverNil()
+}
+
+func (am Amount) IsValid([]byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		am.cid,
+		am.big,
+	}, nil, false); err != nil {
+		return xerrors.Errorf("invalid Balance: %w", err)
 	}
 
 	return nil
 }
 
-func (a Amount) Add(b Amount) Amount {
-	return NewAmountFromBigInt((new(big.Int)).Add(a.Int, b.Int))
+func (am Amount) Big() Big {
+	return am.big
 }
 
-func (a Amount) Sub(b Amount) Amount {
-	return NewAmountFromBigInt((new(big.Int)).Sub(a.Int, b.Int))
+func (am Amount) Currency() CurrencyID {
+	return am.cid
 }
 
-func (a Amount) MulInt64(b int64) Amount {
-	i := big.NewInt(b)
-	return NewAmountFromBigInt((new(big.Int)).Mul(a.Int, i))
+func (am Amount) String() string {
+	return fmt.Sprintf("%s(%s)", am.big.String(), am.cid)
 }
 
-func (a Amount) MulFloat64(b float64) Amount {
-	af, _ := new(big.Float).SetString(a.Int.String())
-	bf := big.NewFloat(b)
-
-	c := new(big.Int)
-	_, _ = new(big.Float).Mul(af, bf).Int(c)
-
-	return NewAmountFromBigInt(c)
+func (am Amount) Equal(b Amount) bool {
+	switch {
+	case am.cid != b.cid:
+		return false
+	case !am.big.Equal(b.big):
+		return false
+	default:
+		return true
+	}
 }
 
-func (a Amount) Div(b Amount) Amount {
-	return NewAmountFromBigInt((new(big.Int)).Div(a.Int, b.Int))
-}
+func (am Amount) WithBig(big Big) Amount {
+	am.big = big
+	am.h = am.GenerateHash()
 
-func (a Amount) Neg() Amount {
-	return NewAmountFromBigInt((new(big.Int)).Neg(a.Int))
+	return am
 }

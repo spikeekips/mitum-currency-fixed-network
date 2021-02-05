@@ -1,11 +1,9 @@
 package digest
 
 import (
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 func (va AccountValue) MarshalBSON() ([]byte, error) {
@@ -21,10 +19,10 @@ func (va AccountValue) MarshalBSON() ([]byte, error) {
 }
 
 type AccountValueBSONUnpacker struct {
-	AC bson.Raw        `bson:"ac"`
-	BL currency.Amount `bson:"balance"`
-	HT base.Height     `bson:"height"`
-	PT base.Height     `bson:"previous_height"`
+	AC bson.Raw    `bson:"ac"`
+	BL []bson.Raw  `bson:"balance"`
+	HT base.Height `bson:"height"`
+	PT base.Height `bson:"previous_height"`
 }
 
 func (va *AccountValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -33,17 +31,10 @@ func (va *AccountValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	if hinter, err := enc.DecodeByHint(uva.AC); err != nil {
-		return err
-	} else if ac, ok := hinter.(currency.Account); !ok {
-		return xerrors.Errorf("not currency.Account: %T", hinter)
-	} else {
-		va.ac = ac
+	bb := make([][]byte, len(uva.BL))
+	for i := range uva.BL {
+		bb[i] = uva.BL[i]
 	}
 
-	va.balance = uva.BL
-	va.height = uva.HT
-	va.previousHeight = uva.PT
-
-	return nil
+	return va.unpack(enc, uva.AC, bb, uva.HT, uva.PT)
 }

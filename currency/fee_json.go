@@ -3,7 +3,6 @@ package currency
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -12,37 +11,36 @@ type FeeOperationFactJSONPacker struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
-	FA string         `json:"fee_amount"`
-	RC base.Address   `json:"receiver"`
-	FE Amount         `json:"fee"`
+	AM []Amount       `json:"amounts"`
 }
 
-func (ft FeeOperationFact) MarshalJSON() ([]byte, error) {
+func (fact FeeOperationFact) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(FeeOperationFactJSONPacker{
-		HintedHead: jsonenc.NewHintedHead(ft.Hint()),
-		H:          ft.h,
-		TK:         ft.token,
-		FA:         ft.fa,
-		RC:         ft.receiver,
-		FE:         ft.fee,
+		HintedHead: jsonenc.NewHintedHead(fact.Hint()),
+		H:          fact.h,
+		TK:         fact.token,
+		AM:         fact.amounts,
 	})
 }
 
 type FeeOperationFactJSONUnpacker struct {
-	H  valuehash.Bytes     `json:"hash"`
-	TK []byte              `json:"token"`
-	FA string              `json:"fee_amount"`
-	RC base.AddressDecoder `json:"receiver"`
-	FE Amount              `json:"fee"`
+	H  valuehash.Bytes   `json:"hash"`
+	TK []byte            `json:"token"`
+	AM []json.RawMessage `json:"amounts"`
 }
 
-func (ft *FeeOperationFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (fact *FeeOperationFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uft FeeOperationFactJSONUnpacker
 	if err := enc.Unmarshal(b, &uft); err != nil {
 		return err
 	}
 
-	return ft.unpack(enc, uft.H, uft.TK, uft.FA, uft.RC, uft.FE)
+	bam := make([][]byte, len(uft.AM))
+	for i := range uft.AM {
+		bam[i] = uft.AM[i]
+	}
+
+	return fact.unpack(enc, uft.H, uft.TK, bam)
 }
 
 type FeeOperationJSONPacker struct {
@@ -61,7 +59,7 @@ func (op FeeOperation) MarshalJSON() ([]byte, error) {
 
 type FeeOperationJSONUnpacker struct {
 	H  valuehash.Bytes `json:"hash"`
-	FC json.RawMessage `json:"fact"`
+	FT json.RawMessage `json:"fact"`
 }
 
 func (op *FeeOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -70,5 +68,5 @@ func (op *FeeOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return op.unpack(enc, upo.H, upo.FC)
+	return op.unpack(enc, upo.H, upo.FT)
 }

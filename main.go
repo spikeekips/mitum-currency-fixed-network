@@ -21,7 +21,8 @@ var (
 )
 
 type mainflags struct {
-	Node cmds.NodeCommand `cmd:"" help:"node"`
+	Version VersionCommand   `cmd:"" help:"version"`
+	Node    cmds.NodeCommand `cmd:"" help:"node"`
 	// TODO Blocks mitumcmds.BlocksCommand `cmd:"" help:"get block data from node"`
 	Key  cmds.KeyCommand  `cmd:"" help:"key"`
 	Seal cmds.SealCommand `cmd:"" help:"seal"`
@@ -57,15 +58,19 @@ func main() {
 		kctx.FatalIfErrorf(err)
 	}
 
-	if kctx.Command() == "version" {
-		_, _ = fmt.Fprintln(os.Stdout, version)
-
-		os.Exit(0)
-	}
-
 	if err := kctx.Run(version); err != nil {
 		kctx.FatalIfErrorf(err)
 	}
 
 	os.Exit(0)
+}
+
+type VersionCommand struct{}
+
+func (cmd *VersionCommand) Run() error {
+	version := util.Version(Version)
+
+	_, _ = fmt.Fprintln(os.Stdout, version)
+
+	return nil
 }

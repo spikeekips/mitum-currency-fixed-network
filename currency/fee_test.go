@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -18,20 +17,11 @@ type testFeeOperation struct {
 }
 
 func (t *testFeeOperation) TestNew() {
-	rpk := key.MustNewBTCPrivatekey()
-	rkey, err := NewKey(rpk.Publickey(), 100)
-	t.NoError(err)
-	rkeys, err := NewKeys([]Key{rkey}, 100)
-	t.NoError(err)
-	receiver, err := NewAddressFromKeys(rkeys)
-	t.NoError(err)
-
-	fa := NewFixedFeeAmount(NewAmount(7))
+	cid := CurrencyID("SHOWME")
+	fee := NewBig(33)
 
 	height := base.Height(3)
-	fee := NewAmount(33)
-	fact := NewFeeOperationFact(fa, height, receiver, fee)
-	t.Equal(fa.Verbose(), fact.fa)
+	fact := NewFeeOperationFact(height, map[CurrencyID]Big{cid: fee})
 
 	op := NewFeeOperation(fact)
 
@@ -41,8 +31,8 @@ func (t *testFeeOperation) TestNew() {
 	t.Implements((*operation.Operation)(nil), op)
 
 	nfact := op.Fact().(FeeOperationFact)
-	t.True(receiver.Equal(nfact.Receiver()))
-	t.Equal(fee, nfact.Fee())
+	t.Equal(fee, nfact.Amounts()[0].Big())
+	t.Equal(cid, nfact.Amounts()[0].Currency())
 }
 
 func TestFeeOperation(t *testing.T) {
@@ -54,14 +44,7 @@ func testFeeOperationEncode(enc encoder.Encoder) suite.TestingSuite {
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		rkey, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)
-		t.NoError(err)
-		rkeys, err := NewKeys([]Key{rkey}, 100)
-		t.NoError(err)
-		receiver, err := NewAddressFromKeys(rkeys)
-		t.NoError(err)
-
-		fact := NewFeeOperationFact(NewFixedFeeAmount(NewAmount(7)), base.Height(3), receiver, NewAmount(33))
+		fact := NewFeeOperationFact(base.Height(3), map[CurrencyID]Big{CurrencyID("SHOWME"): NewBig(33)})
 
 		return NewFeeOperation(fact)
 	}
@@ -72,10 +55,16 @@ func testFeeOperationEncode(enc encoder.Encoder) suite.TestingSuite {
 		fact := ca.Fact().(FeeOperationFact)
 		ufact := cb.Fact().(FeeOperationFact)
 
-		t.True(fact.receiver.Equal(ufact.receiver))
 		t.Equal(fact.token, ufact.token)
-		t.Equal(fact.fa, ufact.fa)
-		t.True(fact.fee.Equal(ufact.fee))
+
+		t.Equal(len(fact.Amounts()), len(ufact.Amounts()))
+
+		for i := range fact.Amounts() {
+			am := fact.Amounts()[i]
+			bm := ufact.Amounts()[i]
+
+			t.True(am.Equal(bm))
+		}
 	}
 
 	return t

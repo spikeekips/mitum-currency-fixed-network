@@ -35,7 +35,7 @@ func (t *testKeyUpdater) TestNew() {
 
 	token := util.UUID().Bytes()
 
-	fact := NewKeyUpdaterFact(token, sender, nkeys)
+	fact := NewKeyUpdaterFact(token, sender, nkeys, t.cid)
 	sig, err := operation.NewFactSignature(spk, fact, nil)
 	t.NoError(err)
 	fs := []operation.FactSign{operation.NewBaseFactSign(spk.Publickey(), sig)}
@@ -74,7 +74,7 @@ func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		token := util.UUID().Bytes()
 
-		fact := NewKeyUpdaterFact(token, sender, nkeys)
+		fact := NewKeyUpdaterFact(token, sender, nkeys, CurrencyID("SEEME"))
 		sig, err := operation.NewFactSignature(spk, fact, nil)
 		t.NoError(err)
 		fs := []operation.FactSign{operation.NewBaseFactSign(spk.Publickey(), sig)}
@@ -98,6 +98,7 @@ func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		t.True(fact.target.Equal(ufact.target))
 		t.True(fact.Keys().Equal(ufact.Keys()))
+		t.Equal(fact.currency, ufact.currency)
 	}
 
 	return t

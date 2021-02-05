@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/xerrors"
@@ -77,6 +78,10 @@ func (st *Storage) New() (*Storage, error) {
 	}
 }
 
+func (st *Storage) Readonly() bool {
+	return st.readonly
+}
+
 func (st *Storage) Close() error {
 	return st.storage.Close()
 }
@@ -120,14 +125,6 @@ func (st *Storage) createIndex() error {
 	}
 
 	return nil
-}
-
-func (st *Storage) BlockStorage(blk block.Block) (*BlockStorage, error) {
-	if st.readonly {
-		return nil, xerrors.Errorf("readonly mode")
-	}
-
-	return NewBlockStorage(st, blk)
 }
 
 func (st *Storage) LastBlock() base.Height {
@@ -433,7 +430,7 @@ func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, err
 	var rs AccountValue
 	if err := st.storage.Client().GetByFilter(
 		defaultColNameAccount,
-		util.NewBSONFilter("address", currency.StateAddressKey(a)).D(),
+		util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a)).D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadAccountValue(res.Decode, st.storage.Encoders()); err != nil {
 				return err
@@ -446,57 +443,84 @@ func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, err
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
-			return AccountValue{}, false, nil
+			return rs, false, nil
 		}
 
-		return AccountValue{}, false, err
+		return rs, false, err
 	}
 
 	// NOTE load balance
-	switch am, amst, found, err := st.balance(a); {
+	switch am, lastHeight, previousHeight, err := st.balance(a); {
 	case err != nil:
-		return AccountValue{}, false, err
-	case !found:
-		return AccountValue{}, false, nil
+		return rs, false, err
 	default:
-		rs = rs.SetBalance(am)
-
-		if amst.Height() > rs.height {
-			rs = rs.
-				SetHeight(amst.Height()).
-				SetPreviousHeight(amst.PreviousHeight())
-		}
+		rs = rs.SetBalance(am).
+			SetHeight(lastHeight).
+			SetPreviousHeight(previousHeight)
 	}
 
 	return rs, true, nil
 }
 
-func (st *Storage) balance(a base.Address) (currency.Amount, state.State, bool /* exists */, error) {
-	var am state.State
-	if err := st.storage.Client().GetByFilter(
-		defaultColNameBalance,
-		util.NewBSONFilter("address", currency.StateAddressKey(a)).D(),
-		func(res *mongo.SingleResult) error {
-			if i, err := loadBalance(res.Decode, st.storage.Encoders()); err != nil {
-				return err
-			} else {
-				am = i
+func (st *Storage) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
+	var lastHeight, previousHeight base.Height = base.NilHeight, base.NilHeight
+	var cids []string
 
-				return nil
-			}
-		},
-		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
-	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
-			return currency.NilAmount, nil, false, nil
+	amm := map[currency.CurrencyID]currency.Amount{}
+	for {
+		filter := util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a))
+
+		var q primitive.D
+		if len(cids) < 1 {
+			q = filter.D()
+		} else {
+			q = filter.Add("currency", bson.M{"$nin": cids}).D()
 		}
 
-		return currency.NilAmount, nil, false, err
-	} else if a, err := currency.StateAmountValue(am); err != nil {
-		return currency.NilAmount, nil, false, err
-	} else {
-		return a, am, true, nil
+		var sta state.State
+		if err := st.storage.Client().GetByFilter(
+			defaultColNameBalance,
+			q,
+			func(res *mongo.SingleResult) error {
+				if i, err := loadBalance(res.Decode, st.storage.Encoders()); err != nil {
+					return err
+				} else {
+					sta = i
+
+					return nil
+				}
+			},
+			options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
+		); err != nil {
+			if xerrors.Is(err, storage.NotFoundError) {
+				break
+			}
+
+			return nil, lastHeight, previousHeight, err
+		}
+
+		if i, err := currency.StateBalanceValue(sta); err != nil {
+			return nil, lastHeight, previousHeight, err
+		} else {
+			amm[i.Currency()] = i
+
+			cids = append(cids, i.Currency().String())
+		}
+
+		if h := sta.Height(); h > lastHeight {
+			lastHeight = h
+			previousHeight = sta.PreviousHeight()
+		}
 	}
+
+	ams := make([]currency.Amount, len(amm))
+	var i int
+	for k := range amm {
+		ams[i] = amm[k]
+		i++
+	}
+
+	return ams, lastHeight, previousHeight, nil
 }
 
 func loadLastBlock(st *Storage) (base.Height, bool, error) {
@@ -533,7 +557,7 @@ func buildOffset(height base.Height, index uint64) string {
 }
 
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
-	filter := bson.M{"addresses": bson.M{"$in": []string{currency.StateAddressKey(address)}}}
+	filter := bson.M{"addresses": bson.M{"$in": []string{currency.StateAddressKeyPrefix(address)}}}
 	if len(offset) > 0 {
 		var height base.Height
 		var index uint64

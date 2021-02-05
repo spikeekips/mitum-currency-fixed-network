@@ -2,8 +2,9 @@ package cmds
 
 import (
 	"github.com/alecthomas/kong"
-	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )

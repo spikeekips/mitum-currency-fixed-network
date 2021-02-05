@@ -10,25 +10,21 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/localtime"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type CreateAccountCommand struct {
 	*BaseCommand
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	Sender     AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
-	Amount     AmountFlag     `arg:"" name:"amount" help:"amount to send" required:""`
-	Threshold  uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
-	Token      string         `help:"token for operation" optional:""`
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
-	Keys       []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Memo       string         `name:"memo" help:"memo"`
-	Seal       FileLoad       `help:"seal" optional:""`
-	sender     base.Address
-	keys       currency.Keys
+	OperationFlags
+	Sender    AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
+	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:""`
+	Big       BigFlag        `arg:"" name:"big" help:"big to send" required:""`
+	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
+	Keys      []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
+	Seal      FileLoad       `help:"seal" optional:""`
+	sender    base.Address
+	keys      currency.Keys
 }
 
 func NewCreateAccountCommand() CreateAccountCommand {
@@ -44,10 +40,6 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 
 	if err := cmd.parseFlags(); err != nil {
 		return err
-	} else if a, err := cmd.Sender.Encode(jenc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
-	} else {
-		cmd.sender = a
 	}
 
 	var op operation.Operation
@@ -72,12 +64,18 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 }
 
 func (cmd *CreateAccountCommand) parseFlags() error {
-	if len(cmd.Keys) < 1 {
-		return xerrors.Errorf("--key must be given at least one")
+	if err := cmd.OperationFlags.IsValid(nil); err != nil {
+		return err
 	}
 
-	if len(cmd.Token) < 1 {
-		cmd.Token = localtime.String(localtime.Now())
+	if a, err := cmd.Sender.Encode(jenc); err != nil {
+		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+	} else {
+		cmd.sender = a
+	}
+
+	if len(cmd.Keys) < 1 {
+		return xerrors.Errorf("--key must be given at least one")
 	}
 
 	{
@@ -99,7 +97,7 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 }
 
 func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) {
-	var items []currency.CreateAccountItem
+	var items []currency.CreateAccountsItem
 	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
 		var sl seal.Seal
 		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
@@ -119,7 +117,12 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 		}
 	}
 
-	item := currency.NewCreateAccountItem(cmd.keys, cmd.Amount.Amount)
+	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
+	if err := am.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	item := currency.NewCreateAccountsItemSingleAmount(cmd.keys, am)
 	if err := item.IsValid(nil); err != nil {
 		return nil, err
 	} else {

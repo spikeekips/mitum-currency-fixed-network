@@ -15,15 +15,17 @@ type KeyUpdaterFactJSONPacker struct {
 	TK []byte         `json:"token"`
 	TG base.Address   `json:"target"`
 	KS Keys           `json:"keys"`
+	CR CurrencyID     `json:"currency"`
 }
 
-func (ft KeyUpdaterFact) MarshalJSON() ([]byte, error) {
+func (fact KeyUpdaterFact) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(KeyUpdaterFactJSONPacker{
-		HintedHead: jsonenc.NewHintedHead(ft.Hint()),
-		H:          ft.h,
-		TK:         ft.token,
-		TG:         ft.target,
-		KS:         ft.keys,
+		HintedHead: jsonenc.NewHintedHead(fact.Hint()),
+		H:          fact.h,
+		TK:         fact.token,
+		TG:         fact.target,
+		KS:         fact.keys,
+		CR:         fact.currency,
 	})
 }
 
@@ -32,15 +34,16 @@ type KeyUpdaterFactJSONUnpacker struct {
 	TK []byte              `json:"token"`
 	TG base.AddressDecoder `json:"target"`
 	KS json.RawMessage     `json:"keys"`
+	CR string              `json:"currency"`
 }
 
-func (ft *KeyUpdaterFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var utf KeyUpdaterFactJSONUnpacker
-	if err := enc.Unmarshal(b, &utf); err != nil {
+func (fact *KeyUpdaterFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var ufact KeyUpdaterFactJSONUnpacker
+	if err := enc.Unmarshal(b, &ufact); err != nil {
 		return err
 	}
 
-	return ft.unpack(enc, utf.H, utf.TK, utf.TG, utf.KS)
+	return fact.unpack(enc, ufact.H, ufact.TK, ufact.TG, ufact.KS, ufact.CR)
 }
 
 func (op KeyUpdater) MarshalJSON() ([]byte, error) {

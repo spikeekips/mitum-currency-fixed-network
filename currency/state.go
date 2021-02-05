@@ -7,55 +7,31 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
 
 var (
-	StateKeyAccountSuffix = ":account"
-	StateKeyBalanceSuffix = ":balance"
+	StateKeyAccountSuffix        = ":account"
+	StateKeyBalanceSuffix        = ":balance"
+	StateKeyCurrencyDesignPrefix = "currencydesign:"
 )
 
-func StateAddressKey(a base.Address) string {
+func StateAddressKeyPrefix(a base.Address) string {
 	return fmt.Sprintf("%s-%x", a.Raw(), [2]byte(a.Hint().Type()))
 }
 
+func StateBalanceKeyPrefix(a base.Address, cid CurrencyID) string {
+	return fmt.Sprintf("%s-%s", StateAddressKeyPrefix(a), cid)
+}
+
 func StateKeyAccount(a base.Address) string {
-	return fmt.Sprintf("%s%s", StateAddressKey(a), StateKeyAccountSuffix)
+	return fmt.Sprintf("%s%s", StateAddressKeyPrefix(a), StateKeyAccountSuffix)
 }
 
 func IsStateAccountKey(key string) bool {
 	return strings.HasSuffix(key, StateKeyAccountSuffix)
-}
-
-func StateKeyBalance(a base.Address) string {
-	return fmt.Sprintf("%s%s", StateAddressKey(a), StateKeyBalanceSuffix)
-}
-
-func IsStateBalanceKey(key string) bool {
-	return strings.HasSuffix(key, StateKeyBalanceSuffix)
-}
-
-func StateAmountValue(st state.State) (Amount, error) {
-	if i := st.Value(); i == nil {
-		return ZeroAmount, nil
-	} else if s, ok := i.Interface().(string); !ok {
-		return NilAmount, xerrors.Errorf("invalid balance value found, %T", st.Value().Interface())
-	} else if a, err := NewAmountFromString(s); err != nil {
-		return NilAmount, xerrors.Errorf("invalid balance value found, %q : %w", s, err)
-	} else {
-		return a, nil
-	}
-}
-
-func StateKeysValue(st state.State) (Keys, error) {
-	if ac, err := LoadStateAccountValue(st); err != nil {
-		return Keys{}, err
-	} else {
-		return ac.Keys(), nil
-	}
 }
 
 func LoadStateAccountValue(st state.State) (Account, error) {
@@ -76,6 +52,14 @@ func SetStateAccountValue(st state.State, v Account) (state.State, error) {
 		return nil, err
 	} else {
 		return st.SetValue(uv)
+	}
+}
+
+func StateKeysValue(st state.State) (Keys, error) {
+	if ac, err := LoadStateAccountValue(st); err != nil {
+		return Keys{}, err
+	} else {
+		return ac.Keys(), nil
 	}
 }
 
@@ -104,42 +88,65 @@ func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 	}
 }
 
-func SetStateAmountValue(st state.State, v Amount) (state.State, error) {
-	if v.Compare(ZeroAmount) < 0 {
-		return nil, xerrors.Errorf("under zero Amount, %v", v)
+func StateKeyBalance(a base.Address, cid CurrencyID) string {
+	return fmt.Sprintf("%s%s", StateBalanceKeyPrefix(a, cid), StateKeyBalanceSuffix)
+}
+
+func IsStateBalanceKey(key string) bool {
+	return strings.HasSuffix(key, StateKeyBalanceSuffix)
+}
+
+func StateBalanceValue(st state.State) (Amount, error) {
+	v := st.Value()
+	if v == nil {
+		return Amount{}, storage.NotFoundError.Errorf("balance not found in State")
 	}
 
-	if uv, err := state.NewStringValue(v); err != nil {
+	if s, ok := v.Interface().(Amount); !ok {
+		return Amount{}, xerrors.Errorf("invalid balance value found, %T", v.Interface())
+	} else {
+		return s, nil
+	}
+}
+
+func SetStateBalanceValue(st state.State, v Amount) (state.State, error) {
+	if uv, err := state.NewHintedValue(v); err != nil {
 		return nil, err
 	} else {
 		return st.SetValue(uv)
 	}
 }
 
-func checkFactSignsByState(
-	address base.Address,
-	fs []operation.FactSign,
-	getState func(key string) (state.State, bool, error),
-) error {
-	var keys Keys
-	if st, err := existsAccountState(StateKeyAccount(address), "keys of account", getState); err != nil {
-		return err
-	} else {
-		if ks, err := StateKeysValue(st); err != nil {
-			return util.IgnoreError.Wrap(err)
-		} else {
-			keys = ks
-		}
-	}
-
-	if err := checkThreshold(fs, keys); err != nil {
-		return util.IgnoreError.Wrap(err)
-	}
-
-	return nil
+func IsStateCurrencyDesignKey(key string) bool {
+	return strings.HasPrefix(key, StateKeyCurrencyDesignPrefix)
 }
 
-func checkExistsAccountState(
+func StateKeyCurrencyDesign(cid CurrencyID) string {
+	return fmt.Sprintf("%s%s", StateKeyCurrencyDesignPrefix, cid)
+}
+
+func StateCurrencyDesignValue(st state.State) (CurrencyDesign, error) {
+	v := st.Value()
+	if v == nil {
+		return CurrencyDesign{}, storage.NotFoundError.Errorf("currency design not found in State")
+	}
+
+	if s, ok := v.Interface().(CurrencyDesign); !ok {
+		return CurrencyDesign{}, xerrors.Errorf("invalid currency design value found, %T", v.Interface())
+	} else {
+		return s, nil
+	}
+}
+
+func SetStateCurrencyDesignValue(st state.State, v CurrencyDesign) (state.State, error) {
+	if uv, err := state.NewHintedValue(v); err != nil {
+		return nil, err
+	} else {
+		return st.SetValue(uv)
+	}
+}
+
+func checkExistsState(
 	key string,
 	getState func(key string) (state.State, bool, error),
 ) error {
@@ -147,13 +154,13 @@ func checkExistsAccountState(
 	case err != nil:
 		return err
 	case !found:
-		return util.IgnoreError.Errorf("account state, %q does not exist", key)
+		return util.IgnoreError.Errorf("state, %q does not exist", key)
 	default:
 		return nil
 	}
 }
 
-func existsAccountState(
+func existsState(
 	k,
 	name string,
 	getState func(key string) (state.State, bool, error),
@@ -168,7 +175,7 @@ func existsAccountState(
 	}
 }
 
-func notExistsAccountState(
+func notExistsState(
 	k,
 	name string,
 	getState func(key string) (state.State, bool, error),
