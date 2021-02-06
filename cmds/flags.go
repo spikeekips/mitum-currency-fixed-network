@@ -45,10 +45,10 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 		pk = k.(key.Publickey)
 	}
 
-	var weight uint
-	if i, err := strconv.ParseUint(l[1], 10, 64); err != nil {
+	var weight uint = 100
+	if i, err := strconv.ParseUint(l[1], 10, 8); err != nil {
 		return xerrors.Errorf("invalid weight, %q for --key: %w", l[1], err)
-	} else {
+	} else if i > 0 && i <= 100 {
 		weight = uint(i)
 	}
 

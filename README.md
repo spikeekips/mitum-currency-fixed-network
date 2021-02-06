@@ -6,6 +6,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum-currency)](https://goreportcard.com/report/github.com/spikeekips/mitum-currency)
 [![codecov](https://codecov.io/gh/spikeekips/mitum-currency/branch/master/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum-currency)
 [![](https://tokei.rs/b1/github/spikeekips/mitum-currency?category=lines)](https://github.com/spikeekips/mitum-currency)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/spikeekips/mitum-currency.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/spikeekips/mitum-currency/alerts/)
 
 *mitum-currency* is the cryptocurrency case of mitum model, based on
 [*mitum*](https://github.com/spikeekips/mitum). This project was started for
