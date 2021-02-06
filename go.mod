@@ -16,7 +16,7 @@ require (
 	github.com/lucas-clemente/quic-go v0.19.3 // indirect
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2
 	github.com/rs/zerolog v1.20.0
-	github.com/spikeekips/mitum v0.0.0-20210131144252-cc35c39f7e83
+	github.com/spikeekips/mitum v0.0.0-20210206163008-8bc3252cccfe
 	github.com/stellar/go v0.0.0-20210204182917-effdc724aaf7 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/ulule/limiter/v3 v3.8.0
