@@ -17,14 +17,12 @@ var (
 )
 
 type Amount struct {
-	h   valuehash.Hash
 	big Big
 	cid CurrencyID
 }
 
 func NewAmount(big Big, cid CurrencyID) Amount {
 	am := Amount{big: big, cid: cid}
-	am.h = am.GenerateHash()
 
 	return am
 }
@@ -54,7 +52,7 @@ func (am Amount) Bytes() []byte {
 }
 
 func (am Amount) Hash() valuehash.Hash {
-	return am.h
+	return am.GenerateHash()
 }
 
 func (am Amount) GenerateHash() valuehash.Hash {
@@ -101,7 +99,6 @@ func (am Amount) Equal(b Amount) bool {
 
 func (am Amount) WithBig(big Big) Amount {
 	am.big = big
-	am.h = am.GenerateHash()
 
 	return am
 }
