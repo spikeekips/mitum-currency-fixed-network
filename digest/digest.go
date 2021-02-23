@@ -74,27 +74,30 @@ end:
 
 			break end
 		case blk := <-di.blockChan:
-			go func(blk block.Block) {
-				if err := util.Retry(0, time.Second*3, func() error {
-					if err := di.digest(blk); err != nil {
-						if di.errChan != nil {
-							di.errChan <- NewDigestError(err, blk.Height())
-						}
-
-						return err
-					}
-
-					return nil
-				}); err != nil {
-					di.Log().Error().Err(err).Hinted("block", blk.Height()).Msg("failed to digest block")
-				} else {
-					di.Log().Info().Hinted("block", blk.Height()).Msg("block digested")
-
+			err := util.Retry(0, time.Second*1, func() error {
+				if err := di.digest(blk); err != nil {
 					if di.errChan != nil {
-						di.errChan <- NewDigestError(nil, blk.Height())
+						go func() {
+							di.errChan <- NewDigestError(err, blk.Height())
+						}()
 					}
+
+					return err
 				}
-			}(blk)
+
+				return nil
+			})
+			if err != nil {
+				di.Log().Error().Err(err).Hinted("block", blk.Height()).Msg("failed to digest block")
+			} else {
+				di.Log().Info().Hinted("block", blk.Height()).Msg("block digested")
+			}
+
+			if di.errChan != nil {
+				go func() {
+					di.errChan <- NewDigestError(err, blk.Height())
+				}()
+			}
 		}
 	}
 
