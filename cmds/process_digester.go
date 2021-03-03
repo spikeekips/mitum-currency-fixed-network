@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -57,7 +58,7 @@ func ProcessDigester(ctx context.Context) (context.Context, error) {
 
 	var st *digest.Storage
 	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -73,7 +74,7 @@ func ProcessDigester(ctx context.Context) (context.Context, error) {
 func ProcessStartDigester(ctx context.Context) (context.Context, error) {
 	var di *digest.Digester
 	if err := LoadDigesterContextValue(ctx, &di); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -98,7 +99,7 @@ func HookDigesterFollowUp(ctx context.Context) (context.Context, error) {
 
 	var st *digest.Storage
 	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 

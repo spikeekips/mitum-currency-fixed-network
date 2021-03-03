@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/digest"
@@ -33,7 +34,7 @@ func init() {
 func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 

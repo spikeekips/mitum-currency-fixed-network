@@ -74,7 +74,7 @@ end:
 
 			break end
 		case blk := <-di.blockChan:
-			err := util.Retry(0, time.Second*1, func() error {
+			err := util.Retry(0, time.Second*1, func(int) error {
 				if err := di.digest(blk); err != nil {
 					if di.errChan != nil {
 						go func() {

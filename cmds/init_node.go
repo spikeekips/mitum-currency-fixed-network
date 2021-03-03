@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
@@ -72,7 +73,7 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 func (cmd *InitCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
-		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}

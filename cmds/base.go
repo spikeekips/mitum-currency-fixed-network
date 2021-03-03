@@ -65,7 +65,7 @@ func (cmd *BaseNodeCommand) BaseProcesses(ps *pm.Processes) (*pm.Processes, erro
 func initializeProposalProcessor(ctx context.Context, opr *currency.OperationProcessor) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
-		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}
@@ -148,7 +148,7 @@ func (cmd *BaseNodeCommand) hookValidateDigestConfig(ctx context.Context) (conte
 
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -265,7 +265,7 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 
 	var dd DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &dd); err != nil {
-		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}

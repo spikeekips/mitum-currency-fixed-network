@@ -15,7 +15,10 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/states"
+	basicstates "github.com/spikeekips/mitum/states/basic"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum-currency/digest"
@@ -86,6 +89,10 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 
 	_ = cmd.SetProcesses(ps)
 
+	if err := cmd.AfterStartedHooks().Add("enter-booting-state", cmd.enteringBootingState, false); err != nil {
+		return cmd, err
+	}
+
 	return cmd, nil
 }
 
@@ -115,7 +122,7 @@ func (cmd *RunCommand) hookLoadCurrencies(ctx context.Context) (context.Context,
 }
 
 func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context, error) {
-	var cs *isaac.ConsensusStates
+	var cs states.States
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
 		return ctx, err
 	}
@@ -132,16 +139,13 @@ func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context
 
 	var di *digest.Digester
 	if err := LoadDigesterContextValue(ctx, &di); err != nil {
-		if !xerrors.Is(err, config.ContextValueNotFoundError) {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}
 
-	if cs := cs.StateHandler(base.StateConsensus); cs != nil {
-		cs.(*isaac.StateConsensusHandler).WhenBlockSaved(cmd.whenBlockSaved(st, cp, di))
-	}
-	if cs := cs.StateHandler(base.StateSyncing); cs != nil {
-		cs.(*isaac.StateSyncingHandler).WhenBlockSaved(cmd.whenBlockSaved(st, cp, di))
+	if err := cs.BlockSavedHook().Add("mitum-currency-digest", cmd.whenBlockSaved(st, cp, di), false); err != nil {
+		return ctx, err
 	}
 
 	return ctx, nil
@@ -151,27 +155,32 @@ func (cmd *RunCommand) whenBlockSaved(
 	st *mongodbstorage.Storage,
 	cp *currency.CurrencyPool,
 	di *digest.Digester,
-) func([]block.Block) {
-	return func(blocks []block.Block) {
+) pm.ProcessFunc {
+	return func(ctx context.Context) (context.Context, error) {
+		var blocks []block.Block
+		if err := util.LoadFromContextValue(ctx, basicstates.ContextValueBlockSaved, &blocks); err != nil {
+			return ctx, err
+		}
+
 		if di != nil {
 			go func() {
 				di.Digest(blocks)
 			}()
 		}
 
-		go func() {
-			if err := digest.LoadCurrenciesFromStorage(st, blocks[0].Height(), func(sta state.State) (bool, error) {
-				if err := cp.Set(sta); err != nil {
-					return false, err
-				} else {
-					cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum storage")
+		if err := digest.LoadCurrenciesFromStorage(st, blocks[0].Height(), func(sta state.State) (bool, error) {
+			if err := cp.Set(sta); err != nil {
+				return false, err
+			} else {
+				cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum storage")
 
-					return true, nil
-				}
-			}); err != nil {
-				cmd.Log().Error().Err(err).Msg("failed to load currency designs from storage")
+				return true, nil
 			}
-		}()
+		}); err != nil {
+			cmd.Log().Error().Err(err).Msg("failed to load currency designs from storage")
+		}
+
+		return ctx, nil
 	}
 }
 
@@ -254,7 +263,7 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -352,4 +361,22 @@ func (cmd *RunCommand) setDigestHandlers(
 	}
 
 	return handlers, nil
+}
+
+func (cmd *RunCommand) enteringBootingState(ctx context.Context) (context.Context, error) {
+	var cs states.States
+	var bcs *basicstates.States
+	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
+		return ctx, err
+	} else if i, ok := cs.(*basicstates.States); !ok {
+		return ctx, xerrors.Errorf("States not *basicstates.States, %T", cs)
+	} else {
+		bcs = i
+	}
+
+	if err := bcs.SwitchState(basicstates.NewStateSwitchContext(base.StateStopped, base.StateBooting)); err != nil {
+		return ctx, err
+	}
+
+	return ctx, nil
 }

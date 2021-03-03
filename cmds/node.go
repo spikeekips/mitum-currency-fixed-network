@@ -1,9 +1,14 @@
 package cmds
 
+import (
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
+)
+
 type NodeCommand struct {
-	Init InitCommand     `cmd:"" help:"initialize node"`
-	Run  RunCommand      `cmd:"" help:"run node"`
-	Info NodeInfoCommand `cmd:"" help:"node information"`
+	Init         InitCommand                   `cmd:"" help:"initialize node"`
+	Run          RunCommand                    `cmd:"" help:"run node"`
+	Info         NodeInfoCommand               `cmd:"" help:"node information"`
+	CleanStorage mitumcmds.CleanStorageCommand `cmd:"" help:"clean storage"`
 }
 
 func NewNodeCommand() (NodeCommand, error) {
@@ -22,8 +27,9 @@ func NewNodeCommand() (NodeCommand, error) {
 	}
 
 	return NodeCommand{
-		Init: initCommand,
-		Run:  runCommand,
-		Info: NewNodeInfoCommand(),
+		Init:         initCommand,
+		Run:          runCommand,
+		Info:         NewNodeInfoCommand(),
+		CleanStorage: mitumcmds.NewCleanStorageCommand(false),
 	}, nil
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/digest"
@@ -55,7 +56,7 @@ func init() {
 func ProcessStartDigestAPI(ctx context.Context) (context.Context, error) {
 	var nt *digest.HTTP2Server
 	if err := LoadDigestNetworkContextValue(ctx, &nt); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -68,7 +69,7 @@ func ProcessStartDigestAPI(ctx context.Context) (context.Context, error) {
 func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, config.ContextValueNotFoundError) {
+		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
