@@ -198,13 +198,23 @@ func (cmd *RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Cont
 }
 
 func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+	var local *network.LocalNode
+	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return ctx, err
+	}
+
 	var suffrage base.Suffrage
 	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
 	}
 
-	var local *isaac.Local
-	if err := process.LoadLocalContextValue(ctx, &local); err != nil {
+	var policy *isaac.LocalPolicy
+	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
+		return ctx, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return ctx, err
 	}
 
@@ -213,46 +223,63 @@ func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (con
 		return ctx, err
 	}
 
-	opr := currency.NewOperationProcessor(cp)
+	if opr, err := cmd.attachProposalProcessor(local, policy, nodepool, suffrage, cp); err != nil {
+		return ctx, err
+	} else {
+		return initializeProposalProcessor(ctx, opr)
+	}
+}
 
+func (cmd *RunCommand) attachProposalProcessor(
+	local *network.LocalNode,
+	policy *isaac.LocalPolicy,
+	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
+	cp *currency.CurrencyPool,
+) (*currency.OperationProcessor, error) {
+	opr := currency.NewOperationProcessor(cp)
 	if _, err := opr.SetProcessor(currency.CreateAccounts{}, currency.NewCreateAccountsProcessor(cp)); err != nil {
-		return ctx, err
+		return nil, err
 	} else if _, err := opr.SetProcessor(currency.KeyUpdater{}, currency.NewKeyUpdaterProcessor(cp)); err != nil {
-		return ctx, err
+		return nil, err
 	} else if _, err := opr.SetProcessor(currency.Transfers{}, currency.NewTransfersProcessor(cp)); err != nil {
-		return ctx, err
+		return nil, err
+	}
+
+	var threshold base.Threshold
+	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), policy.ThresholdRatio()); err != nil {
+		return nil, err
+	} else {
+		threshold = i
 	}
 
 	pubs := make([]key.Publickey, len(suffrage.Nodes()))
-	pubs[0] = local.Node().Publickey()
+	pubs[0] = local.Publickey()
 	var i int = 1
-	local.Nodes().Traverse(func(n network.Node) bool {
+	nodepool.Traverse(func(n network.Node) bool {
+		if !suffrage.IsInside(n.Address()) {
+			return true
+		}
+
 		pubs[i] = n.Publickey()
 		i++
 
 		return true
 	})
 
-	var threshold base.Threshold
-	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), local.Policy().ThresholdRatio()); err != nil {
-		return ctx, err
-	} else {
-		threshold = i
-	}
-
 	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
 		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
 	); err != nil {
-		return ctx, err
+		return nil, err
 	}
 
 	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdater{},
 		currency.NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold),
 	); err != nil {
-		return ctx, err
+		return nil, err
 	}
 
-	return initializeProposalProcessor(ctx, opr)
+	return opr, nil
 }
 
 func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Context, error) {
@@ -315,8 +342,13 @@ func (cmd *RunCommand) setDigestHandlers(
 	design DigestDesign,
 	cache digest.Cache,
 ) (*digest.Handlers, error) {
-	var local *isaac.Local
-	if err := process.LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
@@ -335,13 +367,13 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
-	rns := make([]network.Node, local.Nodes().Len()+1)
+	rns := make([]network.Node, nodepool.Len()+1)
 	// TODO create new local network channel for remote digest,
-	rns[0] = local.Node()
+	rns[0] = local
 
-	if local.Nodes().Len() > 0 { // remote nodes
+	if nodepool.Len() > 0 { // remote nodes
 		var i int = 1
-		local.Nodes().Traverse(func(n network.Node) bool {
+		nodepool.Traverse(func(n network.Node) bool {
 			rns[i] = n
 			i++
 

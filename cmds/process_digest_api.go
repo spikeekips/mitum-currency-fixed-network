@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
@@ -203,17 +202,17 @@ func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal
 }
 
 func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
-	var local *isaac.Local
-	if err := process.LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}
 
-	if u, err := url.Parse(local.Node().URL()); err != nil {
-		return ctx, xerrors.Errorf("invalid local node url, %q", local.Node().URL())
+	if u, err := url.Parse(local.URL()); err != nil {
+		return ctx, xerrors.Errorf("invalid local node url, %q", local.URL())
 	} else if ch, err := process.LoadNodeChannel(u, encs); err != nil {
 		return ctx, err
 	} else {
-		_ = local.Node().SetChannel(ch)
+		_ = local.SetChannel(ch)
 
 		return ctx, nil
 	}
