@@ -20,10 +20,10 @@ type Account struct {
 
 func NewAccount(address base.Address, keys Keys) (Account, error) {
 	if err := address.IsValid(nil); err != nil {
-		return Account{}, nil
+		return Account{}, err
 	}
 	if err := keys.IsValid(nil); err != nil {
-		return Account{}, nil
+		return Account{}, err
 	}
 
 	ac := Account{address: address, keys: keys}
