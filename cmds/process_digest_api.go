@@ -131,10 +131,6 @@ func newSendHandler(
 	remotes []network.Node,
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
-		if len(remotes) < 1 {
-			return nil, xerrors.Errorf("not supported")
-		}
-
 		var sl seal.Seal
 		switch t := v.(type) {
 		case operation.Seal, seal.Seal:

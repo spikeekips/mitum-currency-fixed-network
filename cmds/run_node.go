@@ -198,11 +198,6 @@ func (cmd *RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Cont
 }
 
 func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
-	var local *network.LocalNode
-	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return ctx, err
-	}
-
 	var suffrage base.Suffrage
 	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
@@ -223,7 +218,7 @@ func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (con
 		return ctx, err
 	}
 
-	if opr, err := cmd.attachProposalProcessor(local, policy, nodepool, suffrage, cp); err != nil {
+	if opr, err := cmd.attachProposalProcessor(policy, nodepool, suffrage, cp); err != nil {
 		return ctx, err
 	} else {
 		return initializeProposalProcessor(ctx, opr)
@@ -231,7 +226,6 @@ func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (con
 }
 
 func (cmd *RunCommand) attachProposalProcessor(
-	local *network.LocalNode,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -253,19 +247,15 @@ func (cmd *RunCommand) attachProposalProcessor(
 		threshold = i
 	}
 
-	pubs := make([]key.Publickey, len(suffrage.Nodes()))
-	pubs[0] = local.Publickey()
-	var i int = 1
-	nodepool.Traverse(func(n network.Node) bool {
-		if !suffrage.IsInside(n.Address()) {
-			return true
+	suffrageNodes := suffrage.Nodes()
+	pubs := make([]key.Publickey, len(suffrageNodes))
+	for i := range suffrageNodes {
+		if n, found := nodepool.Node(suffrageNodes[i]); !found {
+			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
+		} else {
+			pubs[i] = n.Publickey()
 		}
-
-		pubs[i] = n.Publickey()
-		i++
-
-		return true
-	})
+	}
 
 	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
 		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
@@ -352,6 +342,11 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return nil, err
+	}
+
 	var nt network.Server
 	if err := process.LoadNetworkContextValue(ctx, &nt); err != nil {
 		return nil, err
@@ -367,18 +362,17 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
-	rns := make([]network.Node, nodepool.Len()+1)
-	// TODO create new local network channel for remote digest,
-	rns[0] = local
-
-	if nodepool.Len() > 0 { // remote nodes
-		var i int = 1
-		nodepool.Traverse(func(n network.Node) bool {
-			rns[i] = n
-			i++
-
-			return true
-		})
+	suffrageNodes := suffrage.Nodes()
+	rns := make([]network.Node, len(suffrageNodes))
+	var j int
+	for i := range suffrageNodes {
+		s := suffrageNodes[i]
+		if n, found := nodepool.Node(s); !found {
+			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
+		} else {
+			rns[j] = n
+			j++
+		}
 	}
 
 	handlers := digest.NewHandlers(conf.NetworkID(), encs, jenc, st, cache, cp).
