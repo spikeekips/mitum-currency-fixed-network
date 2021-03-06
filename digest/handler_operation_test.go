@@ -4,7 +4,7 @@ package digest
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -43,7 +43,7 @@ func (t *testHandlerOperation) TestNew() {
 
 		w := t.requestOK(handlers, "GET", self.String(), nil)
 
-		b, err := ioutil.ReadAll(w.Result().Body)
+		b, err := io.ReadAll(w.Result().Body)
 		t.NoError(err)
 
 		hal := t.loadHal(b)
@@ -69,7 +69,7 @@ func (t *testHandlerOperation) TestNotFound() {
 
 	w := t.request404(handlers, "GET", self.String(), nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	var problem Problem
@@ -130,7 +130,7 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 				break
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -181,7 +181,7 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 				break
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -259,7 +259,7 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 				break
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -311,7 +311,7 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 				break
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)

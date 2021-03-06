@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -177,7 +177,7 @@ func (v *FileLoad) UnmarshalText(b []byte) error {
 		}
 	}
 
-	if c, err := ioutil.ReadFile(filepath.Clean(string(b))); err != nil {
+	if c, err := os.ReadFile(filepath.Clean(string(b))); err != nil {
 		return err
 	} else {
 		*v = c

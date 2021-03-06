@@ -5,7 +5,6 @@ package digest
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 
@@ -76,7 +75,7 @@ func (t *baseTestHandlers) request500(handlers *Handlers, method, path string, d
 	t.Equal(http.StatusInternalServerError, w.Result().StatusCode)
 	t.Equal(ProblemMimetype, w.Result().Header.Get("content-type"))
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hinter, err := t.JSONEnc.DecodeByHint(b)

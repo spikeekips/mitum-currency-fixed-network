@@ -4,7 +4,7 @@ package digest
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -46,7 +46,7 @@ func (t *testHandlerManifest) TestByHeight() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -74,7 +74,7 @@ func (t *testHandlerManifest) TestByHeightNotFound() {
 
 	w := t.request404(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	var problem Problem
@@ -97,7 +97,7 @@ func (t *testHandlerManifest) TestByHash() {
 
 	w := t.requestOK(handlers, "GET", nonself.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -123,7 +123,7 @@ func (t *testHandlerManifest) TestByHashNotFound() {
 
 	w := t.request404(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	var problem Problem
@@ -169,7 +169,7 @@ func (t *testHandlerManifest) TestManifests() {
 				panic(w)
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -221,7 +221,7 @@ func (t *testHandlerManifest) TestManifests() {
 				panic(w)
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -273,7 +273,7 @@ func (t *testHandlerManifest) TestManifests() {
 				panic(w)
 			}
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)

@@ -4,7 +4,7 @@ package digest
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sort"
 	"testing"
 
@@ -42,7 +42,7 @@ func (t *testHandlerAccount) TestAccount() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -72,7 +72,7 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 
 	w := t.request404(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	var problem Problem
@@ -125,7 +125,7 @@ func (t *testHandlerAccount) TestAccountOperations() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -187,7 +187,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		for {
 			w := t.requestOK(handlers, "GET", self.String(), nil)
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -234,7 +234,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		for {
 			w := t.requestOK(handlers, "GET", self.String(), nil)
 
-			b, err := ioutil.ReadAll(w.Result().Body)
+			b, err := io.ReadAll(w.Result().Body)
 			t.NoError(err)
 
 			hal := t.loadHal(b)
@@ -295,7 +295,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 
 	w := t.request404(handlers, "GET", self.String(), nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	var problem Problem

@@ -5,7 +5,7 @@ package digest
 import (
 	"bytes"
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -28,7 +28,7 @@ func (t *testOperationBuildHandler) TestGET() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -47,7 +47,7 @@ func (t *testOperationBuildHandler) TestTemplate() {
 
 		w := t.requestOK(handlers, "GET", self.Path, nil)
 
-		b, err := ioutil.ReadAll(w.Result().Body)
+		b, err := io.ReadAll(w.Result().Body)
 		t.NoError(err)
 
 		hal := t.loadHal(b)
@@ -62,7 +62,7 @@ func (t *testOperationBuildHandler) TestTemplate() {
 
 		w := t.requestOK(handlers, "GET", self.Path, nil)
 
-		b, err := ioutil.ReadAll(w.Result().Body)
+		b, err := io.ReadAll(w.Result().Body)
 		t.NoError(err)
 
 		hal := t.loadHal(b)
@@ -77,7 +77,7 @@ func (t *testOperationBuildHandler) TestTemplate() {
 
 		w := t.requestOK(handlers, "GET", self.Path, nil)
 
-		b, err := ioutil.ReadAll(w.Result().Body)
+		b, err := io.ReadAll(w.Result().Body)
 		t.NoError(err)
 
 		hal := t.loadHal(b)
@@ -97,7 +97,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 
 	var hal Hal
 	{
-		b, err := ioutil.ReadAll(w.Result().Body)
+		b, err := io.ReadAll(w.Result().Body)
 		t.NoError(err)
 
 		hal = t.loadHal(b)
@@ -155,7 +155,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	var opHal Hal
 	{
 		rw := t.requestOK(handlers, "POST", HandlerPathOperationBuildFact, b)
-		b, err := ioutil.ReadAll(rw.Result().Body)
+		b, err := io.ReadAll(rw.Result().Body)
 		t.NoError(err)
 
 		opHal = t.loadHal(b)
@@ -208,7 +208,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	{
 		rw := t.requestOK(handlers, "POST", HandlerPathOperationBuildSign, b)
 
-		b, err := ioutil.ReadAll(rw.Result().Body)
+		b, err := io.ReadAll(rw.Result().Body)
 		t.NoError(err)
 
 		nopHal = t.loadHal(b)

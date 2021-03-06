@@ -3,7 +3,7 @@
 package digest
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
@@ -25,7 +25,7 @@ func (t *testHandlerBlock) TestByHeight() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
@@ -52,7 +52,7 @@ func (t *testHandlerBlock) TestByHash() {
 
 	w := t.requestOK(handlers, "GET", self.Path, nil)
 
-	b, err := ioutil.ReadAll(w.Result().Body)
+	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
 	hal := t.loadHal(b)
