@@ -62,31 +62,31 @@ func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 
 func loadDigestStorage(st *mongodbstorage.Storage, readonly bool) (*digest.Storage, error) {
 	var mst, ost *mongodbstorage.Storage
-	if rst, err := st.Readonly(); err != nil {
+	if nst, err := st.New(); err != nil {
 		return nil, err
 	} else {
-		mst = rst
-		ost = st
+		mst = st
+		ost = nst
 	}
 
-	var nst *digest.Storage
+	var dst *digest.Storage
 	if readonly {
 		if s, err := digest.NewReadonlyStorage(mst, ost); err != nil {
 			return nil, err
 		} else {
-			nst = s
+			dst = s
 		}
 	} else {
 		if s, err := digest.NewStorage(mst, ost); err != nil {
 			return nil, err
 		} else {
-			nst = s
+			dst = s
 		}
 	}
 
-	if err := nst.Initialize(); err != nil {
+	if err := dst.Initialize(); err != nil {
 		return nil, err
 	} else {
-		return nst, nil
+		return dst, nil
 	}
 }
