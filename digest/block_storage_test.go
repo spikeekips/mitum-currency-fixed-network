@@ -49,7 +49,7 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 	t.NoError(err)
 
@@ -111,7 +111,7 @@ func (t *testStorage) TestBlockStorageWithStates() {
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 	t.NoError(err)
 
@@ -163,7 +163,7 @@ func (t *testStorage) TestBlockStorageWithCurrencyPool() {
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 	t.NoError(err)
 

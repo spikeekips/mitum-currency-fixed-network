@@ -1,7 +1,10 @@
 package cmds
 
 import (
+	"context"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"golang.org/x/xerrors"
@@ -13,17 +16,19 @@ import (
 )
 
 var SendVars = kong.Vars{
-	"node_url": "https://localhost",
+	"node_url": "quic://localhost:54321",
 }
 
 type SendCommand struct {
 	*BaseCommand
-	URL        *url.URL       `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
+	URL        []*url.URL     `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
 	Seal       FileLoad       `help:"seal" optional:""`
 	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
 	Pretty     bool           `name:"pretty" help:"pretty format"`
 	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey for sign"`
+	Timeout    time.Duration  `name:"timeout" help:"timeout; default: 5s"`
+	TLSInscure bool           `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 }
 
 func NewSendCommand() SendCommand {
@@ -35,6 +40,10 @@ func NewSendCommand() SendCommand {
 func (cmd *SendCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
+	}
+
+	if cmd.Timeout < 1 {
+		cmd.Timeout = time.Second * 5
 	}
 
 	var sl seal.Seal
@@ -76,12 +85,53 @@ func (cmd *SendCommand) Run(version util.Version) error {
 }
 
 func (cmd *SendCommand) send(sl seal.Seal) error {
-	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs); err != nil {
-		return err
-	} else {
-		channel = ch
+	var urls []*url.URL
+	founds := map[string]struct{}{}
+	for i := range cmd.URL {
+		u := cmd.URL[i]
+		if _, found := founds[u.String()]; found {
+			continue
+		} else {
+			founds[u.String()] = struct{}{}
+			urls = append(urls, u)
+		}
 	}
 
-	return channel.SendSeal(sl)
+	if len(urls) < 1 {
+		return xerrors.Errorf("empty node urls")
+	}
+
+	channels := make([]network.Channel, len(urls))
+	for i := range urls {
+		if ch, err := process.LoadNodeChannel(urls[i], encs, cmd.Timeout, cmd.TLSInscure); err != nil {
+			return err
+		} else {
+			channels[i] = ch
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(channels))
+
+	errchan := make(chan error, len(channels))
+	for i := range channels {
+		go func(channel network.Channel) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
+			defer cancel()
+
+			errchan <- channel.SendSeal(ctx, sl)
+		}(channels[i])
+	}
+	wg.Wait()
+	close(errchan)
+
+	for err := range errchan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

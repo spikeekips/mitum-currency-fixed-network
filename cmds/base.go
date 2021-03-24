@@ -294,7 +294,7 @@ type OperationFlags struct {
 
 func (op *OperationFlags) IsValid([]byte) error {
 	if len(op.Token) < 1 {
-		op.Token = localtime.String(localtime.Now())
+		op.Token = localtime.String(localtime.UTCNow())
 	}
 
 	return nil

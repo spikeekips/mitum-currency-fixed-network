@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"reflect"
 	"sync"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -165,7 +166,10 @@ func newSendHandler(
 			go func(i int) {
 				defer wg.Done()
 
-				errchan <- remotes[i].Channel().SendSeal(sl)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				defer cancel()
+
+				errchan <- remotes[i].Channel().SendSeal(ctx, sl)
 			}(i)
 		}
 
@@ -205,7 +209,7 @@ func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
 
 	if u, err := url.Parse(local.URL()); err != nil {
 		return ctx, xerrors.Errorf("invalid local node url, %q", local.URL())
-	} else if ch, err := process.LoadNodeChannel(u, encs); err != nil {
+	} else if ch, err := process.LoadNodeChannel(u, encs, time.Second*30, true); err != nil {
 		return ctx, err
 	} else {
 		_ = local.SetChannel(ch)

@@ -292,7 +292,8 @@ func (t *baseTest) compareAmount(a, b interface{}) {
 }
 
 func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block {
-	blk, err := block.NewBlockV0(
+	var blk block.BlockUpdater
+	i, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
 		height,
 		base.Round(1),
@@ -300,13 +301,27 @@ func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block 
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 	t.NoError(err)
+	blk = i
 
-	bs, err := st.OpenBlockStorage(blk)
+	ivp := base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageINIT)
+	avp := base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT)
+	blk = blk.SetINITVoteproof(ivp).SetACCEPTVoteproof(avp)
+
+	bd := block.NewBaseBlockDataMap(block.BaseBlockDataMapHint, blk.Height())
+	for _, dataType := range block.BlockData {
+		bd, err = bd.SetItem(block.NewBaseBlockDataMapItem(dataType, util.UUID().String(), "file:///"+util.UUID().String()))
+		t.NoError(err)
+	}
+	bd = bd.SetBlock(blk.Hash())
+	bd, err = bd.UpdateHash()
 	t.NoError(err)
-	t.NoError(bs.Commit(context.Background()))
+
+	bs, err := st.NewStorageSession(blk)
+	t.NoError(err)
+	t.NoError(bs.Commit(context.Background(), bd))
 
 	return blk
 }

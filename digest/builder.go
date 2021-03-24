@@ -610,7 +610,7 @@ func (bl Builder) checkToken(token []byte) ([]byte, error) {
 	}
 
 	if bytes.Equal(token, templateToken) {
-		return localtime.NewTime(localtime.Now()).Bytes(), nil
+		return localtime.NewTime(localtime.UTCNow()).Bytes(), nil
 	}
 
 	return token, nil
