@@ -18,7 +18,7 @@ type testHandlerSend struct {
 }
 
 func (t *testHandlerSend) TestEmptyRemoteNodes() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	self, err := handlers.router.Get(HandlerPathSend).URL()
@@ -37,7 +37,7 @@ func (t *testHandlerSend) TestEmptyRemoteNodes() {
 }
 
 func (t *testHandlerSend) TestSend() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	var sent operation.Operation
@@ -62,7 +62,7 @@ func (t *testHandlerSend) TestSend() {
 }
 
 func (t *testHandlerSend) TestSendOperations() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	var sent operation.Seal

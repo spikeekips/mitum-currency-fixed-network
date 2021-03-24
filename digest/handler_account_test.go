@@ -21,7 +21,7 @@ type testHandlerAccount struct {
 }
 
 func (t *testHandlerAccount) TestAccount() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	ac := t.newAccount()
 	height := base.Height(33)
@@ -60,7 +60,7 @@ func (t *testHandlerAccount) TestAccount() {
 }
 
 func (t *testHandlerAccount) TestAccountNotFound() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	handlers := t.handlers(st, DummyCache{})
 
@@ -81,7 +81,7 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 }
 
 func (t *testHandlerAccount) TestAccountOperations() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 
@@ -142,7 +142,7 @@ func (t *testHandlerAccount) TestAccountOperations() {
 }
 
 func (t *testHandlerAccount) TestAccountOperationsPaging() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 	var offsets []string
@@ -264,7 +264,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 }
 
 func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 

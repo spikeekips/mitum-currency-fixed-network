@@ -16,7 +16,7 @@ type testHandlerBlock struct {
 }
 
 func (t *testHandlerBlock) TestByHeight() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	height := base.Height(33)
@@ -42,7 +42,7 @@ func (t *testHandlerBlock) TestByHeight() {
 }
 
 func (t *testHandlerBlock) TestByHash() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	hash := valuehash.RandomSHA256()

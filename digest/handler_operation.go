@@ -32,7 +32,7 @@ func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
 		h = b
 	}
 
-	switch va, found, err := hd.storage.Operation(h, true); {
+	switch va, found, err := hd.database.Operation(h, true); {
 	case err != nil:
 		hd.problemWithError(w, err, http.StatusInternalServerError)
 
@@ -79,7 +79,7 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vas []Hal
-	switch l, err := hd.loadOperationsHALFromStorage(filter, reverse); {
+	switch l, err := hd.loadOperationsHALFromDatabase(filter, reverse); {
 	case err != nil:
 		hd.problemWithError(w, err, http.StatusInternalServerError)
 
@@ -139,7 +139,7 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	}
 
 	var vas []Hal
-	switch l, err := hd.loadOperationsHALFromStorage(filter, reverse); {
+	switch l, err := hd.loadOperationsHALFromDatabase(filter, reverse); {
 	case err != nil:
 		hd.problemWithError(w, err, http.StatusInternalServerError)
 
@@ -342,9 +342,9 @@ func nextOffsetOfOperationsByHeight(baseSelf string, vas []Hal, reverse bool) st
 	return next
 }
 
-func (hd *Handlers) loadOperationsHALFromStorage(filter bson.M, reverse bool) ([]Hal, error) {
+func (hd *Handlers) loadOperationsHALFromDatabase(filter bson.M, reverse bool) ([]Hal, error) {
 	var vas []Hal
-	if err := hd.storage.Operations(
+	if err := hd.database.Operations(
 		filter, true, reverse, hd.itemsLimiter("operations"),
 		func(_ valuehash.Hash, va OperationValue) (bool, error) {
 			if hal, err := hd.buildOperationHal(va); err != nil {

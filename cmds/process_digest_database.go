@@ -15,23 +15,23 @@ import (
 	"github.com/spikeekips/mitum-currency/digest"
 )
 
-const ProcessNameDigestStorage = "digest_storage"
+const ProcessNameDigestDatabase = "digest_database"
 
-var ProcessorDigestStorage pm.Process
+var ProcessorDigestDatabase pm.Process
 
 func init() {
 	if i, err := pm.NewProcess(
-		ProcessNameDigestStorage,
+		ProcessNameDigestDatabase,
 		[]string{process.ProcessNameNetwork},
-		ProcessDigestStorage,
+		ProcessDigestDatabase,
 	); err != nil {
 		panic(err)
 	} else {
-		ProcessorDigestStorage = i
+		ProcessorDigestDatabase = i
 	}
 }
 
-func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
+func ProcessDigestDatabase(ctx context.Context) (context.Context, error) {
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
 		if xerrors.Is(err, util.ContextValueNotFoundError) {
@@ -41,12 +41,12 @@ func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	var mst *mongodbstorage.Storage
-	if err := LoadStorageContextValue(ctx, &mst); err != nil {
+	var mst *mongodbstorage.Database
+	if err := LoadDatabaseContextValue(ctx, &mst); err != nil {
 		return ctx, err
 	}
 
-	if st, err := loadDigestStorage(mst, false); err != nil {
+	if st, err := loadDigestDatabase(mst, false); err != nil {
 		return ctx, err
 	} else {
 		var log logging.Logger
@@ -56,12 +56,12 @@ func ProcessDigestStorage(ctx context.Context) (context.Context, error) {
 
 		_ = st.SetLogger(log)
 
-		return context.WithValue(ctx, ContextValueDigestStorage, st), nil
+		return context.WithValue(ctx, ContextValueDigestDatabase, st), nil
 	}
 }
 
-func loadDigestStorage(st *mongodbstorage.Storage, readonly bool) (*digest.Storage, error) {
-	var mst, ost *mongodbstorage.Storage
+func loadDigestDatabase(st *mongodbstorage.Database, readonly bool) (*digest.Database, error) {
+	var mst, ost *mongodbstorage.Database
 	if nst, err := st.New(); err != nil {
 		return nil, err
 	} else {
@@ -69,15 +69,15 @@ func loadDigestStorage(st *mongodbstorage.Storage, readonly bool) (*digest.Stora
 		ost = nst
 	}
 
-	var dst *digest.Storage
+	var dst *digest.Database
 	if readonly {
-		if s, err := digest.NewReadonlyStorage(mst, ost); err != nil {
+		if s, err := digest.NewReadonlyDatabase(mst, ost); err != nil {
 			return nil, err
 		} else {
 			dst = s
 		}
 	} else {
-		if s, err := digest.NewStorage(mst, ost); err != nil {
+		if s, err := digest.NewDatabase(mst, ost); err != nil {
 			return nil, err
 		} else {
 			dst = s

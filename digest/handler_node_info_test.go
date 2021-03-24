@@ -21,7 +21,7 @@ type testHandlerNodeInfo struct {
 }
 
 func (t *testHandlerNodeInfo) TestBasic() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)

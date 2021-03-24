@@ -17,7 +17,7 @@ type testDigester struct {
 }
 
 func (t *testDigester) TestNew() {
-	st, err := NewStorage(t.MongodbStorage(), t.MongodbStorage())
+	st, err := NewDatabase(t.MongodbDatabase(), t.MongodbDatabase())
 	t.NoError(err)
 
 	di := NewDigester(st, nil)
@@ -25,8 +25,8 @@ func (t *testDigester) TestNew() {
 }
 
 func (t *testDigester) TestDigest() {
-	mst := t.MongodbStorage()
-	st, err := NewStorage(mst, t.MongodbStorage())
+	mst := t.MongodbDatabase()
+	st, err := NewDatabase(mst, t.MongodbDatabase())
 	t.NoError(err)
 
 	target := base.Height(3)
@@ -76,8 +76,8 @@ end:
 }
 
 func (t *testDigester) TestDigestAgain() {
-	mst := t.MongodbStorage()
-	st, err := NewStorage(mst, t.MongodbStorage())
+	mst := t.MongodbDatabase()
+	st, err := NewDatabase(mst, t.MongodbDatabase())
 	t.NoError(err)
 
 	target := base.Height(3)

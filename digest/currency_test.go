@@ -63,7 +63,7 @@ func (t *testCurrency) newHeight(excude base.Height) base.Height {
 func (t *testCurrency) TestLoad() {
 	des := make([]currency.CurrencyDesign, 3)
 
-	mst := t.MongodbStorage()
+	mst := t.MongodbDatabase()
 
 	var sts []state.State
 	cids := map[currency.CurrencyID]currency.CurrencyDesign{}
@@ -93,7 +93,7 @@ func (t *testCurrency) TestLoad() {
 
 	cp := currency.NewCurrencyPool()
 
-	t.NoError(LoadCurrenciesFromStorage(mst, base.NilHeight, func(sta state.State) (bool, error) {
+	t.NoError(LoadCurrenciesFromDatabase(mst, base.NilHeight, func(sta state.State) (bool, error) {
 		t.NoError(cp.Set(sta))
 
 		return true, nil

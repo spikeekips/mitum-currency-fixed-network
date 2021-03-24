@@ -14,20 +14,20 @@ import (
 )
 
 var (
-	ContextValueDigestDesign  util.ContextKey = "digest_design"
-	ContextValueDigestStorage util.ContextKey = "digest_storage"
-	ContextValueDigestNetwork util.ContextKey = "digest_network"
-	ContextValueDigester      util.ContextKey = "digester"
-	ContextValueCurrencyPool  util.ContextKey = "currency_pool"
+	ContextValueDigestDesign   util.ContextKey = "digest_design"
+	ContextValueDigestDatabase util.ContextKey = "digest_database"
+	ContextValueDigestNetwork  util.ContextKey = "digest_network"
+	ContextValueDigester       util.ContextKey = "digester"
+	ContextValueCurrencyPool   util.ContextKey = "currency_pool"
 )
 
 func LoadDigestDesignContextValue(ctx context.Context, l *DigestDesign) error {
 	return util.LoadFromContextValue(ctx, ContextValueDigestDesign, l)
 }
 
-func LoadStorageContextValue(ctx context.Context, l **mongodbstorage.Storage) error {
-	st := (storage.Storage)(nil)
-	if err := process.LoadStorageContextValue(ctx, &st); err != nil {
+func LoadDatabaseContextValue(ctx context.Context, l **mongodbstorage.Database) error {
+	st := (storage.Database)(nil)
+	if err := process.LoadDatabaseContextValue(ctx, &st); err != nil {
 		return err
 	}
 
@@ -37,8 +37,8 @@ func LoadStorageContextValue(ctx context.Context, l **mongodbstorage.Storage) er
 	return nil
 }
 
-func LoadDigestStorageContextValue(ctx context.Context, l **digest.Storage) error {
-	return util.LoadFromContextValue(ctx, ContextValueDigestStorage, l)
+func LoadDigestDatabaseContextValue(ctx context.Context, l **digest.Database) error {
+	return util.LoadFromContextValue(ctx, ContextValueDigestDatabase, l)
 }
 
 func LoadDigestNetworkContextValue(ctx context.Context, l **digest.HTTP2Server) error {

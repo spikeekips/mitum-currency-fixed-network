@@ -20,10 +20,10 @@ import (
 
 var bulkWriteLimit = 500
 
-type BlockStorage struct {
+type BlockSession struct {
 	sync.RWMutex
 	block           block.Block
-	st              *Storage
+	st              *Database
 	inStates        map[string]struct{}
 	operationModels []mongo.WriteModel
 	accountModels   []mongo.WriteModel
@@ -31,26 +31,26 @@ type BlockStorage struct {
 	statesValue     *sync.Map
 }
 
-func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+func NewBlockSession(st *Database, blk block.Block) (*BlockSession, error) {
 	if st.Readonly() {
 		return nil, xerrors.Errorf("readonly mode")
 	}
 
-	var nst *Storage
+	var nst *Database
 	if n, err := st.New(); err != nil {
 		return nil, err
 	} else {
 		nst = n
 	}
 
-	return &BlockStorage{
+	return &BlockSession{
 		st:          nst,
 		block:       blk,
 		statesValue: &sync.Map{},
 	}, nil
 }
 
-func (bs *BlockStorage) Prepare() error {
+func (bs *BlockSession) Prepare() error {
 	bs.Lock()
 	defer bs.Unlock()
 
@@ -69,7 +69,7 @@ func (bs *BlockStorage) Prepare() error {
 	return nil
 }
 
-func (bs *BlockStorage) Commit(ctx context.Context) error {
+func (bs *BlockSession) Commit(ctx context.Context) error {
 	bs.Lock()
 	defer bs.Unlock()
 
@@ -99,14 +99,14 @@ func (bs *BlockStorage) Commit(ctx context.Context) error {
 	return nil
 }
 
-func (bs *BlockStorage) Close() error {
+func (bs *BlockSession) Close() error {
 	bs.Lock()
 	defer bs.Unlock()
 
 	return bs.close()
 }
 
-func (bs *BlockStorage) prepareOperationsTree() error {
+func (bs *BlockSession) prepareOperationsTree() error {
 	inStates := map[string]struct{}{}
 	if err := bs.block.OperationsTree().Traverse(func(i int, key, _, v []byte) (bool, error) {
 		fh := valuehash.NewBytes(key)
@@ -127,7 +127,7 @@ func (bs *BlockStorage) prepareOperationsTree() error {
 	return nil
 }
 
-func (bs *BlockStorage) prepareOperations() error {
+func (bs *BlockSession) prepareOperations() error {
 	if len(bs.block.Operations()) < 1 {
 		return nil
 	}
@@ -148,7 +148,7 @@ func (bs *BlockStorage) prepareOperations() error {
 		op := bs.block.Operations()[i]
 		if doc, err := NewOperationDoc(
 			op,
-			bs.st.storage.Encoder(),
+			bs.st.database.Encoder(),
 			bs.block.Height(),
 			bs.block.ConfirmedAt(),
 			inStates(op.Fact().Hash()),
@@ -163,7 +163,7 @@ func (bs *BlockStorage) prepareOperations() error {
 	return nil
 }
 
-func (bs *BlockStorage) prepareAccounts() error {
+func (bs *BlockSession) prepareAccounts() error {
 	if len(bs.block.States()) < 1 {
 		return nil
 	}
@@ -196,25 +196,25 @@ func (bs *BlockStorage) prepareAccounts() error {
 	return nil
 }
 
-func (bs *BlockStorage) handleAccountState(st state.State) ([]mongo.WriteModel, error) {
+func (bs *BlockSession) handleAccountState(st state.State) ([]mongo.WriteModel, error) {
 	if rs, err := NewAccountValue(st); err != nil {
 		return nil, err
-	} else if doc, err := NewAccountDoc(rs, bs.st.storage.Encoder()); err != nil {
+	} else if doc, err := NewAccountDoc(rs, bs.st.database.Encoder()); err != nil {
 		return nil, err
 	} else {
 		return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
 	}
 }
 
-func (bs *BlockStorage) handleBalanceState(st state.State) ([]mongo.WriteModel, error) {
-	if doc, err := NewBalanceDoc(st, bs.st.storage.Encoder()); err != nil {
+func (bs *BlockSession) handleBalanceState(st state.State) ([]mongo.WriteModel, error) {
+	if doc, err := NewBalanceDoc(st, bs.st.database.Encoder()); err != nil {
 		return nil, err
 	} else {
 		return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
 	}
 }
 
-func (bs *BlockStorage) writeModels(ctx context.Context, col string, models []mongo.WriteModel) error {
+func (bs *BlockSession) writeModels(ctx context.Context, col string, models []mongo.WriteModel) error {
 	started := time.Now()
 	defer func() {
 		bs.statesValue.Store(fmt.Sprintf("write-models-%s", col), time.Since(started))
@@ -247,9 +247,9 @@ func (bs *BlockStorage) writeModels(ctx context.Context, col string, models []mo
 	return nil
 }
 
-func (bs *BlockStorage) writeModelsChunk(ctx context.Context, col string, models []mongo.WriteModel) error {
+func (bs *BlockSession) writeModelsChunk(ctx context.Context, col string, models []mongo.WriteModel) error {
 	opts := options.BulkWrite().SetOrdered(false)
-	if res, err := bs.st.storage.Client().Collection(col).BulkWrite(ctx, models, opts); err != nil {
+	if res, err := bs.st.database.Client().Collection(col).BulkWrite(ctx, models, opts); err != nil {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("not inserted to %s", col)
@@ -258,7 +258,7 @@ func (bs *BlockStorage) writeModelsChunk(ctx context.Context, col string, models
 	return nil
 }
 
-func (bs *BlockStorage) close() error {
+func (bs *BlockSession) close() error {
 	bs.block = nil
 	bs.operationModels = nil
 	bs.accountModels = nil

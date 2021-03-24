@@ -30,7 +30,7 @@ func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Reques
 	}
 
 	hd.handleManifest(w, r, func() (block.Manifest, bool, error) {
-		return hd.storage.ManifestByHeight(height)
+		return hd.database.ManifestByHeight(height)
 	})
 }
 
@@ -53,7 +53,7 @@ func (hd *Handlers) handleManifestByHash(w http.ResponseWriter, r *http.Request)
 	}
 
 	hd.handleManifest(w, r, func() (block.Manifest, bool, error) {
-		return hd.storage.Manifest(h)
+		return hd.database.Manifest(h)
 	})
 }
 
@@ -142,7 +142,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vas []Hal
-	if err := hd.storage.Manifests(
+	if err := hd.database.Manifests(
 		true, reverse, height, hd.itemsLimiter("manifests"),
 		func(height base.Height, _ valuehash.Hash, va block.Manifest) (bool, error) {
 			if height <= base.PreGenesisHeight {

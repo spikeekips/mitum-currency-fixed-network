@@ -15,7 +15,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (t *testStorage) TestBlockStorageWithOperations() {
+func (t *testDatabase) TestBlockSessionWithOperations() {
 	addrs := make([]base.Address, 5)
 	for i := 0; i < len(addrs); i++ {
 		addrs[i] = currency.MustAddress(util.UUID().String())
@@ -55,8 +55,8 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 
 	nblk := blk.SetOperations(ops)
 
-	st, _ := t.Storage()
-	bs, err := NewBlockStorage(st, nblk)
+	st, _ := t.Database()
+	bs, err := NewBlockSession(st, nblk)
 	t.NoError(err)
 
 	t.NoError(bs.Prepare())
@@ -102,7 +102,7 @@ func (t *testStorage) TestBlockStorageWithOperations() {
 	}
 }
 
-func (t *testStorage) TestBlockStorageWithStates() {
+func (t *testDatabase) TestBlockSessionWithStates() {
 	blk, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
 		base.Height(3),
@@ -134,8 +134,8 @@ func (t *testStorage) TestBlockStorageWithStates() {
 	}
 
 	nblk := blk.SetStates(sts)
-	st, _ := t.Storage()
-	bs, err := NewBlockStorage(st, nblk)
+	st, _ := t.Database()
+	bs, err := NewBlockSession(st, nblk)
 	t.NoError(err)
 
 	t.NoError(bs.Prepare())
@@ -154,7 +154,7 @@ func (t *testStorage) TestBlockStorageWithStates() {
 	}
 }
 
-func (t *testStorage) TestBlockStorageWithCurrencyPool() {
+func (t *testDatabase) TestBlockSessionWithCurrencyPool() {
 	blk, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
 		base.Height(3),
@@ -212,8 +212,8 @@ func (t *testStorage) TestBlockStorageWithCurrencyPool() {
 
 	nblk := blk.SetStates(sts)
 
-	st, _ := t.Storage()
-	bs, err := NewBlockStorage(st, nblk)
+	st, _ := t.Database()
+	bs, err := NewBlockSession(st, nblk)
 	t.NoError(err)
 
 	t.NoError(bs.Prepare())

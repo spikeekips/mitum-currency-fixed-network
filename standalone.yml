@@ -1,10 +1,10 @@
 address: mc-node0-010a:0.0.1
 privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
 storage:
-    uri: mongodb://127.0.0.1:27017/mc
+    database:
+        uri: mongodb://127.0.0.1:27017/mc
     blockfs:
         path: ./mc-blockfs
-        wide-open: true
 network-id: mc; Tue 08 Dec 2020 07:22:18 AM KST
 network:
     bind: quic://0.0.0.0:54321
@@ -41,7 +41,6 @@ policy:
 nodes:
 
 digest:
-    storage: mongodb://127.0.0.1:27017/mc_digest
     network:
         bind: https://localhost:54322
         url: https://localhost:54322

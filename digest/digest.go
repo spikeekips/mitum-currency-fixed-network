@@ -45,17 +45,17 @@ type Digester struct {
 	sync.RWMutex
 	*util.FunctionDaemon
 	*logging.Logging
-	storage   *Storage
+	database  *Database
 	blockChan chan block.Block
 	errChan   chan error
 }
 
-func NewDigester(st *Storage, errChan chan error) *Digester {
+func NewDigester(st *Database, errChan chan error) *Digester {
 	di := &Digester{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "digester")
 		}),
-		storage:   st,
+		database:  st,
 		blockChan: make(chan block.Block, 100),
 		errChan:   errChan,
 	}
@@ -121,12 +121,12 @@ func (di *Digester) digest(blk block.Block) error {
 	di.Lock()
 	defer di.Unlock()
 
-	return DigestBlock(di.storage, blk)
+	return DigestBlock(di.database, blk)
 }
 
-func DigestBlock(st *Storage, blk block.Block) error {
-	var bs *BlockStorage
-	if s, err := NewBlockStorage(st, blk); err != nil {
+func DigestBlock(st *Database, blk block.Block) error {
+	var bs *BlockSession
+	if s, err := NewBlockSession(st, blk); err != nil {
 		return err
 	} else {
 		bs = s

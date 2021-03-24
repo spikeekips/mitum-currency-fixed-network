@@ -33,7 +33,7 @@ var (
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameDigester,
-		[]string{ProcessNameDigestStorage},
+		[]string{ProcessNameDigestDatabase},
 		ProcessDigester,
 	); err != nil {
 		panic(err)
@@ -58,8 +58,8 @@ func ProcessDigester(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st *digest.Storage
-	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
+	var st *digest.Database
+	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
 		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
@@ -94,13 +94,13 @@ func HookDigesterFollowUp(ctx context.Context) (context.Context, error) {
 
 	log.Debug().Msg("digester trying to follow up")
 
-	var mst storage.Storage
-	if err := process.LoadStorageContextValue(ctx, &mst); err != nil {
+	var mst storage.Database
+	if err := process.LoadDatabaseContextValue(ctx, &mst); err != nil {
 		return ctx, err
 	}
 
-	var st *digest.Storage
-	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
+	var st *digest.Database
+	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
 		if xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
@@ -134,8 +134,8 @@ func HookDigesterFollowUp(ctx context.Context) (context.Context, error) {
 }
 
 func digestFollowup(ctx context.Context, height base.Height) error {
-	var st *digest.Storage
-	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
+	var st *digest.Database
+	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
 		return err
 	}
 

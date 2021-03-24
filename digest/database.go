@@ -33,22 +33,22 @@ var (
 
 var DigestStorageLastBlockKey = "digest_last_block"
 
-type Storage struct {
+type Database struct {
 	sync.RWMutex
 	*logging.Logging
-	mitum     *mongodbstorage.Storage
-	storage   *mongodbstorage.Storage
+	mitum     *mongodbstorage.Database
+	database  *mongodbstorage.Database
 	readonly  bool
 	lastBlock base.Height
 }
 
-func NewStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storage) (*Storage, error) {
-	nst := &Storage{
+func NewDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Database) (*Database, error) {
+	nst := &Database{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "digest-mongodb-storage")
+			return c.Str("module", "digest-mongodb-database")
 		}),
 		mitum:     mitum,
-		storage:   st,
+		database:  st,
 		lastBlock: base.NilHeight,
 	}
 	_ = nst.SetLogger(mitum.Log())
@@ -56,8 +56,8 @@ func NewStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storage) (*Sto
 	return nst, nil
 }
 
-func NewReadonlyStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storage) (*Storage, error) {
-	if st, err := NewStorage(mitum, st); err != nil {
+func NewReadonlyDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Database) (*Database, error) {
+	if st, err := NewDatabase(mitum, st); err != nil {
 		return nil, err
 	} else {
 		st.readonly = true
@@ -66,27 +66,27 @@ func NewReadonlyStorage(mitum *mongodbstorage.Storage, st *mongodbstorage.Storag
 	}
 }
 
-func (st *Storage) New() (*Storage, error) {
+func (st *Database) New() (*Database, error) {
 	if st.readonly {
 		return nil, xerrors.Errorf("readonly mode")
 	}
 
-	if nst, err := st.storage.New(); err != nil {
+	if nst, err := st.database.New(); err != nil {
 		return nil, err
 	} else {
-		return NewStorage(st.mitum, nst)
+		return NewDatabase(st.mitum, nst)
 	}
 }
 
-func (st *Storage) Readonly() bool {
+func (st *Database) Readonly() bool {
 	return st.readonly
 }
 
-func (st *Storage) Close() error {
-	return st.storage.Close()
+func (st *Database) Close() error {
+	return st.database.Close()
 }
 
-func (st *Storage) Initialize() error {
+func (st *Database) Initialize() error {
 	st.Lock()
 	defer st.Unlock()
 
@@ -113,13 +113,13 @@ func (st *Storage) Initialize() error {
 	return nil
 }
 
-func (st *Storage) createIndex() error {
+func (st *Database) createIndex() error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
 
 	for col, models := range defaultIndexes {
-		if err := st.storage.CreateIndex(col, models, indexPrefix); err != nil {
+		if err := st.database.CreateIndex(col, models, indexPrefix); err != nil {
 			return err
 		}
 	}
@@ -127,14 +127,14 @@ func (st *Storage) createIndex() error {
 	return nil
 }
 
-func (st *Storage) LastBlock() base.Height {
+func (st *Database) LastBlock() base.Height {
 	st.RLock()
 	defer st.RUnlock()
 
 	return st.lastBlock
 }
 
-func (st *Storage) SetLastBlock(height base.Height) error {
+func (st *Database) SetLastBlock(height base.Height) error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
@@ -149,8 +149,8 @@ func (st *Storage) SetLastBlock(height base.Height) error {
 	return st.setLastBlock(height)
 }
 
-func (st *Storage) setLastBlock(height base.Height) error {
-	if err := st.storage.SetInfo(DigestStorageLastBlockKey, height.Bytes()); err != nil {
+func (st *Database) setLastBlock(height base.Height) error {
+	if err := st.database.SetInfo(DigestStorageLastBlockKey, height.Bytes()); err != nil {
 		st.Log().Debug().Hinted("height", height).Msg("failed to set last block")
 
 		return err
@@ -162,7 +162,7 @@ func (st *Storage) setLastBlock(height base.Height) error {
 	}
 }
 
-func (st *Storage) Clean() error {
+func (st *Database) Clean() error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
@@ -173,13 +173,13 @@ func (st *Storage) Clean() error {
 	return st.clean()
 }
 
-func (st *Storage) clean() error {
+func (st *Database) clean() error {
 	for _, col := range []string{
 		defaultColNameAccount,
 		defaultColNameBalance,
 		defaultColNameOperation,
 	} {
-		if err := st.storage.Client().Collection(col).Drop(context.Background()); err != nil {
+		if err := st.database.Client().Collection(col).Drop(context.Background()); err != nil {
 			return storage.WrapStorageError(err)
 		}
 
@@ -195,7 +195,7 @@ func (st *Storage) clean() error {
 	return nil
 }
 
-func (st *Storage) CleanByHeight(height base.Height) error {
+func (st *Database) CleanByHeight(height base.Height) error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
@@ -206,7 +206,7 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 	return st.cleanByHeight(height)
 }
 
-func (st *Storage) cleanByHeight(height base.Height) error {
+func (st *Database) cleanByHeight(height base.Height) error {
 	if height <= base.PreGenesisHeight+1 {
 		return st.clean()
 	}
@@ -219,7 +219,7 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 		defaultColNameBalance,
 		defaultColNameOperation,
 	} {
-		res, err := st.storage.Client().Collection(col).BulkWrite(
+		res, err := st.database.Client().Collection(col).BulkWrite(
 			context.Background(),
 			[]mongo.WriteModel{removeByHeight},
 			opts,
@@ -234,16 +234,16 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 	return st.setLastBlock(height - 1)
 }
 
-func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
+func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
 	return st.mitum.ManifestByHeight(height)
 }
 
-func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
+func (st *Database) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	return st.mitum.Manifest(h)
 }
 
 // Manifests returns block.Manifests by it's order, height.
-func (st *Storage) Manifests(
+func (st *Database) Manifests(
 	load bool,
 	reverse bool,
 	offset base.Height,
@@ -275,7 +275,7 @@ func (st *Storage) Manifests(
 // * reverse: order by height; if true, higher height will be returned first.
 // *  offset: returns from next of offset, usually it is combination of
 // "<height>,<fact>".
-func (st *Storage) OperationsByAddress(
+func (st *Database) OperationsByAddress(
 	address base.Address,
 	load,
 	reverse bool,
@@ -311,7 +311,7 @@ func (st *Storage) OperationsByAddress(
 		opt = opt.SetProjection(bson.M{"fact": 1})
 	}
 
-	return st.storage.Client().Find(
+	return st.database.Client().Find(
 		context.Background(),
 		defaultColNameOperation,
 		filter,
@@ -324,7 +324,7 @@ func (st *Storage) OperationsByAddress(
 				}
 			}
 
-			if va, err := loadOperation(cursor.Decode, st.storage.Encoders()); err != nil {
+			if va, err := loadOperation(cursor.Decode, st.database.Encoders()); err != nil {
 				return false, err
 			} else {
 				return callback(va.Operation().Fact().Hash(), va)
@@ -336,17 +336,17 @@ func (st *Storage) OperationsByAddress(
 
 // Operation returns operation.Operation. If load is false, just returns nil
 // Operation.
-func (st *Storage) Operation(
+func (st *Database) Operation(
 	h valuehash.Hash, /* fact hash */
 	load bool,
 ) (OperationValue, bool /* exists */, error) {
 	if !load {
-		exists, err := st.storage.Client().Exists(defaultColNameOperation, util.NewBSONFilter("fact", h).D())
+		exists, err := st.database.Client().Exists(defaultColNameOperation, util.NewBSONFilter("fact", h).D())
 		return OperationValue{}, exists, err
 	}
 
 	var va OperationValue
-	if err := st.storage.Client().GetByFilter(
+	if err := st.database.Client().GetByFilter(
 		defaultColNameOperation,
 		util.NewBSONFilter("fact", h).D(),
 		func(res *mongo.SingleResult) error {
@@ -354,7 +354,7 @@ func (st *Storage) Operation(
 				return nil
 			}
 
-			if i, err := loadOperation(res.Decode, st.storage.Encoders()); err != nil {
+			if i, err := loadOperation(res.Decode, st.database.Encoders()); err != nil {
 				return err
 			} else {
 				va = i
@@ -374,7 +374,7 @@ func (st *Storage) Operation(
 }
 
 // Operations returns operation.Operations by it's order, height and index.
-func (st *Storage) Operations(
+func (st *Database) Operations(
 	filter bson.M,
 	load bool,
 	reverse bool,
@@ -402,7 +402,7 @@ func (st *Storage) Operations(
 		opt = opt.SetProjection(bson.M{"fact": 1})
 	}
 
-	return st.storage.Client().Find(
+	return st.database.Client().Find(
 		context.Background(),
 		defaultColNameOperation,
 		filter,
@@ -415,7 +415,7 @@ func (st *Storage) Operations(
 				}
 			}
 
-			if va, err := loadOperation(cursor.Decode, st.storage.Encoders()); err != nil {
+			if va, err := loadOperation(cursor.Decode, st.database.Encoders()); err != nil {
 				return false, err
 			} else {
 				return callback(va.Operation().Fact().Hash(), va)
@@ -426,13 +426,13 @@ func (st *Storage) Operations(
 }
 
 // Account returns AccountValue.
-func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, error) {
+func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, error) {
 	var rs AccountValue
-	if err := st.storage.Client().GetByFilter(
+	if err := st.database.Client().GetByFilter(
 		defaultColNameAccount,
 		util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a)).D(),
 		func(res *mongo.SingleResult) error {
-			if i, err := loadAccountValue(res.Decode, st.storage.Encoders()); err != nil {
+			if i, err := loadAccountValue(res.Decode, st.database.Encoders()); err != nil {
 				return err
 			} else {
 				rs = i
@@ -462,7 +462,7 @@ func (st *Storage) Account(a base.Address) (AccountValue, bool /* exists */, err
 	return rs, true, nil
 }
 
-func (st *Storage) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
+func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
 	var lastHeight, previousHeight base.Height = base.NilHeight, base.NilHeight
 	var cids []string
 
@@ -478,11 +478,11 @@ func (st *Storage) balance(a base.Address) ([]currency.Amount, base.Height, base
 		}
 
 		var sta state.State
-		if err := st.storage.Client().GetByFilter(
+		if err := st.database.Client().GetByFilter(
 			defaultColNameBalance,
 			q,
 			func(res *mongo.SingleResult) error {
-				if i, err := loadBalance(res.Decode, st.storage.Encoders()); err != nil {
+				if i, err := loadBalance(res.Decode, st.database.Encoders()); err != nil {
 					return err
 				} else {
 					sta = i
@@ -523,8 +523,8 @@ func (st *Storage) balance(a base.Address) ([]currency.Amount, base.Height, base
 	return ams, lastHeight, previousHeight, nil
 }
 
-func loadLastBlock(st *Storage) (base.Height, bool, error) {
-	switch b, found, err := st.storage.Info(DigestStorageLastBlockKey); {
+func loadLastBlock(st *Database) (base.Height, bool, error) {
+	switch b, found, err := st.database.Info(DigestStorageLastBlockKey); {
 	case err != nil:
 		return base.NilHeight, false, xerrors.Errorf("failed to get last block for digest: %w", err)
 	case !found:

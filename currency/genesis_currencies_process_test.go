@@ -63,7 +63,7 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 
 	op := t.newOperaton(keys, cs)
 
-	sp, err := storage.NewStatepool(t.Storage(nil, nil))
+	sp, err := storage.NewStatepool(t.Database(nil, nil))
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys)

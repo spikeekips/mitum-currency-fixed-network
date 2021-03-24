@@ -16,18 +16,18 @@ import (
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
-type testStorage struct {
+type testDatabase struct {
 	baseTest
 }
 
-func (t *testStorage) TestInitialize() {
-	st, err := NewStorage(t.MongodbStorage(), t.MongodbStorage())
+func (t *testDatabase) TestInitialize() {
+	st, err := NewDatabase(t.MongodbDatabase(), t.MongodbDatabase())
 	t.NoError(err)
 
 	newHeight := base.Height(33)
 	t.NoError(st.SetLastBlock(newHeight))
 
-	nst, err := NewStorage(t.MongodbStorage(), t.MongodbStorage())
+	nst, err := NewDatabase(t.MongodbDatabase(), t.MongodbDatabase())
 	t.NoError(err)
 	t.NoError(nst.Initialize())
 
@@ -38,8 +38,8 @@ func (t *testStorage) TestInitialize() {
 	t.Equal(newHeight, h)
 }
 
-func (t *testStorage) TestOperationByAddress() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperationByAddress() {
+	st, _ := t.Database()
 
 	height := base.Height(3)
 	confirmedAt := localtime.UTCNow()
@@ -122,8 +122,8 @@ func (t *testStorage) TestOperationByAddress() {
 	}
 }
 
-func (t *testStorage) TestOperationByAddressOrderByHeight() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperationByAddressOrderByHeight() {
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 	var hashes []string
@@ -195,8 +195,8 @@ func (t *testStorage) TestOperationByAddressOrderByHeight() {
 	}
 }
 
-func (t *testStorage) TestOperationByAddressOffset() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperationByAddressOffset() {
+	st, _ := t.Database()
 	confirmedAt := localtime.UTCNow()
 
 	sender := currency.MustAddress(util.UUID().String())
@@ -272,8 +272,8 @@ func (t *testStorage) TestOperationByAddressOffset() {
 	}
 }
 
-func (t *testStorage) TestOperationByAddressLimit() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperationByAddressLimit() {
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 	var hashes []string
@@ -391,8 +391,8 @@ func (t *testStorage) TestOperationByAddressLimit() {
 	}
 }
 
-func (t *testStorage) TestOperationsFact() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperationsFact() {
+	st, _ := t.Database()
 	height := base.Height(3)
 	confirmedAt := localtime.UTCNow()
 
@@ -426,8 +426,8 @@ func (t *testStorage) TestOperationsFact() {
 	}
 }
 
-func (t *testStorage) TestClean() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestClean() {
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 
@@ -464,8 +464,8 @@ func (t *testStorage) TestClean() {
 	t.Empty(uhashes)
 }
 
-func (t *testStorage) TestCleanByHeight() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestCleanByHeight() {
+	st, _ := t.Database()
 
 	sender := currency.MustAddress(util.UUID().String())
 	var hashes []string
@@ -516,7 +516,7 @@ func (t *testStorage) TestCleanByHeight() {
 	}
 }
 
-func (t *testStorage) TestAccountsWithBadState() {
+func (t *testDatabase) TestAccountsWithBadState() {
 	ac := t.newAccount()
 
 	height := base.Height(33)
@@ -526,8 +526,8 @@ func (t *testStorage) TestAccountsWithBadState() {
 	t.Contains(err.Error(), "not state for currency.Account")
 }
 
-func (t *testStorage) TestAccount() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestAccount() {
+	st, _ := t.Database()
 
 	height := base.Height(33)
 	ac := t.newAccount()
@@ -558,8 +558,8 @@ func (t *testStorage) TestAccount() {
 	t.compareAmount(am, urs.balance[0])
 }
 
-func (t *testStorage) TestAccountBalanceUpdated() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestAccountBalanceUpdated() {
+	st, _ := t.Database()
 
 	ac := t.newAccount()
 
@@ -605,8 +605,8 @@ func (t *testStorage) TestAccountBalanceUpdated() {
 	t.compareAmount(lastAmount, urs.balance[0])
 }
 
-func (t *testStorage) TestAccountMultiCurrencies() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestAccountMultiCurrencies() {
+	st, _ := t.Database()
 
 	height := base.Height(33)
 	ac := t.newAccount()
@@ -651,8 +651,8 @@ func (t *testStorage) TestAccountMultiCurrencies() {
 	t.compareAmount(amC, amE)
 }
 
-func (t *testStorage) TestOperations() {
-	st, _ := t.Storage()
+func (t *testDatabase) TestOperations() {
+	st, _ := t.Database()
 
 	var hashes []string
 
@@ -780,6 +780,6 @@ func (t *testStorage) TestOperations() {
 	}
 }
 
-func TestStorage(t *testing.T) {
-	suite.Run(t, new(testStorage))
+func TestDatabase(t *testing.T) {
+	suite.Run(t, new(testDatabase))
 }

@@ -101,13 +101,13 @@ func (t *baseTest) SetupSuite() {
 	t.cid = currency.CurrencyID("SHOWME")
 }
 
-func (t *baseTest) MongodbStorage() *mongodbstorage.Storage {
-	return t.StorageSupportTest.Storage(t.Encs, t.BSONEnc).(isaac.DummyMongodbStorage).Storage
+func (t *baseTest) MongodbDatabase() *mongodbstorage.Database {
+	return t.StorageSupportTest.Database(t.Encs, t.BSONEnc).(isaac.DummyMongodbDatabase).Database
 }
 
-func (t *baseTest) Storage() (*Storage, *mongodbstorage.Storage) {
-	mst := t.MongodbStorage()
-	st, err := NewStorage(mst, t.MongodbStorage())
+func (t *baseTest) Database() (*Database, *mongodbstorage.Database) {
+	mst := t.MongodbDatabase()
+	st, err := NewDatabase(mst, t.MongodbDatabase())
 	t.NoError(err)
 
 	return st, mst
@@ -197,15 +197,15 @@ func (t *baseTest) newBalanceState(ac currency.Account, height base.Height, am c
 	return stu.GetState()
 }
 
-func (t *baseTest) insertDoc(st *Storage, col string, doc mongodbstorage.Doc) interface{} {
-	id, err := st.storage.Client().Add(col, doc)
+func (t *baseTest) insertDoc(st *Database, col string, doc mongodbstorage.Doc) interface{} {
+	id, err := st.database.Client().Add(col, doc)
 	t.NoError(err)
 
 	return id
 }
 
 func (t *baseTest) insertAccount(
-	st *Storage, height base.Height, ac currency.Account, am currency.Amount,
+	st *Database, height base.Height, ac currency.Account, am currency.Amount,
 ) (AccountValue, []state.State) {
 	var va AccountValue
 	sts := make([]state.State, 2)
@@ -291,7 +291,7 @@ func (t *baseTest) compareAmount(a, b interface{}) {
 	t.Equal(ua.Currency(), ub.Currency())
 }
 
-func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block {
+func (t *baseTest) newBlock(height base.Height, st storage.Database) block.Block {
 	var blk block.BlockUpdater
 	i, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
@@ -319,7 +319,7 @@ func (t *baseTest) newBlock(height base.Height, st storage.Storage) block.Block 
 	bd, err = bd.UpdateHash()
 	t.NoError(err)
 
-	bs, err := st.NewStorageSession(blk)
+	bs, err := st.NewSession(blk)
 	t.NoError(err)
 	t.NoError(bs.Commit(context.Background(), bd))
 

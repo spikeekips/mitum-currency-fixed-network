@@ -19,8 +19,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func LoadCurrenciesFromStorage(
-	st *mongodbstorage.Storage,
+func LoadCurrenciesFromDatabase(
+	st *mongodbstorage.Database,
 	height base.Height,
 	callback func(state.State) (bool, error),
 ) error {

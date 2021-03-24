@@ -22,7 +22,7 @@ type testHandlerOperation struct {
 }
 
 func (t *testHandlerOperation) TestNew() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	var vas []OperationValue
 	for i := 0; i < 10; i++ {
@@ -60,7 +60,7 @@ func (t *testHandlerOperation) TestNew() {
 }
 
 func (t *testHandlerOperation) TestNotFound() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	handlers := t.handlers(st, DummyCache{})
 
@@ -86,7 +86,7 @@ type testHandlerOperations struct {
 }
 
 func (t *testHandlerOperations) TestOperationsPaging() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	var hashes []string
 
@@ -211,7 +211,7 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 }
 
 func (t *testHandlerOperations) TestOperationsByHeightPaging() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 
 	hashesByHeight := map[base.Height][]string{}
 

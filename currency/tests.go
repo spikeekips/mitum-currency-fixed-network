@@ -105,7 +105,7 @@ func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*storage.Sta
 		}
 	}
 
-	pool, err := storage.NewStatepoolWithBase(t.Storage(nil, nil), base)
+	pool, err := storage.NewStatepoolWithBase(t.Database(nil, nil), base)
 	t.NoError(err)
 
 	opr := (NewOperationProcessor(nil)).New(pool)

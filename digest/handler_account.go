@@ -29,7 +29,7 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 		address = a
 	}
 
-	switch va, found, err := hd.storage.Account(address); {
+	switch va, found, err := hd.database.Account(address); {
 	case err != nil:
 		hd.problemWithError(w, err, http.StatusInternalServerError)
 
@@ -114,7 +114,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 	}
 
 	var vas []Hal
-	if err := hd.storage.OperationsByAddress(
+	if err := hd.database.OperationsByAddress(
 		address, true, reverse, offset, hd.itemsLimiter("account-operations"),
 		func(_ valuehash.Hash, va OperationValue) (bool, error) {
 			if hal, err := hd.buildOperationHal(va); err != nil {

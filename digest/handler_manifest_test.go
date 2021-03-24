@@ -34,7 +34,7 @@ func (t *testHandlerManifest) compareManifest(a, b interface{}) {
 }
 
 func (t *testHandlerManifest) TestByHeight() {
-	st, mst := t.Storage()
+	st, mst := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	height := base.Height(33)
@@ -64,7 +64,7 @@ func (t *testHandlerManifest) TestByHeight() {
 }
 
 func (t *testHandlerManifest) TestByHeightNotFound() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	height := base.Height(33)
@@ -83,7 +83,7 @@ func (t *testHandlerManifest) TestByHeightNotFound() {
 }
 
 func (t *testHandlerManifest) TestByHash() {
-	st, mst := t.Storage()
+	st, mst := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	height := base.Height(33)
@@ -115,7 +115,7 @@ func (t *testHandlerManifest) TestByHash() {
 }
 
 func (t *testHandlerManifest) TestByHashNotFound() {
-	st, _ := t.Storage()
+	st, _ := t.Database()
 	handlers := t.handlers(st, DummyCache{})
 
 	self, err := handlers.router.Get(HandlerPathManifestByHash).URLPath("hash", valuehash.RandomSHA256().String())
@@ -132,7 +132,7 @@ func (t *testHandlerManifest) TestByHashNotFound() {
 }
 
 func (t *testHandlerManifest) TestManifests() {
-	st, mst := t.Storage()
+	st, mst := t.Database()
 
 	var baseheight int64 = 33
 

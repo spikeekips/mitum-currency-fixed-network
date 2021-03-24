@@ -28,8 +28,8 @@ var RunCommandProcesses []pm.Process
 
 var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 	return []pm.Hook{
-		pm.NewHook(pm.HookPrefixPost, process.ProcessNameStorage,
-			"set_storage", cmd.hookLoadCurrencies).SetOverride(true),
+		pm.NewHook(pm.HookPrefixPost, process.ProcessNameDatabase,
+			"set_database", cmd.hookLoadCurrencies).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 			"set_currency_network_handlers", cmd.hookSetNetworkHandlers).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
@@ -47,7 +47,7 @@ var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 
 func init() {
 	RunCommandProcesses = []pm.Process{
-		ProcessorDigestStorage,
+		ProcessorDigestDatabase,
 		ProcessorDigester,
 		ProcessorDigestAPI,
 		ProcessorStartDigestAPI,
@@ -97,20 +97,20 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 }
 
 func (cmd *RunCommand) hookLoadCurrencies(ctx context.Context) (context.Context, error) {
-	cmd.Log().Debug().Msg("loading currencies from mitum storage")
+	cmd.Log().Debug().Msg("loading currencies from mitum database")
 
-	var st *mongodbstorage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st *mongodbstorage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 
 	cp := currency.NewCurrencyPool()
 
-	if err := digest.LoadCurrenciesFromStorage(st, base.NilHeight, func(sta state.State) (bool, error) {
+	if err := digest.LoadCurrenciesFromDatabase(st, base.NilHeight, func(sta state.State) (bool, error) {
 		if err := cp.Set(sta); err != nil {
 			return false, err
 		} else {
-			cmd.Log().Debug().Interface("currency", sta).Msg("currency loaded from mitum storage")
+			cmd.Log().Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
 
 			return true, nil
 		}
@@ -127,8 +127,8 @@ func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context
 		return ctx, err
 	}
 
-	var st *mongodbstorage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st *mongodbstorage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 
@@ -152,7 +152,7 @@ func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context
 }
 
 func (cmd *RunCommand) whenBlockSaved(
-	st *mongodbstorage.Storage,
+	st *mongodbstorage.Database,
 	cp *currency.CurrencyPool,
 	di *digest.Digester,
 ) pm.ProcessFunc {
@@ -168,16 +168,16 @@ func (cmd *RunCommand) whenBlockSaved(
 			}()
 		}
 
-		if err := digest.LoadCurrenciesFromStorage(st, blocks[0].Height(), func(sta state.State) (bool, error) {
+		if err := digest.LoadCurrenciesFromDatabase(st, blocks[0].Height(), func(sta state.State) (bool, error) {
 			if err := cp.Set(sta); err != nil {
 				return false, err
 			} else {
-				cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum storage")
+				cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum database")
 
 				return true, nil
 			}
 		}); err != nil {
-			cmd.Log().Error().Err(err).Msg("failed to load currency designs from storage")
+			cmd.Log().Error().Err(err).Msg("failed to load currency designs from database")
 		}
 
 		return ctx, nil
@@ -352,8 +352,8 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
-	var st *digest.Storage
-	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
+	var st *digest.Database
+	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
 		return nil, err
 	}
 

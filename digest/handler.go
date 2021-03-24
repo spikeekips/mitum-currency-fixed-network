@@ -67,7 +67,7 @@ type Handlers struct {
 	networkID       base.NetworkID
 	encs            *encoder.Encoders
 	enc             encoder.Encoder
-	storage         *Storage
+	database        *Database
 	cache           Cache
 	cp              *currency.CurrencyPool
 	nodeInfoHandler network.NodeInfoHandler
@@ -82,7 +82,7 @@ func NewHandlers(
 	networkID base.NetworkID,
 	encs *encoder.Encoders,
 	enc encoder.Encoder,
-	st *Storage,
+	st *Database,
 	cache Cache,
 	cp *currency.CurrencyPool,
 ) *Handlers {
@@ -93,7 +93,7 @@ func NewHandlers(
 		networkID:    networkID,
 		encs:         encs,
 		enc:          enc,
-		storage:      st,
+		database:     st,
 		cache:        cache,
 		cp:           cp,
 		router:       mux.NewRouter(),

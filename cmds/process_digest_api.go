@@ -36,7 +36,7 @@ var (
 )
 
 func init() {
-	if i, err := pm.NewProcess(ProcessNameDigestAPI, []string{ProcessNameDigestStorage}, ProcessDigestAPI); err != nil {
+	if i, err := pm.NewProcess(ProcessNameDigestAPI, []string{ProcessNameDigestDatabase}, ProcessDigestAPI); err != nil {
 		panic(err)
 	} else {
 		ProcessorDigestAPI = i
@@ -44,7 +44,7 @@ func init() {
 
 	if i, err := pm.NewProcess(
 		ProcessNameStartDigestAPI,
-		[]string{ProcessNameDigestStorage, ProcessNameDigestAPI},
+		[]string{ProcessNameDigestDatabase, ProcessNameDigestAPI},
 		ProcessStartDigestAPI,
 	); err != nil {
 		panic(err)
@@ -87,13 +87,13 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 		return ctx, nil
 	}
 
-	var st *digest.Storage
-	if err := LoadDigestStorageContextValue(ctx, &st); err != nil {
-		log.Debug().Err(err).Msg("digest api disabled; empty storage")
+	var st *digest.Database
+	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
+		log.Debug().Err(err).Msg("digest api disabled; empty database")
 
 		return ctx, nil
 	} else if st == nil {
-		log.Debug().Msg("digest api disabled; empty storage")
+		log.Debug().Msg("digest api disabled; empty database")
 
 		return ctx, nil
 	}
