@@ -43,7 +43,7 @@ func (de DigestError) IsError() bool {
 
 type Digester struct {
 	sync.RWMutex
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	*logging.Logging
 	database  *Database
 	blockChan chan block.Block
@@ -60,16 +60,16 @@ func NewDigester(st *Database, errChan chan error) *Digester {
 		errChan:   errChan,
 	}
 
-	di.FunctionDaemon = util.NewFunctionDaemon(di.start, false)
+	di.ContextDaemon = util.NewContextDaemon("digester", di.start)
 
 	return di
 }
 
-func (di *Digester) start(stopchan chan struct{}) error {
+func (di *Digester) start(ctx context.Context) error {
 end:
 	for {
 		select {
-		case <-stopchan:
+		case <-ctx.Done():
 			di.Log().Debug().Msg("stopped")
 
 			break end

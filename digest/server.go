@@ -18,7 +18,7 @@ import (
 
 type HTTP2Server struct {
 	sync.RWMutex
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	*logging.Logging
 	bind             string
 	host             string
@@ -53,7 +53,7 @@ func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, e
 		sv.srv = srv
 	}
 
-	sv.FunctionDaemon = util.NewFunctionDaemon(sv.start, false)
+	sv.ContextDaemon = util.NewContextDaemon("http2-server", sv.start)
 
 	return sv, nil
 }
@@ -103,7 +103,7 @@ func (sv *HTTP2Server) SetHandler(handler http.Handler) {
 	sv.srv.Handler = handler
 }
 
-func (sv *HTTP2Server) start(stopchan chan struct{}) error {
+func (sv *HTTP2Server) start(ctx context.Context) error {
 	if ln, err := net.Listen("tcp", sv.bind); err != nil {
 		return err
 	} else {
@@ -133,7 +133,7 @@ func (sv *HTTP2Server) start(stopchan chan struct{}) error {
 			sv.Log().Error().Err(err).Msg("something wrong")
 
 			return err
-		case <-stopchan:
+		case <-ctx.Done():
 			return sv.srv.Shutdown(context.Background())
 		default:
 			return nil
