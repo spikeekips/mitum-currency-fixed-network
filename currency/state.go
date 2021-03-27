@@ -8,7 +8,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -37,7 +36,7 @@ func IsStateAccountKey(key string) bool {
 func LoadStateAccountValue(st state.State) (Account, error) {
 	v := st.Value()
 	if v == nil {
-		return Account{}, storage.NotFoundError.Errorf("account not found in State")
+		return Account{}, util.NotFoundError.Errorf("account not found in State")
 	}
 
 	if s, ok := v.Interface().(Account); !ok {
@@ -66,7 +65,7 @@ func StateKeysValue(st state.State) (Keys, error) {
 func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 	var ac Account
 	if a, err := LoadStateAccountValue(st); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
+		if !xerrors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
 
@@ -99,7 +98,7 @@ func IsStateBalanceKey(key string) bool {
 func StateBalanceValue(st state.State) (Amount, error) {
 	v := st.Value()
 	if v == nil {
-		return Amount{}, storage.NotFoundError.Errorf("balance not found in State")
+		return Amount{}, util.NotFoundError.Errorf("balance not found in State")
 	}
 
 	if s, ok := v.Interface().(Amount); !ok {
@@ -128,7 +127,7 @@ func StateKeyCurrencyDesign(cid CurrencyID) string {
 func StateCurrencyDesignValue(st state.State) (CurrencyDesign, error) {
 	v := st.Value()
 	if v == nil {
-		return CurrencyDesign{}, storage.NotFoundError.Errorf("currency design not found in State")
+		return CurrencyDesign{}, util.NotFoundError.Errorf("currency design not found in State")
 	}
 
 	if s, ok := v.Interface().(CurrencyDesign); !ok {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -66,7 +65,7 @@ func (st AmountState) GenerateHash() valuehash.Hash {
 func (st AmountState) Merge(base state.State) (state.State, error) {
 	var am Amount
 	if b, err := StateBalanceValue(base); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			am = NewZeroAmount(st.cid)
 		} else {
 			return nil, err

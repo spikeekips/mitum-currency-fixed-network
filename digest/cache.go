@@ -11,7 +11,7 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/rainycape/memcache"
-	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -98,11 +98,10 @@ func (mc *Memcached) Set(key string, b []byte, expire time.Duration) error {
 	return mc.cl.Set(&memcache.Item{Key: key, Value: b, Expiration: int32(expire.Seconds())})
 }
 
-type DummyCache struct {
-}
+type DummyCache struct{}
 
 func (ca DummyCache) Get(string) ([]byte, error) {
-	return nil, storage.NotFoundError
+	return nil, util.NotFoundError
 }
 
 func (ca DummyCache) Set(string, []byte, time.Duration) error {

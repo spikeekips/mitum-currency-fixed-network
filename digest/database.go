@@ -363,7 +363,7 @@ func (st *Database) Operation(
 			}
 		},
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return OperationValue{}, false, nil
 		}
 
@@ -442,7 +442,7 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return rs, false, nil
 		}
 
@@ -492,7 +492,7 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 			},
 			options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 		); err != nil {
-			if xerrors.Is(err, storage.NotFoundError) {
+			if xerrors.Is(err, util.NotFoundError) {
 				break
 			}
 

@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -50,7 +49,7 @@ func LoadCurrenciesFromDatabase(
 			},
 			options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 		); err != nil {
-			if xerrors.Is(err, storage.NotFoundError) {
+			if xerrors.Is(err, util.NotFoundError) {
 				break
 			}
 
