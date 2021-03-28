@@ -37,7 +37,7 @@ func (t *testHandlerNodeInfo) TestBasic() {
 	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey(), "quic://n2")
 
 	nodes := []base.Node{n1, n2}
-	config := map[string]interface{}{"showme": 1}
+	policy := map[string]interface{}{"showme": 1}
 
 	ni := network.NewNodeInfoV0(
 		local,
@@ -46,7 +46,7 @@ func (t *testHandlerNodeInfo) TestBasic() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		config,
+		policy,
 		nodes,
 		nil,
 	)
@@ -80,11 +80,11 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 	t.Equal(a.Version(), b.Version())
 	t.Equal(a.URL(), b.URL())
 
-	t.Equal(len(a.Config()), len(b.Config()))
+	t.Equal(len(a.Policy()), len(b.Policy()))
 	{
-		ab, err := jsonenc.Marshal(a.Config())
+		ab, err := jsonenc.Marshal(a.Policy())
 		t.NoError(err)
-		bb, err := jsonenc.Marshal(b.Config())
+		bb, err := jsonenc.Marshal(b.Policy())
 		t.NoError(err)
 		t.Equal(ab, bb)
 	}
