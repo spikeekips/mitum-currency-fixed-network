@@ -22,7 +22,8 @@ func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
+	cachekey := cacheKeyPath(r)
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -30,21 +31,26 @@ func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if n, err := hd.nodeInfoHandler(); err != nil {
+	if v, err, shared := hd.rg.Do(cachekey, hd.handleNodeInfoInGroup); err != nil {
 		hd.Log().Error().Err(err).Msg("failed to get node info")
 
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		hd.handleError(w, err)
 	} else {
-		if hal, err := hd.buildNodeInfoHal(n); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
+		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
 
-			return
-		} else {
-			hd.writeHal(w, hal, http.StatusOK)
-			hd.writeCache(w, cacheKeyPath(r), time.Second*2)
+		if !shared {
+			hd.writeCache(w, cachekey, time.Second*3)
 		}
+	}
+}
+
+func (hd *Handlers) handleNodeInfoInGroup() (interface{}, error) {
+	if n, err := hd.nodeInfoHandler(); err != nil {
+		return nil, err
+	} else if i, err := hd.buildNodeInfoHal(n); err != nil {
+		return nil, err
+	} else {
+		return hd.enc.Marshal(i)
 	}
 }
 

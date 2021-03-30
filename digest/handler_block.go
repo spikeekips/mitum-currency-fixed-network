@@ -6,8 +6,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/spikeekips/mitum/base"
+	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var halBlockTemplate = map[string]HalLink{
@@ -18,7 +18,8 @@ var halBlockTemplate = map[string]HalLink{
 }
 
 func (hd *Handlers) handleBlock(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
+	cachekey := cacheKeyPath(r)
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -26,47 +27,49 @@ func (hd *Handlers) handleBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		return hd.handleBlockInGroup(mux.Vars(r))
+	}); err != nil {
+		hd.handleError(w, err)
+	} else {
+		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		if !shared {
+			hd.writeCache(w, cachekey, time.Hour*3000)
+		}
+	}
+}
 
+func (hd *Handlers) handleBlockInGroup(vars map[string]string) ([]byte, error) {
 	var hal Hal
 	if s, found := vars["height"]; found {
 		var height base.Height
 		if h, err := parseHeightFromPath(s); err != nil {
-			hd.problemWithError(w, xerrors.Errorf("invalid height found for block by height: %w", err), http.StatusBadRequest)
-
-			return
+			return nil, quicnetwork.BadRequestError.Errorf("invalid height found for block by height: %w", err)
 		} else {
 			height = h
 		}
 
 		if h, err := hd.buildBlockHalByHeight(height); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
-
-			return
+			return nil, err
 		} else {
 			hal = h
 		}
 	} else if s, found := vars["hash"]; found {
 		var h valuehash.Hash
 		if b, err := parseHashFromPath(s); err != nil {
-			hd.problemWithError(w, xerrors.Errorf("invalid hash for block by hash: %w", err), http.StatusBadRequest)
-
-			return
+			return nil, quicnetwork.BadRequestError.Errorf("invalid hash for block by hash: %w", err)
 		} else {
 			h = b
 		}
 
 		if h, err := hd.buildBlockHalByHash(h); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
-
-			return
+			return nil, err
 		} else {
 			hal = h
 		}
 	}
 
-	hd.writeHal(w, hal, http.StatusOK)
-	hd.writeCache(w, cacheKeyPath(r), time.Hour*3000)
+	return hd.enc.Marshal(hal)
 }
 
 func (hd *Handlers) buildBlockHalByHeight(height base.Height) (Hal, error) {

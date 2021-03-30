@@ -13,11 +13,14 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	quicnetwork "github.com/spikeekips/mitum/network/quic"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/xerrors"
 )
 
@@ -76,6 +79,7 @@ type Handlers struct {
 	routes          map[ /* path */ string]*mux.Route
 	itemsLimiter    func(string /* request type */) int64
 	rateLimiter     *limiter.Limiter
+	rg              *singleflight.Group
 }
 
 func NewHandlers(
@@ -99,6 +103,7 @@ func NewHandlers(
 		router:       mux.NewRouter(),
 		routes:       map[string]*mux.Route{},
 		itemsLimiter: defaultItemsLimiter,
+		rg:           &singleflight.Group{},
 	}
 }
 
@@ -241,7 +246,7 @@ func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 
 func (hd *Handlers) notSupported(w http.ResponseWriter, err error) {
 	if err == nil {
-		err = xerrors.Errorf("not supported")
+		err = quicnetwork.NotSupportedErorr
 	}
 
 	hd.problemWithError(w, err, http.StatusInternalServerError)
@@ -280,6 +285,17 @@ func (hd *Handlers) writeHal(w http.ResponseWriter, hal Hal, status int) { // no
 	stream.WriteVal(hal)
 }
 
+func (hd *Handlers) writeHalBytes(w http.ResponseWriter, b []byte, status int) { // nolint:unparam
+	w.Header().Set(HTTP2EncoderHintHeader, hd.enc.Hint().String())
+	w.Header().Set("Content-Type", HALMimetype)
+
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+
+	_, _ = w.Write(b)
+}
+
 func (hd *Handlers) writeCache(w http.ResponseWriter, key string, expire time.Duration) {
 	if cw, ok := w.(*CacheResponseWriter); ok {
 		_ = cw.SetKey(key).SetExpire(expire)
@@ -290,6 +306,20 @@ func (hd *Handlers) SetRateLimiter(limiter *limiter.Limiter) *Handlers {
 	hd.rateLimiter = limiter
 
 	return hd
+}
+
+func (hd *Handlers) handleError(w http.ResponseWriter, err error) {
+	var status int = http.StatusInternalServerError
+	switch {
+	case xerrors.Is(err, util.NotFoundError):
+		status = http.StatusNotFound
+	case xerrors.Is(err, quicnetwork.BadRequestError):
+		status = http.StatusBadRequest
+	case xerrors.Is(err, quicnetwork.NotSupportedErorr):
+		status = http.StatusInternalServerError
+	}
+
+	hd.problemWithError(w, err, status)
 }
 
 func cacheKeyPath(r *http.Request) string {

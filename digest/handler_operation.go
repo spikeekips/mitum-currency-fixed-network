@@ -9,13 +9,15 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
+	cachekey := cacheKeyPath(r)
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -32,26 +34,33 @@ func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
 		h = b
 	}
 
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		return hd.handleOperationInGroup(h)
+	}); err != nil {
+		hd.handleError(w, err)
+	} else {
+		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+
+		if !shared {
+			hd.writeCache(w, cachekey, time.Hour*30)
+		}
+	}
+}
+
+func (hd *Handlers) handleOperationInGroup(h valuehash.Hash) ([]byte, error) {
 	switch va, found, err := hd.database.Operation(h, true); {
 	case err != nil:
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, err
 	case !found:
-		hd.problemWithError(w, xerrors.Errorf("operation not found"), http.StatusNotFound)
-
-		return
+		return nil, util.NotFoundError.Errorf("operation not found")
 	default:
 		if hal, err := hd.buildOperationHal(va); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
-
-			return
+			return nil, err
 		} else {
 			hal = hal.AddLink("operation:{hash}", NewHalLink(HandlerPathOperation, nil).SetTemplated())
 			hal = hal.AddLink("block:{height}", NewHalLink(HandlerPathBlockByHeight, nil).SetTemplated())
 
-			hd.writeHal(w, hal, http.StatusOK)
-			hd.writeCache(w, cacheKeyPath(r), time.Hour*30)
+			return hd.enc.Marshal(hal)
 		}
 	}
 }
@@ -60,8 +69,8 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, ckey, w); err != nil {
+	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -69,11 +78,38 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		i, filled, err := hd.handleOperationsInGroup(offset, reverse)
+
+		return []interface{}{i, filled}, err
+	}); err != nil {
+		hd.handleError(w, err)
+	} else {
+		var b []byte
+		var filled bool
+		{
+			l := v.([]interface{})
+			b = l[0].([]byte)
+			filled = l[1].(bool)
+		}
+
+		hd.writeHalBytes(w, b, http.StatusOK)
+
+		if !shared {
+			var expire time.Duration = time.Second * 3
+			if filled {
+				expire = time.Hour * 30
+			}
+
+			hd.writeCache(w, cachekey, expire)
+		}
+	}
+}
+
+func (hd *Handlers) handleOperationsInGroup(offset string, reverse bool) ([]byte, bool, error) {
 	var filter bson.M
 	if f, err := buildOperationsFilterByOffset(offset, reverse); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	} else {
 		filter = f
 	}
@@ -81,29 +117,23 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 	var vas []Hal
 	switch l, err := hd.loadOperationsHALFromDatabase(filter, reverse); {
 	case err != nil:
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	case len(l) < 1:
-		hd.problemWithError(w, xerrors.Errorf("operations not found"), http.StatusNotFound)
-
-		return
+		return nil, false, util.NotFoundError.Errorf("operations not found")
 	default:
 		vas = l
 	}
 
 	if h, err := hd.combineURL(HandlerPathOperations); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	} else {
 		hal := hd.buildOperationsHal(h, vas, offset, reverse)
 		if next := nextOffsetOfOperations(h, vas, reverse); len(next) > 0 {
 			hal = hal.AddLink("next", NewHalLink(next, nil))
 		}
 
-		hd.writeHal(w, hal, http.StatusOK)
-		hd.writeCache(w, ckey, time.Second*2) // TODO too short expire time.
+		b, err := hd.enc.Marshal(hal)
+		return b, int64(len(vas)) == hd.itemsLimiter("operations"), err
 	}
 }
 
@@ -111,8 +141,8 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, ckey, w); err != nil {
+	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -121,19 +151,53 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	}
 
 	var height base.Height
-	if h, err := parseHeightFromPath(mux.Vars(r)["height"]); err != nil {
+	switch h, err := parseHeightFromPath(mux.Vars(r)["height"]); {
+	case err != nil:
 		hd.problemWithError(w, xerrors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
 
 		return
-	} else {
+	case h <= base.NilHeight:
+		hd.problemWithError(w, xerrors.Errorf("invalid height, %v", h), http.StatusBadRequest)
+		return
+	default:
 		height = h
 	}
 
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		i, filled, err := hd.handleOperationsByHeightInGroup(height, offset, reverse)
+		return []interface{}{i, filled}, err
+	}); err != nil {
+		hd.handleError(w, err)
+	} else {
+		var b []byte
+		var filled bool
+		{
+			l := v.([]interface{})
+			b = l[0].([]byte)
+			filled = l[1].(bool)
+		}
+
+		hd.writeHalBytes(w, b, http.StatusOK)
+
+		if !shared {
+			var expire time.Duration = time.Second * 3
+			if filled {
+				expire = time.Hour * 30
+			}
+
+			hd.writeCache(w, cachekey, expire)
+		}
+	}
+}
+
+func (hd *Handlers) handleOperationsByHeightInGroup(
+	height base.Height,
+	offset string,
+	reverse bool,
+) ([]byte, bool, error) {
 	var filter bson.M
 	if f, err := buildOperationsByHeightFilterByOffset(height, offset, reverse); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	} else {
 		filter = f
 	}
@@ -141,29 +205,23 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	var vas []Hal
 	switch l, err := hd.loadOperationsHALFromDatabase(filter, reverse); {
 	case err != nil:
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	case len(l) < 1:
-		hd.problemWithError(w, xerrors.Errorf("operations not found"), http.StatusNotFound)
-
-		return
+		return nil, false, util.NotFoundError.Errorf("operations not found")
 	default:
 		vas = l
 	}
 
 	if h, err := hd.combineURL(HandlerPathOperationsByHeight, "height", height.String()); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	} else {
 		hal := hd.buildOperationsHal(h, vas, offset, reverse)
 		if next := nextOffsetOfOperationsByHeight(h, vas, reverse); len(next) > 0 {
 			hal = hal.AddLink("next", NewHalLink(next, nil))
 		}
 
-		hd.writeHal(w, hal, http.StatusOK)
-		hd.writeCache(w, ckey, time.Second*2) // TODO too short expire time.
+		b, err := hd.enc.Marshal(hal)
+		return b, int64(len(vas)) == hd.itemsLimiter("operations"), err
 	}
 }
 

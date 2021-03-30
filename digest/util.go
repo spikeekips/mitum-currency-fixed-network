@@ -53,11 +53,12 @@ func parseHashFromPath(s string) (valuehash.Hash, error) {
 		return nil, xerrors.Errorf("empty hash")
 	}
 
-	if h := valuehash.NewBytesFromString(s); h.Empty() {
-		return nil, xerrors.Errorf("empty hash")
-	} else {
-		return h, nil
+	h := valuehash.NewBytesFromString(s)
+	if err := h.IsValid(nil); err != nil {
+		return nil, err
 	}
+
+	return h, nil
 }
 
 func parseOffsetQuery(s string) string {

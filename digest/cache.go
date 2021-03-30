@@ -258,7 +258,7 @@ func ScanCRLF(data []byte, atEOF bool) (int, []byte, error) {
 }
 
 func loadFromCache(cache Cache, key string, w http.ResponseWriter) error {
-	if b, err := cache.Get(cacheKey(key)); err != nil {
+	if b, err := cache.Get(makeCacheKey(key)); err != nil {
 		return err
 	} else if err = writeFromCache(b, w); err != nil {
 		return err

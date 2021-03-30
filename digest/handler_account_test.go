@@ -77,7 +77,7 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 
 	var problem Problem
 	t.NoError(jsonenc.Unmarshal(b, &problem))
-	t.Contains(problem.Error(), "account not found")
+	t.Contains(problem.Error(), "not found")
 }
 
 func (t *testHandlerAccount) TestAccountOperations() {

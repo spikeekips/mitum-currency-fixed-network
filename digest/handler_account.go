@@ -7,12 +7,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
+	cachekey := cacheKeyPath(r)
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
@@ -25,27 +27,43 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 		hd.problemWithError(w, err, http.StatusBadRequest)
 
 		return
+	} else if err := a.IsValid(nil); err != nil {
+		hd.problemWithError(w, err, http.StatusBadRequest)
+		return
 	} else {
 		address = a
 	}
 
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		return hd.handleAccountInGroup(address)
+	}); err != nil {
+		if xerrors.Is(err, util.NotFoundError) {
+			err = util.NotFoundError.Errorf("account, %s not found", address)
+		} else {
+			hd.Log().Error().Err(err).Str("address", address.String()).Msg("failed to get account")
+		}
+
+		hd.handleError(w, err)
+	} else {
+		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+
+		if !shared {
+			hd.writeCache(w, cachekey, time.Second*2)
+		}
+	}
+}
+
+func (hd *Handlers) handleAccountInGroup(address base.Address) (interface{}, error) {
 	switch va, found, err := hd.database.Account(address); {
 	case err != nil:
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, err
 	case !found:
-		hd.problemWithError(w, xerrors.Errorf("account not found"), http.StatusNotFound)
-
-		return
+		return nil, util.NotFoundError
 	default:
 		if hal, err := hd.buildAccountHal(va); err != nil {
-			hd.problemWithError(w, err, http.StatusNotFound)
-
-			return
+			return nil, err
 		} else {
-			hd.writeHal(w, hal, http.StatusOK)
-			hd.writeCache(w, cacheKeyPath(r), time.Hour*30)
+			return hd.enc.Marshal(hal)
 		}
 	}
 }
@@ -97,6 +115,9 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 		hd.problemWithError(w, err, http.StatusBadRequest)
 
 		return
+	} else if err := a.IsValid(nil); err != nil {
+		hd.problemWithError(w, err, http.StatusBadRequest)
+		return
 	} else {
 		address = a
 	}
@@ -104,18 +125,51 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	ckey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, ckey, w); err != nil {
+	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
 		hd.Log().Verbose().Err(err).Msg("failed to load cache")
 	} else {
 		hd.Log().Verbose().Msg("loaded from cache")
-
 		return
 	}
 
+	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		i, filled, err := hd.handleAccountOperationsInGroup(address, offset, reverse)
+
+		return []interface{}{i, filled}, err
+	}); err != nil {
+		hd.handleError(w, err)
+	} else {
+		var b []byte
+		var filled bool
+		{
+			l := v.([]interface{})
+			b = l[0].([]byte)
+			filled = l[1].(bool)
+		}
+
+		hd.writeHalBytes(w, b, http.StatusOK)
+
+		if !shared {
+			var expire time.Duration = time.Second * 3
+			if filled {
+				expire = time.Hour * 30
+			}
+
+			hd.writeCache(w, cachekey, expire)
+		}
+	}
+}
+
+func (hd *Handlers) handleAccountOperationsInGroup(
+	address base.Address,
+	offset string,
+	reverse bool,
+) ([]byte, bool, error) {
+	limit := hd.itemsLimiter("account-operations")
 	var vas []Hal
 	if err := hd.database.OperationsByAddress(
-		address, true, reverse, offset, hd.itemsLimiter("account-operations"),
+		address, true, reverse, offset, limit,
 		func(_ valuehash.Hash, va OperationValue) (bool, error) {
 			if hal, err := hd.buildOperationHal(va); err != nil {
 				return false, err
@@ -126,22 +180,16 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 			return true, nil
 		},
 	); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+		return nil, false, err
 	} else if len(vas) < 1 {
-		hd.problemWithError(w, xerrors.Errorf("operations not found"), http.StatusNotFound)
-
-		return
+		return nil, false, util.NotFoundError.Errorf("operations not found")
 	}
 
-	if hal, err := hd.buildAccountOperationsHal(address, vas, offset, reverse); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
-
-		return
+	if i, err := hd.buildAccountOperationsHal(address, vas, offset, reverse); err != nil {
+		return nil, false, err
 	} else {
-		hd.writeHal(w, hal, http.StatusOK)
-		hd.writeCache(w, ckey, time.Hour*30)
+		b, err := hd.enc.Marshal(i)
+		return b, int64(len(vas)) == limit, err
 	}
 }
 
