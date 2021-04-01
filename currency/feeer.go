@@ -76,11 +76,10 @@ func (fa NilFeeer) IsValid([]byte) error {
 type FixedFeeer struct {
 	receiver base.Address
 	amount   Big
-	isZero   bool
 }
 
 func NewFixedFeeer(receiver base.Address, amount Big) FixedFeeer {
-	return FixedFeeer{receiver: receiver, amount: amount, isZero: amount.IsZero()}
+	return FixedFeeer{receiver: receiver, amount: amount}
 }
 
 func (fa FixedFeeer) Type() string {
@@ -104,7 +103,7 @@ func (fa FixedFeeer) Min() Big {
 }
 
 func (fa FixedFeeer) Fee(Big) (Big, error) {
-	if fa.isZero {
+	if fa.isZero() {
 		return ZeroBig, nil
 	}
 
@@ -123,25 +122,23 @@ func (fa FixedFeeer) IsValid([]byte) error {
 	return nil
 }
 
+func (fa FixedFeeer) isZero() bool {
+	return fa.amount.IsZero()
+}
+
 type RatioFeeer struct {
-	receiver       base.Address
-	ratio          float64 // 0 >=, or <= 1.0
-	min            Big
-	max            Big
-	isZero         bool
-	isOne          bool
-	isUnlimitedMax bool
+	receiver base.Address
+	ratio    float64 // 0 >=, or <= 1.0
+	min      Big
+	max      Big
 }
 
 func NewRatioFeeer(receiver base.Address, ratio float64, min, max Big) RatioFeeer {
 	return RatioFeeer{
-		receiver:       receiver,
-		ratio:          ratio,
-		min:            min,
-		max:            max,
-		isZero:         ratio == 0,
-		isOne:          ratio == 1,
-		isUnlimitedMax: max.Equal(UnlimitedMaxFeeAmount),
+		receiver: receiver,
+		ratio:    ratio,
+		min:      min,
+		max:      max,
 	}
 }
 
@@ -169,18 +166,18 @@ func (fa RatioFeeer) Min() Big {
 }
 
 func (fa RatioFeeer) Fee(a Big) (Big, error) {
-	if fa.isZero {
+	if fa.isZero() {
 		return ZeroBig, nil
 	} else if a.IsZero() {
 		return fa.min, nil
 	}
 
-	if fa.isOne {
+	if fa.isOne() {
 		return a, nil
 	} else if f := a.MulFloat64(fa.ratio); f.Compare(fa.min) < 0 {
 		return fa.min, nil
 	} else {
-		if !fa.isUnlimitedMax && f.Compare(fa.max) > 0 {
+		if !fa.isUnlimited() && f.Compare(fa.max) > 0 {
 			return fa.max, nil
 		} else {
 			return f, nil
@@ -208,6 +205,18 @@ func (fa RatioFeeer) IsValid([]byte) error {
 	}
 
 	return nil
+}
+
+func (fa RatioFeeer) isUnlimited() bool {
+	return fa.max.Equal(UnlimitedMaxFeeAmount)
+}
+
+func (fa RatioFeeer) isZero() bool {
+	return fa.ratio == 0
+}
+
+func (fa RatioFeeer) isOne() bool {
+	return fa.ratio == 1
 }
 
 func NewFeeToken(feeer Feeer, height base.Height) []byte {

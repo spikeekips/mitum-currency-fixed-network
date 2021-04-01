@@ -129,6 +129,10 @@ func (a Big) Sub(b Big) Big {
 	return NewBigFromBigInt((new(big.Int)).Sub(a.Int, b.Int))
 }
 
+func (a Big) Mul(b Big) Big {
+	return NewBigFromBigInt((new(big.Int)).Mul(a.Int, b.Int))
+}
+
 func (a Big) MulInt64(b int64) Big {
 	i := big.NewInt(b)
 	return NewBigFromBigInt((new(big.Int)).Mul(a.Int, i))
