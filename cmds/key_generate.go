@@ -25,24 +25,15 @@ func (cmd *GenerateKeyCommand) Run(version util.Version) error {
 		return xerrors.Errorf("failed to initialize command: %w", err)
 	}
 
+	var priv key.Privatekey
 	if len(cmd.Type) < 1 {
 		cmd.Type = btc
+	} else if !IsValidKeyType(cmd.Type) {
+		return xerrors.Errorf("unknown key type, %q", cmd.Type)
+	} else if i := GenerateKey(cmd.Type); i == nil {
+		return xerrors.Errorf("failed to generate key, %q", cmd.Type)
 	} else {
-		switch cmd.Type {
-		case btc, ether, stellar:
-		default:
-			return xerrors.Errorf("unknown key type, %q", cmd.Type)
-		}
-	}
-
-	var priv key.Privatekey
-	switch cmd.Type {
-	case btc:
-		priv = key.MustNewBTCPrivatekey()
-	case ether:
-		priv = key.MustNewEtherPrivatekey()
-	case stellar:
-		priv = key.MustNewStellarPrivatekey()
+		priv = i
 	}
 
 	if cmd.JSON {
