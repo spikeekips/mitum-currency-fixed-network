@@ -254,7 +254,7 @@ func CheckEnoughBalance(
 		}
 
 		if am.Big().Compare(rq[0]) < 0 {
-			return nil, util.IgnoreError.Errorf("insufficient balance of sender")
+			return nil, util.IgnoreError.Errorf("insufficient balance of sender, %s; %d !> %d", holder.String(), am.Big(), rq[0])
 		} else {
 			sb[cid] = NewAmountState(st, cid)
 		}
