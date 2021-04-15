@@ -7,9 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/isaac"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -29,11 +27,11 @@ var RunCommandProcesses []pm.Process
 var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameDatabase,
-			"set_database", cmd.hookLoadCurrencies).SetOverride(true),
+			"set_database", HookLoadCurrencies).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 			"set_currency_network_handlers", cmd.hookSetNetworkHandlers).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameProposalProcessor,
-			"initialize_proposal_processor", cmd.hookInitializeProposalProcessor).SetOverride(true),
+			"initialize_proposal_processor", HookInitializeProposalProcessor).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, ProcessNameDigestAPI,
 			"set_digest_api_handlers", cmd.hookDigestAPIHandlers).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, ProcessNameDigester,
@@ -94,31 +92,6 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 	}
 
 	return cmd, nil
-}
-
-func (cmd *RunCommand) hookLoadCurrencies(ctx context.Context) (context.Context, error) {
-	cmd.Log().Debug().Msg("loading currencies from mitum database")
-
-	var st *mongodbstorage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
-		return ctx, err
-	}
-
-	cp := currency.NewCurrencyPool()
-
-	if err := digest.LoadCurrenciesFromDatabase(st, base.NilHeight, func(sta state.State) (bool, error) {
-		if err := cp.Set(sta); err != nil {
-			return false, err
-		} else {
-			cmd.Log().Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
-
-			return true, nil
-		}
-	}); err != nil {
-		return ctx, err
-	}
-
-	return context.WithValue(ctx, ContextValueCurrencyPool, cp), nil
 }
 
 func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context, error) {
@@ -195,81 +168,6 @@ func (cmd *RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Cont
 	))
 
 	return ctx, nil
-}
-
-func (cmd *RunCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
-	var suffrage base.Suffrage
-	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
-		return ctx, err
-	}
-
-	var policy *isaac.LocalPolicy
-	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
-		return ctx, err
-	}
-
-	var nodepool *network.Nodepool
-	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
-		return ctx, err
-	}
-
-	var cp *currency.CurrencyPool
-	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
-		return ctx, err
-	}
-
-	if opr, err := cmd.attachProposalProcessor(policy, nodepool, suffrage, cp); err != nil {
-		return ctx, err
-	} else {
-		return initializeProposalProcessor(ctx, opr)
-	}
-}
-
-func (cmd *RunCommand) attachProposalProcessor(
-	policy *isaac.LocalPolicy,
-	nodepool *network.Nodepool,
-	suffrage base.Suffrage,
-	cp *currency.CurrencyPool,
-) (*currency.OperationProcessor, error) {
-	opr := currency.NewOperationProcessor(cp)
-	if _, err := opr.SetProcessor(currency.CreateAccounts{}, currency.NewCreateAccountsProcessor(cp)); err != nil {
-		return nil, err
-	} else if _, err := opr.SetProcessor(currency.KeyUpdater{}, currency.NewKeyUpdaterProcessor(cp)); err != nil {
-		return nil, err
-	} else if _, err := opr.SetProcessor(currency.Transfers{}, currency.NewTransfersProcessor(cp)); err != nil {
-		return nil, err
-	}
-
-	var threshold base.Threshold
-	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), policy.ThresholdRatio()); err != nil {
-		return nil, err
-	} else {
-		threshold = i
-	}
-
-	suffrageNodes := suffrage.Nodes()
-	pubs := make([]key.Publickey, len(suffrageNodes))
-	for i := range suffrageNodes {
-		if n, found := nodepool.Node(suffrageNodes[i]); !found {
-			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
-		} else {
-			pubs[i] = n.Publickey()
-		}
-	}
-
-	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
-		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
-	); err != nil {
-		return nil, err
-	}
-
-	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdater{},
-		currency.NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold),
-	); err != nil {
-		return nil, err
-	}
-
-	return opr, nil
 }
 
 func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Context, error) {

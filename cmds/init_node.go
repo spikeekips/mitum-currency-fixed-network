@@ -23,7 +23,7 @@ var (
 
 var InitCommandHooks = func(cmd *InitCommand) []pm.Hook {
 	genesisOperationHandlers := map[string]process.HookHandlerGenesisOperations{
-		"genesis-currencies": genesisOperationsHandlerGenesisCurrencies,
+		"genesis-currencies": GenesisOperationsHandlerGenesisCurrencies,
 	}
 
 	for k, v := range process.DefaultHookHandlersGenesisOperations {
@@ -87,7 +87,7 @@ func (cmd *InitCommand) hookInitializeProposalProcessor(ctx context.Context) (co
 	return ctx, nil
 }
 
-func genesisOperationsHandlerGenesisCurrencies(
+func GenesisOperationsHandlerGenesisCurrencies(
 	ctx context.Context,
 	m map[string]interface{},
 ) (operation.Operation, error) {

@@ -11,10 +11,16 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/isaac"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/network"
+	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -22,6 +28,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 )
 
 var BaseNodeCommandHooks = func(cmd *BaseNodeCommand) []pm.Hook {
@@ -62,7 +69,112 @@ func (cmd *BaseNodeCommand) BaseProcesses(ps *pm.Processes) (*pm.Processes, erro
 	return ps, nil
 }
 
-func initializeProposalProcessor(ctx context.Context, opr *currency.OperationProcessor) (context.Context, error) {
+func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
+	log.Debug().Msg("loading currencies from mitum database")
+
+	var st *mongodbstorage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+		return ctx, err
+	}
+
+	cp := currency.NewCurrencyPool()
+
+	if err := digest.LoadCurrenciesFromDatabase(st, base.NilHeight, func(sta state.State) (bool, error) {
+		if err := cp.Set(sta); err != nil {
+			return false, err
+		} else {
+			log.Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
+
+			return true, nil
+		}
+	}); err != nil {
+		return ctx, err
+	}
+
+	return context.WithValue(ctx, ContextValueCurrencyPool, cp), nil
+}
+
+func HookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return ctx, err
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
+		return ctx, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return ctx, err
+	}
+
+	var cp *currency.CurrencyPool
+	if err := LoadCurrencyPoolContextValue(ctx, &cp); err != nil {
+		return ctx, err
+	}
+
+	if opr, err := AttachProposalProcessor(policy, nodepool, suffrage, cp); err != nil {
+		return ctx, err
+	} else {
+		return InitializeProposalProcessor(ctx, opr)
+	}
+}
+
+func AttachProposalProcessor(
+	policy *isaac.LocalPolicy,
+	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
+	cp *currency.CurrencyPool,
+) (*currency.OperationProcessor, error) {
+	opr := currency.NewOperationProcessor(cp)
+	if _, err := opr.SetProcessor(currency.CreateAccounts{}, currency.NewCreateAccountsProcessor(cp)); err != nil {
+		return nil, err
+	} else if _, err := opr.SetProcessor(currency.KeyUpdater{}, currency.NewKeyUpdaterProcessor(cp)); err != nil {
+		return nil, err
+	} else if _, err := opr.SetProcessor(currency.Transfers{}, currency.NewTransfersProcessor(cp)); err != nil {
+		return nil, err
+	}
+
+	var threshold base.Threshold
+	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), policy.ThresholdRatio()); err != nil {
+		return nil, err
+	} else {
+		threshold = i
+	}
+
+	suffrageNodes := suffrage.Nodes()
+	pubs := make([]key.Publickey, len(suffrageNodes))
+	for i := range suffrageNodes {
+		if n, found := nodepool.Node(suffrageNodes[i]); !found {
+			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
+		} else {
+			pubs[i] = n.Publickey()
+		}
+	}
+
+	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
+		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
+	); err != nil {
+		return nil, err
+	}
+
+	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdater{},
+		currency.NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold),
+	); err != nil {
+		return nil, err
+	}
+
+	return opr, nil
+}
+
+func InitializeProposalProcessor(ctx context.Context, opr *currency.OperationProcessor) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
 		if !xerrors.Is(err, util.ContextValueNotFoundError) {

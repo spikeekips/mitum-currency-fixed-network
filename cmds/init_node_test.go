@@ -63,7 +63,7 @@ currencies:
 	var m map[string]interface{}
 	t.NoError(yaml.Unmarshal([]byte(y), &m))
 
-	op, err := genesisOperationsHandlerGenesisCurrencies(ctx, m)
+	op, err := GenesisOperationsHandlerGenesisCurrencies(ctx, m)
 	t.NoError(err)
 	t.NotNil(op)
 
