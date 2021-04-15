@@ -18,7 +18,7 @@ var (
 	CreateAccountsHint     = hint.MustHint(CreateAccountsType, "0.0.1")
 )
 
-var maxCreateAccountsItems uint = 10
+var MaxCreateAccountsItems uint = 10
 
 type AmountsItem interface {
 	Amounts() []Amount
@@ -82,8 +82,8 @@ func (fact CreateAccountsFact) IsValid([]byte) error {
 		return xerrors.Errorf("empty token for CreateAccountsFact")
 	} else if n := len(fact.items); n < 1 {
 		return xerrors.Errorf("empty items")
-	} else if n > int(maxCreateAccountsItems) {
-		return xerrors.Errorf("items, %d over max, %d", n, maxCreateAccountsItems)
+	} else if n > int(MaxCreateAccountsItems) {
+		return xerrors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{

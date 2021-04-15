@@ -18,7 +18,7 @@ var (
 	TransfersHint     = hint.MustHint(TransfersType, "0.0.1")
 )
 
-var maxTransferItems uint = 10
+var MaxTransferItems uint = 10
 
 type TransfersItem interface {
 	hint.Hinter
@@ -81,8 +81,8 @@ func (fact TransfersFact) IsValid([]byte) error {
 		return xerrors.Errorf("empty token for TransferFact")
 	} else if n := len(fact.items); n < 1 {
 		return xerrors.Errorf("empty items")
-	} else if n > int(maxTransferItems) {
-		return xerrors.Errorf("items, %d over max, %d", n, maxTransferItems)
+	} else if n > int(MaxTransferItems) {
+		return xerrors.Errorf("items, %d over max, %d", n, MaxTransferItems)
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{fact.h, fact.sender}, nil, false); err != nil {
