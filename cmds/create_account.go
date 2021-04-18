@@ -52,7 +52,7 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 	if sl, err := loadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
-		cmd.NetworkID.Bytes(),
+		cmd.NetworkID.NetworkID(),
 		op,
 	); err != nil {
 		return err
@@ -96,22 +96,13 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 	return nil
 }
 
-func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) {
+func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) { // nolint:dupl
 	var items []currency.CreateAccountsItem
-	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
-		var sl seal.Seal
-		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
-			return nil, err
-		} else if so, ok := s.(operation.Seal); !ok {
-			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
-		} else if _, ok := so.(operation.SealUpdater); !ok {
-			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
-		} else {
-			sl = so
-		}
-
-		for _, op := range sl.(operation.Seal).Operations() {
-			if t, ok := op.(currency.CreateAccounts); ok {
+	if i, err := loadOperations(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
+		return nil, err
+	} else {
+		for j := range i {
+			if t, ok := i[j].(currency.CreateAccounts); ok {
 				items = t.Fact().(currency.CreateAccountsFact).Items()
 			}
 		}
@@ -132,7 +123,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 	fact := currency.NewCreateAccountsFact([]byte(cmd.Token), cmd.sender, items)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, []byte(cmd.NetworkID)); err != nil {
+	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID()); err != nil {
 		return nil, err
 	} else {
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))

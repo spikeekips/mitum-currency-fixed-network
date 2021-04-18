@@ -17,6 +17,7 @@ var (
 		kong.Description("mitum-currency tool"),
 		cmds.KeyAddressVars,
 		cmds.SendVars,
+		mitumcmds.BlockDownloadVars,
 	}
 )
 
@@ -24,8 +25,9 @@ type mainflags struct {
 	Version VersionCommand   `cmd:"" help:"version"`
 	Node    cmds.NodeCommand `cmd:"" help:"node"`
 	// TODO Blocks mitumcmds.BlocksCommand `cmd:"" help:"get block data from node"`
-	Key  cmds.KeyCommand  `cmd:"" help:"key"`
-	Seal cmds.SealCommand `cmd:"" help:"seal"`
+	Key     cmds.KeyCommand     `cmd:"" help:"key"`
+	Seal    cmds.SealCommand    `cmd:"" help:"seal"`
+	Storage cmds.StorageCommand `cmd:"" help:"storage"`
 }
 
 func main() {
@@ -39,9 +41,10 @@ func main() {
 	}
 
 	flags := mainflags{
-		Node: nodeCommand,
-		Key:  cmds.NewKeyCommand(),
-		Seal: cmds.NewSealCommand(),
+		Node:    nodeCommand,
+		Key:     cmds.NewKeyCommand(),
+		Seal:    cmds.NewSealCommand(),
+		Storage: cmds.NewStorageCommand(),
 	}
 
 	var kctx *kong.Context

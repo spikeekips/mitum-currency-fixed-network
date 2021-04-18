@@ -152,18 +152,6 @@ func (v *BigFlag) UnmarshalText(b []byte) error {
 	return nil
 }
 
-type NetworkIDFlag []byte
-
-func (v *NetworkIDFlag) UnmarshalText(b []byte) error {
-	*v = b
-
-	return nil
-}
-
-func (v NetworkIDFlag) Bytes() []byte {
-	return []byte(v)
-}
-
 type FileLoad []byte
 
 func (v *FileLoad) UnmarshalText(b []byte) error {

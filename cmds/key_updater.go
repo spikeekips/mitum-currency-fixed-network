@@ -46,7 +46,7 @@ func (cmd *KeyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 	if bs, err := operation.NewBaseSeal(
 		cmd.Privatekey,
 		[]operation.Operation{op},
-		cmd.NetworkID.Bytes(),
+		cmd.NetworkID.NetworkID(),
 	); err != nil {
 		return xerrors.Errorf("failed to create operation.Seal: %w", err)
 	} else {
@@ -98,7 +98,7 @@ func (cmd *KeyUpdaterCommand) createOperation() (operation.Operation, error) {
 	)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, []byte(cmd.NetworkID)); err != nil {
+	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID()); err != nil {
 		return nil, err
 	} else {
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))

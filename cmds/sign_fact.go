@@ -4,15 +4,16 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/operation"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
 )
 
 type SignFactCommand struct {
 	*BaseCommand
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       FileLoad       `help:"seal" optional:""`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:""`
+	Pretty     bool                    `name:"pretty" help:"pretty format"`
+	Seal       FileLoad                `help:"seal" optional:""`
 }
 
 func NewSignFactCommand() SignFactCommand {
@@ -27,7 +28,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 	}
 
 	var sl operation.Seal
-	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else if so, ok := s.(operation.Seal); !ok {
 		return xerrors.Errorf("seal is not operation.Seal, %T", s)
@@ -55,7 +56,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 			fsu = u
 		}
 
-		if sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.Bytes()); err != nil {
+		if sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.NetworkID()); err != nil {
 			return err
 		} else {
 			f := operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
@@ -70,7 +71,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 
 	sl = sl.(operation.SealUpdater).SetOperations(nops).(operation.Seal)
 
-	if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
+	if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else {
 		sl = s.(operation.Seal)

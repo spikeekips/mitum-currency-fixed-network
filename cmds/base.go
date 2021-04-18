@@ -397,11 +397,11 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 }
 
 type OperationFlags struct {
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey to sign operation" required:""`
-	Token      string         `help:"token for operation" optional:""`
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
-	Memo       string         `name:"memo" help:"memo"`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey to sign operation" required:""`
+	Token      string                  `help:"token for operation" optional:""`
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:""`
+	Memo       string                  `name:"memo" help:"memo"`
+	Pretty     bool                    `name:"pretty" help:"pretty format"`
 }
 
 func (op *OperationFlags) IsValid([]byte) error {

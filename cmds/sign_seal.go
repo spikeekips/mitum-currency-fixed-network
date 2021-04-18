@@ -4,15 +4,16 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
 )
 
 type SignSealCommand struct {
 	*BaseCommand
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" required:""`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Seal       FileLoad       `help:"seal" optional:""`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:""`
+	Pretty     bool                    `name:"pretty" help:"pretty format"`
+	Seal       FileLoad                `help:"seal" optional:""`
 }
 
 func NewSignSealCommand() SignSealCommand {
@@ -27,7 +28,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 	}
 
 	var sl seal.Seal
-	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else {
 		sl = s
@@ -38,7 +39,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
 		cmd.Log().Debug().Msg("already signed")
 	} else {
-		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
+		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID()); err != nil {
 			return err
 		} else {
 			cmd.Log().Debug().Msg("seal signed")

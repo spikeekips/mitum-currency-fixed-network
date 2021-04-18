@@ -10,6 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -21,14 +22,14 @@ var SendVars = kong.Vars{
 
 type SendCommand struct {
 	*BaseCommand
-	URL        []*url.URL     `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
-	NetworkID  NetworkIDFlag  `name:"network-id" help:"network-id" `
-	Seal       FileLoad       `help:"seal" optional:""`
-	DryRun     bool           `help:"dry-run, print operation" optional:"" default:"false"`
-	Pretty     bool           `name:"pretty" help:"pretty format"`
-	Privatekey PrivatekeyFlag `arg:"" name:"privatekey" help:"privatekey for sign"`
-	Timeout    time.Duration  `name:"timeout" help:"timeout; default: 5s"`
-	TLSInscure bool           `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
+	URL        []*url.URL              `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" `
+	Seal       FileLoad                `help:"seal" optional:""`
+	DryRun     bool                    `help:"dry-run, print operation" optional:"" default:"false"`
+	Pretty     bool                    `name:"pretty" help:"pretty format"`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey for sign"`
+	Timeout    time.Duration           `name:"timeout" help:"timeout; default: 5s"`
+	TLSInscure bool                    `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 }
 
 func NewSendCommand() SendCommand {
@@ -47,7 +48,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 	}
 
 	var sl seal.Seal
-	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
+	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else {
 		sl = s
@@ -56,7 +57,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
-		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.Bytes()); err != nil {
+		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID()); err != nil {
 			return err
 		} else {
 			sl = s

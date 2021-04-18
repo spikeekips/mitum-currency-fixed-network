@@ -50,7 +50,7 @@ func (cmd *TransferCommand) Run(version util.Version) error {
 	if sl, err := loadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
-		cmd.NetworkID.Bytes(),
+		cmd.NetworkID.NetworkID(),
 		op,
 	); err != nil {
 		return err
@@ -78,22 +78,13 @@ func (cmd *TransferCommand) parseFlags() error {
 	return nil
 }
 
-func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
+func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // nolint:dupl
 	var items []currency.TransfersItem
-	if len(bytes.TrimSpace(cmd.Seal.Bytes())) > 0 {
-		var sl seal.Seal
-		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
-			return nil, err
-		} else if so, ok := s.(operation.Seal); !ok {
-			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
-		} else if _, ok := so.(operation.SealUpdater); !ok {
-			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
-		} else {
-			sl = so
-		}
-
-		for _, op := range sl.(operation.Seal).Operations() {
-			if t, ok := op.(currency.Transfers); ok {
+	if i, err := loadOperations(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
+		return nil, err
+	} else {
+		for j := range i {
+			if t, ok := i[j].(currency.Transfers); ok {
 				items = t.Fact().(currency.TransfersFact).Items()
 			}
 		}
@@ -114,7 +105,7 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.sender, items)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.Bytes()); err != nil {
+	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID()); err != nil {
 		return nil, err
 	} else {
 		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
@@ -125,4 +116,23 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 	} else {
 		return op, nil
 	}
+}
+
+func loadOperations(b []byte, networkID base.NetworkID) ([]operation.Operation, error) {
+	if len(bytes.TrimSpace(b)) < 1 {
+		return nil, nil
+	}
+
+	var sl seal.Seal
+	if s, err := loadSeal(b, networkID); err != nil {
+		return nil, err
+	} else if so, ok := s.(operation.Seal); !ok {
+		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+	} else if _, ok := so.(operation.SealUpdater); !ok {
+		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+	} else {
+		sl = so
+	}
+
+	return sl.(operation.Seal).Operations(), nil
 }
