@@ -2956,6 +2956,9 @@ components:
           description: Whether the operation is in block or not. If `false`, the operation is processed, but ignored with it's own problem.
           type: boolean
           example: true
+        reason:
+          $ref: '#/components/schemas/ReasonError'
+          description: It describes the rejected reason of operation.
 
     CurrencyDesign:
       type: object
@@ -3116,5 +3119,18 @@ components:
       description: account address
       type: string
       example: 'mc-node-010a:0.0.1'
+
+    ReasonError:
+      type: object
+      required:
+        - msg
+      properties:
+        msg:
+          description: reason message
+          type: string
+          example: 'insufficient balance'
+        data:
+          description: additional data
+          type: object
 
 # vi: ft=yaml tw=100 ts=2 sw=2 expandtab smarttab

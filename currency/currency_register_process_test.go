@@ -77,7 +77,9 @@ func (t *testCurrencyRegisterOperations) TestGenesisAddressNotExist() {
 	opr := copr.New(pool)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 

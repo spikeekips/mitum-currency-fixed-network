@@ -11,10 +11,12 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -24,7 +26,7 @@ type BlockSession struct {
 	sync.RWMutex
 	block           block.Block
 	st              *Database
-	inStates        map[string]struct{}
+	opsTreeNodes    map[string]operation.FixedTreeNode
 	operationModels []mongo.WriteModel
 	accountModels   []mongo.WriteModel
 	balanceModels   []mongo.WriteModel
@@ -107,22 +109,18 @@ func (bs *BlockSession) Close() error {
 }
 
 func (bs *BlockSession) prepareOperationsTree() error {
-	inStates := map[string]struct{}{}
-	if err := bs.block.OperationsTree().Traverse(func(i int, key, _, v []byte) (bool, error) {
-		fh := valuehash.NewBytes(key)
+	nodes := map[string]operation.FixedTreeNode{}
+	if err := bs.block.OperationsTree().Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		nno := no.(operation.FixedTreeNode)
+		fh := valuehash.NewBytes(nno.Key())
+		nodes[fh.String()] = nno
 
-		switch mod, err := base.BytesToFactMode(v); {
-		case err != nil:
-			return false, err
-		case mod&base.FInStates != 0:
-			inStates[fh.String()] = struct{}{}
-		}
 		return true, nil
 	}); err != nil {
 		return err
 	}
 
-	bs.inStates = inStates
+	bs.opsTreeNodes = nodes
 
 	return nil
 }
@@ -132,26 +130,36 @@ func (bs *BlockSession) prepareOperations() error {
 		return nil
 	}
 
-	bs.operationModels = make([]mongo.WriteModel, len(bs.block.Operations()))
-
-	inStates := func(valuehash.Hash) bool {
-		return false
-	}
-	if bs.inStates != nil {
-		inStates = func(fh valuehash.Hash) bool {
-			_, found := bs.inStates[fh.String()]
-			return found
+	node := func(h valuehash.Hash) (bool /* found */, bool /* instate */, operation.ReasonError) {
+		no, found := bs.opsTreeNodes[h.String()]
+		if !found {
+			return false, false, nil
 		}
+
+		return true, no.InState(), no.Reason()
 	}
+
+	bs.operationModels = make([]mongo.WriteModel, len(bs.block.Operations()))
 
 	for i := range bs.block.Operations() {
 		op := bs.block.Operations()[i]
+
+		var inState bool
+		var reason operation.ReasonError
+		if found, i, j := node(op.Fact().Hash()); !found {
+			return util.NotFoundError.Errorf("operation, %s not found in operations tree", op.Fact().Hash().String())
+		} else {
+			inState = i
+			reason = j
+		}
+
 		if doc, err := NewOperationDoc(
 			op,
 			bs.st.database.Encoder(),
 			bs.block.Height(),
 			bs.block.ConfirmedAt(),
-			inStates(op.Fact().Hash()),
+			inState,
+			reason,
 			uint64(i),
 		); err != nil {
 			return err

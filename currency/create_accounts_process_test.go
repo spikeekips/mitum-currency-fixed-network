@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -298,7 +299,9 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithMinBalance() {
 	ca := t.newOperation(sa.Address, items, sa.Privs())
 
 	err = opr.Process(ca)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "amount should be over minimum balance")
 }
 
@@ -326,7 +329,9 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithFee() {
 	ca := t.newOperation(sa.Address, items, sa.Privs())
 
 	err := opr.Process(ca)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -354,7 +359,9 @@ func (t *testCreateAccountsOperation) TestUnknownCurrencyID() {
 	ca := t.newOperation(sa.Address, items, sa.Privs())
 
 	err := opr.Process(ca)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "unknown currency id found")
 }
 
@@ -379,7 +386,8 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 
 	err = copr.Process(ca)
 
-	t.True(xerrors.Is(err, util.IgnoreError))
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -408,8 +416,10 @@ func (t *testCreateAccountsOperation) TestEmptyCurrency() {
 	ca := t.newOperation(sa.Address, items, sa.Privs())
 
 	err := opr.Process(ca)
-	t.True(xerrors.Is(err, util.IgnoreError))
-	t.Contains(err.Error(), "currency of holder does not exist")
+
+	var operr operation.ReasonError
+	t.True(xerrors.As(err, &operr))
+	t.Contains(fmt.Sprintf("%+v", err), "currency of holder does not exist")
 }
 
 func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
@@ -438,7 +448,8 @@ func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 
 	err = copr.Process(ca)
 
-	t.True(xerrors.Is(err, util.IgnoreError))
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "currency of holder does not exist")
 }
 
@@ -489,7 +500,8 @@ func (t *testCreateAccountsOperation) TestInsufficientBalance() {
 
 	err := opr.Process(ca)
 
-	t.True(xerrors.Is(err, util.IgnoreError))
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -581,7 +593,9 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 		items := []CreateAccountsItem{NewCreateAccountsItemMultiAmounts(na.Keys(), []Amount{NewAmount(NewBig(1), cid)})}
 		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.MustNewBTCPrivatekey()})
 		err := opr.Process(ca)
-		t.True(xerrors.Is(err, util.IgnoreError))
+
+		var oper operation.ReasonError
+		t.True(xerrors.As(err, &oper))
 	}
 
 	items := []CreateAccountsItem{NewCreateAccountsItemMultiAmounts(na0.Keys(), []Amount{NewAmount(NewBig(1), cid)})}

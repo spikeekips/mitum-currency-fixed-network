@@ -1,8 +1,8 @@
 package currency
 
 import (
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
 )
@@ -48,9 +48,9 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	}
 
 	if ks, err := StateKeysValue(op.sa); err != nil {
-		return nil, util.IgnoreError.Wrap(err)
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	} else if ks.Equal(fact.Keys()) {
-		return nil, util.IgnoreError.Errorf("same Keys with the existing")
+		return nil, operation.NewBaseReasonError("same Keys with the existing")
 	}
 
 	if st, err := existsState(StateKeyBalance(fact.target, fact.currency), "balance of target", getState); err != nil {
@@ -60,24 +60,24 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	}
 
 	if err := checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
-		return nil, util.IgnoreError.Errorf("invalid signing: %w", err)
+		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
 	}
 
 	var feeer Feeer
 	if i, found := op.cp.Feeer(fact.currency); !found {
-		return nil, util.IgnoreError.Errorf("currency, %q not found of KeyUpdater", fact.currency)
+		return nil, operation.NewBaseReasonError("currency, %q not found of KeyUpdater", fact.currency)
 	} else {
 		feeer = i
 	}
 
 	if fee, err := feeer.Fee(ZeroBig); err != nil {
-		return nil, util.IgnoreError.Wrap(err)
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	} else {
 		switch b, err := StateBalanceValue(op.sb); {
 		case err != nil:
-			return nil, util.IgnoreError.Wrap(err)
+			return nil, operation.NewBaseReasonErrorFromError(err)
 		case b.Big().Compare(fee) < 0:
-			return nil, util.IgnoreError.Errorf("insufficient balance with fee")
+			return nil, operation.NewBaseReasonError("insufficient balance with fee")
 		default:
 			op.fee = fee
 		}

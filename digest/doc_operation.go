@@ -24,7 +24,8 @@ func NewOperationDoc(
 	enc encoder.Encoder,
 	height base.Height,
 	confirmedAt time.Time,
-	inStates bool,
+	inState bool,
+	reason operation.ReasonError,
 	index uint64,
 ) (OperationDoc, error) {
 	var addresses []string
@@ -39,7 +40,7 @@ func NewOperationDoc(
 		}
 	}
 
-	va := NewOperationValue(op, height, confirmedAt, inStates, index)
+	va := NewOperationValue(op, height, confirmedAt, inState, reason, index)
 	b, err := mongodbstorage.NewBaseDoc(nil, va, enc)
 	if err != nil {
 		return OperationDoc{}, err

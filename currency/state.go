@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 )
@@ -153,7 +154,7 @@ func checkExistsState(
 	case err != nil:
 		return err
 	case !found:
-		return util.IgnoreError.Errorf("state, %q does not exist", key)
+		return operation.NewBaseReasonError("state, %q does not exist", key)
 	default:
 		return nil
 	}
@@ -168,7 +169,7 @@ func existsState(
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, util.IgnoreError.Errorf("%s does not exist", name)
+		return nil, operation.NewBaseReasonError("%s does not exist", name)
 	default:
 		return st, nil
 	}
@@ -183,7 +184,7 @@ func notExistsState(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, util.IgnoreError.Errorf("%s already exists", name)
+		return nil, operation.NewBaseReasonError("%s already exists", name)
 	default:
 		return st, nil
 	}

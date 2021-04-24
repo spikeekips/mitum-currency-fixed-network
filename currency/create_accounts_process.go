@@ -2,8 +2,8 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
 )
@@ -130,7 +130,7 @@ func (opp *CreateAccountsProcessor) PreProcess(
 	}
 
 	if required, err := opp.calculateItemsFee(); err != nil {
-		return nil, util.IgnoreError.Errorf("failed to calculate fee: %w", err)
+		return nil, operation.NewBaseReasonError("failed to calculate fee: %w", err)
 	} else if sb, err := CheckEnoughBalance(fact.sender, required, getState); err != nil {
 		return nil, err
 	} else {
@@ -142,14 +142,14 @@ func (opp *CreateAccountsProcessor) PreProcess(
 	for i := range fact.items {
 		c := &CreateAccountsItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
 		if err := c.PreProcess(getState, setState); err != nil {
-			return nil, util.IgnoreError.Wrap(err)
+			return nil, operation.NewBaseReasonErrorFromError(err)
 		}
 
 		ns[i] = c
 	}
 
 	if err := checkFactSignsByState(fact.sender, opp.Signs(), getState); err != nil {
-		return nil, util.IgnoreError.Errorf("invalid signing: %w", err)
+		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
 	}
 
 	opp.ns = ns
@@ -157,7 +157,7 @@ func (opp *CreateAccountsProcessor) PreProcess(
 	return opp, nil
 }
 
-func (opp *CreateAccountsProcessor) Process(
+func (opp *CreateAccountsProcessor) Process( // nolint:dupl
 	getState func(key string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
@@ -166,7 +166,7 @@ func (opp *CreateAccountsProcessor) Process(
 	var sts []state.State // nolint:prealloc
 	for i := range opp.ns {
 		if s, err := opp.ns[i].Process(getState, setState); err != nil {
-			return util.IgnoreError.Errorf("failed to process create account item: %w", err)
+			return operation.NewBaseReasonError("failed to process create account item: %w", err)
 		} else {
 			sts = append(sts, s...)
 		}
@@ -248,13 +248,14 @@ func CheckEnoughBalance(
 
 		var am Amount
 		if b, err := StateBalanceValue(st); err != nil {
-			return nil, util.IgnoreError.Errorf("insufficient balance of sender: %w", err)
+			return nil, operation.NewBaseReasonError("insufficient balance of sender: %w", err)
 		} else {
 			am = b
 		}
 
 		if am.Big().Compare(rq[0]) < 0 {
-			return nil, util.IgnoreError.Errorf("insufficient balance of sender, %s; %d !> %d", holder.String(), am.Big(), rq[0])
+			return nil, operation.NewBaseReasonError(
+				"insufficient balance of sender, %s; %d !> %d", holder.String(), am.Big(), rq[0])
 		} else {
 			sb[cid] = NewAmountState(st, cid)
 		}

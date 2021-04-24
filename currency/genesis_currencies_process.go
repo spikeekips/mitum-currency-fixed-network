@@ -2,8 +2,8 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -15,7 +15,7 @@ func (op GenesisCurrencies) Process(
 
 	var newAddress base.Address
 	if a, err := fact.Address(); err != nil {
-		return util.IgnoreError.Wrap(err)
+		return operation.NewBaseReasonErrorFromError(err)
 	} else {
 		newAddress = a
 	}
@@ -49,7 +49,7 @@ func (op GenesisCurrencies) Process(
 	if ac, err := NewAccountFromKeys(fact.keys); err != nil {
 		return err
 	} else if st, err := SetStateAccountValue(ns, ac); err != nil {
-		return util.IgnoreError.Wrap(err)
+		return operation.NewBaseReasonErrorFromError(err)
 	} else {
 		states = append(states, st)
 	}

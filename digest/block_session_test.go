@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -41,19 +42,26 @@ func (t *testDatabase) TestBlockSessionWithOperations() {
 		opsByAddress[receiver.String()] = append(opsByAddress[receiver.String()], op.Fact().Hash().String())
 	}
 
+	trg := tree.NewFixedTreeGenerator(uint64(len(ops)))
+	for i := range ops {
+		t.NoError(trg.Add(operation.NewFixedTreeNode(uint64(i), ops[i].Fact().Hash().Bytes(), true, nil)))
+	}
+	tr, err := trg.Tree()
+	t.NoError(err)
+
 	blk, err := block.NewBlockV0(
 		block.SuffrageInfoV0{},
 		base.Height(3),
 		base.Round(1),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
-		valuehash.RandomSHA256(),
+		valuehash.NewBytes(tr.Root()),
 		valuehash.RandomSHA256(),
 		localtime.UTCNow(),
 	)
 	t.NoError(err)
 
-	nblk := blk.SetOperations(ops)
+	nblk := blk.SetOperations(ops).SetOperationsTree(tr)
 
 	st, _ := t.Database()
 	bs, err := NewBlockSession(st, nblk)

@@ -5,7 +5,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 )
 
 func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs []operation.FactSign) error {
@@ -21,7 +20,7 @@ func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs 
 	}
 
 	if signed < threshold.Threshold {
-		return util.IgnoreError.Errorf("not enough suffrage signs")
+		return operation.NewBaseReasonError("not enough suffrage signs")
 	}
 
 	return nil
@@ -37,14 +36,14 @@ func checkFactSignsByState(
 		return err
 	} else {
 		if ks, err := StateKeysValue(st); err != nil {
-			return util.IgnoreError.Wrap(err)
+			return operation.NewBaseReasonErrorFromError(err)
 		} else {
 			keys = ks
 		}
 	}
 
 	if err := checkThreshold(fs, keys); err != nil {
-		return util.IgnoreError.Wrap(err)
+		return operation.NewBaseReasonErrorFromError(err)
 	}
 
 	return nil

@@ -93,8 +93,6 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(currency.TransfersItemSingleAmountHinter)
 	_ = t.Encs.AddHinter(currency.Transfers{})
 	_ = t.Encs.AddHinter(currency.CurrencyPolicy{})
-	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
-	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 
 	t.networkID = util.UUID().Bytes()
 

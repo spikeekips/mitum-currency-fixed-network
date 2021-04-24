@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -25,12 +26,25 @@ func (t *testHandlerOperation) TestNew() {
 	st, _ := t.Database()
 
 	var vas []OperationValue
+	hasReasons := map[string]OperationValue{}
 	for i := 0; i < 10; i++ {
 		sender := currency.MustAddress(util.UUID().String())
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, base.Height(i), localtime.UTCNow(), true, uint64(i))
+
+		var reason operation.ReasonError
+		var inState bool = true
+		if i%2 == 0 {
+			reason = operation.NewBaseReasonError("%d", i).SetData(map[string]interface{}{"i": float64(i)})
+			inState = false
+		}
+
+		doc, err := NewOperationDoc(tf, t.BSONEnc, base.Height(i), localtime.UTCNow(), inState, reason, uint64(i))
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
+
+		if i%2 == 0 {
+			hasReasons[tf.Fact().Hash().String()] = doc.va
+		}
 
 		vas = append(vas, doc.va)
 	}
@@ -56,6 +70,24 @@ func (t *testHandlerOperation) TestNew() {
 
 		t.Equal(va.Height(), uva.Height())
 		t.compareOperationValue(va, uva)
+
+		ar := uva.Reason()
+		ai := uva.InState()
+
+		var br operation.ReasonError
+		var bi bool = true
+		if j, found := hasReasons[uva.Operation().Fact().Hash().String()]; found {
+			br = j.Reason()
+			bi = j.InState()
+
+			t.Equal(ar.Msg(), br.Msg())
+			t.Equal(ar.Data(), br.Data())
+		} else {
+			t.Nil(ar)
+			t.Nil(br)
+		}
+
+		t.Equal(ai, bi)
 	}
 }
 
@@ -95,7 +127,7 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 			height := base.Height(i % 3)
 			index := uint64(j)
 			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, index)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, index)
 			t.NoError(err)
 			_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -221,7 +253,7 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 		for j := 0; j < 3; j++ {
 			index := uint64(j)
 			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, index)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, index)
 			t.NoError(err)
 			_ = t.insertDoc(st, defaultColNameOperation, doc)
 

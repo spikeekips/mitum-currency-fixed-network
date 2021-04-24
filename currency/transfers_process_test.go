@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/tree"
 )
 
 type testTransfersOperations struct {
@@ -82,7 +83,9 @@ func (t *testTransfersOperations) TestSenderNotExist() {
 	opr := t.processor(cp, pool)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -102,7 +105,9 @@ func (t *testTransfersOperations) TestReceiverNotExist() {
 	tf := t.newTransfer(sa.Address, sa.Privs(), items)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "receiver does not exist")
 }
 
@@ -122,7 +127,9 @@ func (t *testTransfersOperations) TestInsufficientBalance() {
 	tf := t.newTransfer(sa.Address, sa.Privs(), items)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -270,7 +277,9 @@ func (t *testTransfersOperations) TestInsufficientMultipleItemsWithFee() {
 	t.NoError(err)
 
 	err = opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -295,7 +304,9 @@ func (t *testTransfersOperations) TestInSufficientBalanceWithFee() {
 	tf := t.newTransfer(sa.Address, sa.Privs(), items)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -359,7 +370,9 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 	tf := t.newTransfer(sender, pks, items)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "not passed threshold")
 }
 
@@ -380,7 +393,9 @@ func (t *testTransfersOperations) TestUnknownKey() {
 	tf := t.newTransfer(sa.Address, []key.Privatekey{sa.Priv, key.MustNewBTCPrivatekey()}, items)
 
 	err := opr.Process(tf)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "unknown key found")
 }
 
@@ -450,7 +465,10 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	errchan = make(chan error)
 	wk = util.NewDistributeWorker(500, errchan)
 
-	var items int64
+	var items, ignored int64
+
+	fee := NewBig(1)
+	feeer := NewFixedFeeer(acs[0].Address, fee)
 
 	half := size / 2
 	go func() {
@@ -475,9 +493,19 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 				//}
 
 				atomic.AddInt64(&items, 1)
-				tf := t.newTransfer(acs[i].Address, acs[i].Privs(), []TransfersItem{t.newTransfersItem(receiver.Address, NewBig(1))})
 
-				return acerr{err: nil, ac: tf}
+				var ops []operation.Operation
+				tf := t.newTransfer(acs[i].Address, acs[i].Privs(), []TransfersItem{t.newTransfersItem(receiver.Address, NewBig(1))})
+				ops = append(ops, tf)
+
+				if i%3 == 0 {
+					tf := t.newTransfer(acs[i].Address, acs[i].Privs(), []TransfersItem{t.newTransfersItem(receiver.Address, NewBig(int64(size+1)))})
+					ops = append(ops, tf)
+
+					atomic.AddInt64(&ignored, 1)
+				}
+
+				return acerr{err: nil, ac: ops}
 			},
 		)
 
@@ -497,13 +525,10 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 			continue
 		}
 
-		op := err.(acerr).ac.(operation.Operation)
-		ops = append(ops, op)
+		op := err.(acerr).ac.([]operation.Operation)
+		ops = append(ops, op...)
 	}
 	t.T().Log("operations created:", len(ops), "elapsed:", time.Since(started))
-
-	fee := NewBig(1)
-	feeer := NewFixedFeeer(acs[0].Address, fee)
 
 	cp := NewCurrencyPool()
 	t.NoError(cp.Set(t.newCurrencyDesignState(t.cid, NewBig(99), NewTestAddress(), feeer)))
@@ -520,12 +545,12 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	t.T().Log("trying to process")
 	started = time.Now()
 
-	co, err := prprocessor.NewConcurrentOperationsProcessor(100, pool, oppHintSet)
+	co, err := prprocessor.NewConcurrentOperationsProcessor(uint64(len(ops)), 100, pool, oppHintSet)
 	t.NoError(err)
 	co.Start(context.Background(), nil)
 
-	for _, op := range ops {
-		t.NoError(co.Process(op))
+	for i := range ops {
+		t.NoError(co.Process(uint64(i), ops[i]))
 	}
 	t.NoError(co.Close())
 
@@ -564,6 +589,22 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 
 		t.Equal(expected, a.Big(), i)
 	}
+
+	tr, err := co.OperationsTree()
+	t.NoError(err)
+
+	var notInState int64
+	t.NoError(tr.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		ono, ok := no.(operation.FixedTreeNode)
+		t.True(ok)
+
+		if !ono.InState() {
+			notInState++
+		}
+
+		return true, nil
+	}))
+	t.Equal(atomic.LoadInt64(&ignored), notInState)
 }
 
 // TODO write benchmark for OperationProcessor

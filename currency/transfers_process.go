@@ -1,8 +1,8 @@
 package currency
 
 import (
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
 )
@@ -99,7 +99,7 @@ func (opp *TransfersProcessor) PreProcess(
 	}
 
 	if required, err := opp.calculateItemsFee(); err != nil {
-		return nil, util.IgnoreError.Wrap(err)
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	} else if sb, err := CheckEnoughBalance(fact.sender, required, getState); err != nil {
 		return nil, err
 	} else {
@@ -111,7 +111,7 @@ func (opp *TransfersProcessor) PreProcess(
 	for i := range fact.items {
 		c := &TransfersItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
 		if err := c.PreProcess(getState, setState); err != nil {
-			return nil, util.IgnoreError.Wrap(err)
+			return nil, operation.NewBaseReasonErrorFromError(err)
 		}
 
 		rb[i] = c
@@ -126,7 +126,7 @@ func (opp *TransfersProcessor) PreProcess(
 	return opp, nil
 }
 
-func (opp *TransfersProcessor) Process(
+func (opp *TransfersProcessor) Process( // nolint:dupl
 	getState func(key string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
@@ -135,7 +135,7 @@ func (opp *TransfersProcessor) Process(
 	var sts []state.State // nolint:prealloc
 	for i := range opp.rb {
 		if s, err := opp.rb[i].Process(getState, setState); err != nil {
-			return util.IgnoreError.Errorf("failed to process transfer item: %w", err)
+			return operation.NewBaseReasonError("failed to process transfer item: %w", err)
 		} else {
 			sts = append(sts, s...)
 		}

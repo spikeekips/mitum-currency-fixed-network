@@ -93,7 +93,7 @@ func (t *testHandlerAccount) TestAccountOperations() {
 		height := base.Height(i % 3)
 		index := uint64(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, index)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, index)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -152,7 +152,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		height := base.Height(i % 3)
 		index := uint64(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, index)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, index)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -272,7 +272,7 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i % 3)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, uint64(i))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(i))
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 

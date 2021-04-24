@@ -125,7 +125,9 @@ func (t *testKeyUpdaterOperation) TestUnknownCurrency() {
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "balance of target does not exist")
 }
 
@@ -150,7 +152,9 @@ func (t *testKeyUpdaterOperation) TestEmptyBalance() {
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -172,7 +176,9 @@ func (t *testKeyUpdaterOperation) TestTargetNotExist() {
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "target keys does not exist")
 }
 
@@ -188,7 +194,9 @@ func (t *testKeyUpdaterOperation) TestSameKeys() {
 	op := t.newOperation(sa.Address, sa.Keys(), sa.Privs(), t.cid)
 
 	err = opr.Process(op)
-	t.True(xerrors.Is(err, util.IgnoreError))
+
+	var oper operation.ReasonError
+	t.True(xerrors.As(err, &oper))
 	t.Contains(err.Error(), "same Keys")
 }
 

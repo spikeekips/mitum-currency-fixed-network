@@ -52,7 +52,7 @@ func (t *testDatabase) TestOperationByAddress() {
 
 	{
 		tf := t.newTransfer(sender, receiver0)
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 0)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, nil, 0)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -62,7 +62,7 @@ func (t *testDatabase) TestOperationByAddress() {
 
 	{
 		tf := t.newTransfer(sender, receiver1)
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 1)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, nil, 1)
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -133,7 +133,7 @@ func (t *testDatabase) TestOperationByAddressOrderByHeight() {
 		receiver := currency.MustAddress(util.UUID().String())
 		{
 			tf := t.newTransfer(sender, receiver)
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, 0)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, 0)
 			t.NoError(err)
 			t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -146,7 +146,7 @@ func (t *testDatabase) TestOperationByAddressOrderByHeight() {
 		receiver := currency.MustAddress(util.UUID().String())
 		{
 			tf := t.newTransfer(sender, receiver)
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, 1)
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, 1)
 			t.NoError(err)
 			t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -206,7 +206,7 @@ func (t *testDatabase) TestOperationByAddressOffset() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, 0)
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, nil, 0)
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -281,7 +281,7 @@ func (t *testDatabase) TestOperationByAddressLimit() {
 	for i := 0; i < 10; i++ {
 		height := base.Height(i)
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, uint64(i))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(i))
 		t.NoError(err)
 		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -400,7 +400,7 @@ func (t *testDatabase) TestOperationsFact() {
 
 	for i := 0; i < 3; i++ {
 		tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, uint64(i))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, confirmedAt, true, nil, uint64(i))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -434,7 +434,7 @@ func (t *testDatabase) TestClean() {
 	lastHeight := base.Height(3)
 	for height := base.Height(0); height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, uint64(height))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(height))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 	}
@@ -473,7 +473,7 @@ func (t *testDatabase) TestCleanByHeight() {
 	lastHeight := base.Height(10)
 	for height := base.Height(0); height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
-		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, uint64(height))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(height))
 		t.NoError(err)
 		t.insertDoc(st, defaultColNameOperation, doc)
 
@@ -662,7 +662,7 @@ func (t *testDatabase) TestOperations() {
 		height := base.Height(i)
 		for j := 0; j < 3; j++ {
 			tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
-			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, uint64(j))
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(j))
 			t.NoError(err)
 			_ = t.insertDoc(st, defaultColNameOperation, doc)
 

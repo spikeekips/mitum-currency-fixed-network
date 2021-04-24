@@ -12,12 +12,13 @@ import (
 
 type OperationValueJSONPacker struct {
 	jsonenc.HintedHead
-	HS valuehash.Hash      `json:"hash"`
-	OP operation.Operation `json:"operation"`
-	HT base.Height         `json:"height"`
-	CF localtime.Time      `json:"confirmed_at"`
-	IN bool                `json:"in_state"`
-	ID uint64              `json:"index"`
+	HS valuehash.Hash        `json:"hash"`
+	OP operation.Operation   `json:"operation"`
+	HT base.Height           `json:"height"`
+	CF localtime.Time        `json:"confirmed_at"`
+	RS operation.ReasonError `json:"reason"`
+	IN bool                  `json:"in_state"`
+	ID uint64                `json:"index"`
 }
 
 func (va OperationValue) MarshalJSON() ([]byte, error) {
@@ -27,7 +28,8 @@ func (va OperationValue) MarshalJSON() ([]byte, error) {
 		OP:         va.op,
 		HT:         va.height,
 		CF:         localtime.NewTime(va.confirmedAt),
-		IN:         va.inStates,
+		RS:         va.reason,
+		IN:         va.inState,
 		ID:         va.index,
 	})
 }
@@ -37,6 +39,7 @@ type OperationValueJSONUnpacker struct {
 	HT base.Height     `json:"height"`
 	CF localtime.Time  `json:"confirmed_at"`
 	IN bool            `json:"in_state"`
+	RS json.RawMessage `json:"reason"`
 	ID uint64          `json:"index"`
 }
 
@@ -52,9 +55,15 @@ func (va *OperationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		va.op = op
 	}
 
+	if i, err := operation.DecodeReasonError(enc, uva.RS); err != nil {
+		return err
+	} else {
+		va.reason = i
+	}
+
 	va.height = uva.HT
 	va.confirmedAt = uva.CF.Time
-	va.inStates = uva.IN
+	va.inState = uva.IN
 	va.index = uva.ID
 
 	return nil

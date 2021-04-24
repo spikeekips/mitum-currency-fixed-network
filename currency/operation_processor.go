@@ -4,10 +4,10 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -95,7 +95,7 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 	var sp state.Processor
 	switch i, known, err := opr.getNewProcessor(op); {
 	case err != nil:
-		return nil, util.IgnoreError.Wrap(err)
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	case !known:
 		return op, nil
 	default:
@@ -110,7 +110,7 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 	}
 
 	if err := opr.checkDuplication(op); err != nil {
-		return nil, util.IgnoreError.Errorf("duplication found: %w", err)
+		return nil, operation.NewBaseReasonError("duplication found: %w", err)
 	}
 
 	return pop, nil
