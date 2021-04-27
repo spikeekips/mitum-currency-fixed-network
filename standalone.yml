@@ -38,6 +38,10 @@ policy:
     timespan-valid-ballot: 1m0s
     timeout-process-proposal: 10s
 
+suffrage:
+    nodes:
+        - mc-node0-010a:0.0.1
+
 nodes:
 
 digest:
