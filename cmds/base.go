@@ -100,18 +100,29 @@ func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
 }
 
 func HookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
 	var suffrage base.Suffrage
 	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
 	}
 
-	var policy *isaac.LocalPolicy
-	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return ctx, err
 	}
 
-	var nodepool *network.Nodepool
-	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+	if !suffrage.IsInside(nodepool.Local().Address()) {
+		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
+
+		return ctx, nil
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
 		return ctx, err
 	}
 
