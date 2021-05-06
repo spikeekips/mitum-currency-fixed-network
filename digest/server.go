@@ -18,8 +18,8 @@ import (
 
 type HTTP2Server struct {
 	sync.RWMutex
-	*util.ContextDaemon
 	*logging.Logging
+	*util.ContextDaemon
 	bind             string
 	host             string
 	srv              *http.Server
@@ -99,6 +99,12 @@ func (sv *HTTP2Server) Initialize() error {
 	return nil
 }
 
+func (sv *HTTP2Server) SetLogger(l logging.Logger) logging.Logger {
+	_ = sv.ContextDaemon.SetLogger(l)
+
+	return sv.Logging.SetLogger(l)
+}
+
 func (sv *HTTP2Server) SetHandler(handler http.Handler) {
 	sv.srv.Handler = handler
 }
@@ -107,6 +113,8 @@ func (sv *HTTP2Server) start(ctx context.Context) error {
 	if ln, err := net.Listen("tcp", sv.bind); err != nil {
 		return err
 	} else {
+		sv.srv.Handler = network.HTTPLogHandler(sv.srv.Handler, sv.Log())
+
 		var listener net.Listener = tcpKeepAliveListener{
 			TCPListener:      ln.(*net.TCPListener),
 			keepAliveTimeout: sv.keepAliveTimeout,

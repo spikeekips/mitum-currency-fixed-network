@@ -81,6 +81,11 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	var networkLog logging.Logger
+	if err := config.LoadNetworkLogContextValue(ctx, &networkLog); err != nil {
+		return ctx, err
+	}
+
 	if design.Network() == nil {
 		log.Debug().Msg("digest api disabled; empty network")
 
@@ -109,16 +114,12 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 		certs = design.Network().Certs()
 	}
 
-	if sv, err := digest.NewHTTP2Server(
-		design.Network().Bind().Host,
-		design.Network().URL().Host,
-		certs,
-	); err != nil {
+	if sv, err := digest.NewHTTP2Server(design.Network().Bind().Host, design.Network().URL().Host, certs); err != nil {
 		return ctx, err
 	} else if err := sv.Initialize(); err != nil {
 		return ctx, err
 	} else {
-		_ = sv.SetLogger(log)
+		_ = sv.SetLogger(networkLog)
 
 		nt = sv
 	}
