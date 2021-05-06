@@ -11,7 +11,7 @@ require (
 	github.com/json-iterator/go v1.1.10
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2
 	github.com/rs/zerolog v1.20.0
-	github.com/spikeekips/mitum v0.0.0-20210506170546-05983d7e98db
+	github.com/spikeekips/mitum v0.0.0-20210506174522-fec7d401e368
 	github.com/stretchr/testify v1.7.0
 	github.com/ulule/limiter/v3 v3.8.0
 	go.mongodb.org/mongo-driver v1.4.6
@@ -21,5 +21,3 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
-
-//replace github.com/spikeekips/mitum => /workspace/mitum/src
