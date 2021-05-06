@@ -207,9 +207,18 @@ func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	if u, err := url.Parse(local.URL()); err != nil {
+	var u *url.URL
+	if i, err := url.Parse(local.URL()); err != nil {
 		return ctx, xerrors.Errorf("invalid local node url, %q", local.URL())
-	} else if ch, err := process.LoadNodeChannel(u, encs, time.Second*30, true); err != nil {
+	} else {
+		u = i
+
+		query := u.Query()
+		query.Set("insecure", "true")
+		u.RawQuery = query.Encode()
+	}
+
+	if ch, err := process.LoadNodeChannel(u, encs, time.Second*30); err != nil {
 		return ctx, err
 	} else {
 		_ = local.SetChannel(ch)

@@ -104,7 +104,15 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 
 	channels := make([]network.Channel, len(urls))
 	for i := range urls {
-		if ch, err := process.LoadNodeChannel(urls[i], encs, cmd.Timeout, cmd.TLSInscure); err != nil {
+		u := urls[i]
+		if cmd.TLSInscure {
+			query := u.Query()
+			query.Set("insecure", "true")
+
+			u.RawQuery = query.Encode()
+		}
+
+		if ch, err := process.LoadNodeChannel(u, encs, cmd.Timeout); err != nil {
 			return err
 		} else {
 			channels[i] = ch
