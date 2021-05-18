@@ -17,9 +17,8 @@ func (no FeeerDesign) MarshalJSON() ([]byte, error) {
 }
 
 type DigestDesignPackerJSON struct {
-	Network   config.LocalNetwork `json:"network"`
-	Cache     string              `json:"cache"`
-	RateLimit *RateLimiterDesign  `json:"rate-limit"`
+	Network config.LocalNetwork `json:"network"`
+	Cache   string              `json:"cache"`
 }
 
 func (no DigestDesign) MarshalJSON() ([]byte, error) {
@@ -28,15 +27,7 @@ func (no DigestDesign) MarshalJSON() ([]byte, error) {
 		cache = no.cache.String()
 	}
 	return jsonenc.Marshal(DigestDesignPackerJSON{
-		Network:   no.network,
-		Cache:     cache,
-		RateLimit: no.RateLimiterYAML,
-	})
-}
-
-func (no RateLimiterDesign) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(map[string]interface{}{
-		"period": *no.PeriodYAML,
-		"limit":  *no.Limit,
+		Network: no.network,
+		Cache:   cache,
 	})
 }

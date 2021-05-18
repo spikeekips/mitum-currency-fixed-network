@@ -278,10 +278,12 @@ func (cmd *BaseNodeCommand) hookValidateDigestConfig(ctx context.Context) (conte
 		return ctx, err
 	}
 
-	if i, err := cmd.validateDigestConfigNetwork(ctx, conf, design); err != nil {
-		return ctx, err
-	} else {
-		ctx = i
+	if design.Network() != nil {
+		if i, err := cmd.validateDigestConfigNetwork(ctx, conf, design); err != nil {
+			return ctx, err
+		} else {
+			ctx = i
+		}
 	}
 
 	return ctx, nil
@@ -292,10 +294,6 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 	conf config.LocalNode,
 	design DigestDesign,
 ) (context.Context, error) {
-	if design.Network() == nil {
-		return ctx, nil
-	}
-
 	if design.Network().URL() == nil {
 		return ctx, xerrors.Errorf("digest network url is missing")
 	}
@@ -321,7 +319,33 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 		}
 	}
 
+	if design.Network().RateLimit() != nil {
+		if i, err := cmd.validateDigestConfigNetworkRateLimit(ctx, design); err != nil {
+			return i, err
+		} else {
+			ctx = i
+		}
+	}
+
 	return ctx, nil
+}
+
+func (cmd *BaseNodeCommand) validateDigestConfigNetworkRateLimit(
+	ctx context.Context,
+	design DigestDesign,
+) (context.Context, error) {
+	rcc := config.NewRateLimitChecker(ctx, design.Network().RateLimit(), nil)
+
+	if err := util.NewChecker("config-ratelimit-checker", []util.CheckerFunc{
+		rcc.Initialize,
+		rcc.Check,
+	}).Check(); err != nil {
+		if !xerrors.Is(err, util.IgnoreError) {
+			return ctx, err
+		}
+	}
+
+	return ctx, design.Network().SetRateLimit(rcc.Config())
 }
 
 func isLocal(u *url.URL) bool {

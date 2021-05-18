@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
@@ -19,7 +20,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
-	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/xerrors"
 )
@@ -50,6 +50,27 @@ var (
 	HandlerPathSend                       = `/builder/send`
 )
 
+var RateLimitHandlerMap = map[string]string{
+	"node-info":                       HandlerPathNodeInfo,
+	"currencies":                      HandlerPathCurrencies,
+	"currency":                        HandlerPathCurrency,
+	"block-manifests":                 HandlerPathManifests,
+	"block-operations":                HandlerPathOperations,
+	"block-operation":                 HandlerPathOperation,
+	"block-by-height":                 HandlerPathBlockByHeight,
+	"block-by-hash":                   HandlerPathBlockByHash,
+	"block-operations-by-height":      HandlerPathOperationsByHeight,
+	"block-manifest-by-height":        HandlerPathManifestByHeight,
+	"block-manifest-by-hash":          HandlerPathManifestByHash,
+	"account":                         HandlerPathAccount,
+	"account-operations":              HandlerPathAccountOperations,
+	"builder-operation-fact-template": HandlerPathOperationBuildFactTemplate,
+	"builder-operation-fact":          HandlerPathOperationBuildFact,
+	"builder-operation-sign":          HandlerPathOperationBuildSign,
+	"builder-operation":               HandlerPathOperationBuild,
+	"builder-send":                    HandlerPathSend,
+}
+
 var (
 	UnknownProblem     = NewProblem(DefaultProblemType, "unknown problem occurred")
 	unknownProblemJSON []byte
@@ -78,7 +99,8 @@ type Handlers struct {
 	router          *mux.Router
 	routes          map[ /* path */ string]*mux.Route
 	itemsLimiter    func(string /* request type */) int64
-	rateLimiter     *limiter.Limiter
+	rateLimit       map[string][]process.RateLimitRule
+	rateLimitStore  limiter.Store
 	rg              *singleflight.Group
 }
 
@@ -103,6 +125,7 @@ func NewHandlers(
 		router:       mux.NewRouter(),
 		routes:       map[string]*mux.Route{},
 		itemsLimiter: defaultItemsLimiter,
+		rateLimit:    map[string][]process.RateLimitRule{},
 		rg:           &singleflight.Group{},
 	}
 }
@@ -195,8 +218,14 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 		route = hd.router.Name(name)
 	}
 
-	if hd.rateLimiter != nil {
-		handler = stdlib.NewMiddleware(hd.rateLimiter).Handler(handler)
+	if rules, found := hd.rateLimit[prefix]; found {
+		handler = process.NewRateLimitMiddleware(
+			process.NewRateLimit(rules, limiter.Rate{Limit: -1}), // NOTE by default, unlimited
+			handler,
+			hd.rateLimitStore,
+		)
+
+		hd.Log().Debug().Str("prefix", prefix).Msg("ratelimit middleware attached")
 	}
 
 	route = route.
@@ -302,8 +331,9 @@ func (hd *Handlers) writeCache(w http.ResponseWriter, key string, expire time.Du
 	}
 }
 
-func (hd *Handlers) SetRateLimiter(limiter *limiter.Limiter) *Handlers {
-	hd.rateLimiter = limiter
+func (hd *Handlers) SetRateLimit(rules map[string][]process.RateLimitRule, store limiter.Store) *Handlers {
+	hd.rateLimit = rules
+	hd.rateLimitStore = store
 
 	return hd
 }

@@ -3,10 +3,7 @@ package cmds
 import (
 	"context"
 	"net/url"
-	"time"
 
-	"github.com/ulule/limiter/v3"
-	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/key"
@@ -229,12 +226,10 @@ func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
 }
 
 type DigestDesign struct {
-	NetworkYAML     *yamlconfig.LocalNetwork `yaml:"network,omitempty"`
-	CacheYAML       *string                  `yaml:"cache,omitempty"`
-	RateLimiterYAML *RateLimiterDesign       `yaml:"rate-limit"`
-	network         config.LocalNetwork
-	cache           *url.URL
-	rateLimiter     *limiter.Limiter
+	NetworkYAML *yamlconfig.LocalNetwork `yaml:"network,omitempty"`
+	CacheYAML   *string                  `yaml:"cache,omitempty"`
+	network     config.LocalNetwork
+	cache       *url.URL
 }
 
 func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
@@ -270,14 +265,6 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	if no.RateLimiterYAML != nil {
-		if err := no.RateLimiterYAML.Set(ctx); err != nil {
-			return ctx, err
-		} else {
-			no.rateLimiter = no.RateLimiterYAML.Limiter()
-		}
-	}
-
 	return ctx, nil
 }
 
@@ -287,46 +274,4 @@ func (no *DigestDesign) Network() config.LocalNetwork {
 
 func (no *DigestDesign) Cache() *url.URL {
 	return no.cache
-}
-
-func (no *DigestDesign) RateLimiter() *limiter.Limiter {
-	return no.rateLimiter
-}
-
-type RateLimiterDesign struct {
-	PeriodYAML *string `yaml:"period"`
-	Limit      *uint64
-	limiter    *limiter.Limiter
-}
-
-func (no *RateLimiterDesign) Set(context.Context) error {
-	if no.PeriodYAML == nil {
-		return xerrors.Errorf("period is missing")
-	} else {
-		var period time.Duration
-		switch d, err := time.ParseDuration(*no.PeriodYAML); {
-		case err != nil:
-			return xerrors.Errorf("invalid period string, %q: %w", no.PeriodYAML, err)
-		case d < 0:
-			return xerrors.Errorf("negative period string, %q", no.PeriodYAML)
-		default:
-			period = d
-		}
-
-		if no.Limit == nil || *no.Limit < 1 {
-			return xerrors.Errorf("limit should be over 0")
-		}
-
-		no.limiter = limiter.New(
-			memory.NewStore(),
-			limiter.Rate{Period: period, Limit: int64(*no.Limit)},
-			limiter.WithTrustForwardHeader(true),
-		)
-	}
-
-	return nil
-}
-
-func (no RateLimiterDesign) Limiter() *limiter.Limiter {
-	return no.limiter
 }

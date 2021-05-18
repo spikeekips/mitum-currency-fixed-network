@@ -2,9 +2,12 @@ package cmds
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
@@ -13,13 +16,13 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
+	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/states"
 	basicstates "github.com/spikeekips/mitum/states/basic"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
-
-	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum-currency/digest"
+	"github.com/spikeekips/mitum/util/logging"
+	"github.com/ulule/limiter/v3"
 )
 
 var RunCommandProcesses []pm.Process
@@ -195,13 +198,15 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 	var handlers *digest.Handlers
 	if i, err := cmd.setDigestHandlers(ctx, conf, design, cache); err != nil {
 		return ctx, err
-	} else if err := i.Initialize(); err != nil {
-		return ctx, err
 	} else {
-		handlers = i
-	}
+		_ = i.SetLogger(cmd.Log())
 
-	_ = handlers.SetLogger(cmd.Log())
+		if err := i.Initialize(); err != nil {
+			return ctx, err
+		} else {
+			handlers = i
+		}
+	}
 
 	var dnt *digest.HTTP2Server
 	if err := LoadDigestNetworkContextValue(ctx, &dnt); err != nil {
@@ -230,21 +235,6 @@ func (cmd *RunCommand) setDigestHandlers(
 	design DigestDesign,
 	cache digest.Cache,
 ) (*digest.Handlers, error) {
-	var local *network.LocalNode
-	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, err
-	}
-
-	var nodepool *network.Nodepool
-	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
-		return nil, err
-	}
-
-	var suffrage base.Suffrage
-	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
-		return nil, err
-	}
-
 	var nt network.Server
 	if err := process.LoadNetworkContextValue(ctx, &nt); err != nil {
 		return nil, err
@@ -260,28 +250,19 @@ func (cmd *RunCommand) setDigestHandlers(
 		return nil, err
 	}
 
-	suffrageNodes := suffrage.Nodes()
-	rns := make([]network.Node, len(suffrageNodes))
-	var j int
-	for i := range suffrageNodes {
-		s := suffrageNodes[i]
-		if n, found := nodepool.Node(s); !found {
-			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
-		} else {
-			rns[j] = n
-			j++
-		}
-	}
-
 	handlers := digest.NewHandlers(conf.NetworkID(), encs, jenc, st, cache, cp).
 		SetNodeInfoHandler(nt.NodeInfoHandler())
 
-	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rns))
+	if i, err := cmd.setDigestSendHandler(ctx, conf, handlers); err != nil {
+		return nil, err
+	} else {
+		handlers = i
+	}
 
-	cmd.Log().Debug().Msg("send handler attached")
-
-	if design.RateLimiter() != nil {
-		handlers = handlers.SetRateLimiter(design.RateLimiter())
+	if nc := design.Network(); nc != nil && nc.RateLimit() != nil {
+		if _, err := cmd.attachDigestRateLimit(ctx, handlers, nc.RateLimit()); err != nil {
+			return nil, err
+		}
 	}
 
 	return handlers, nil
@@ -303,4 +284,90 @@ func (cmd *RunCommand) enteringBootingState(ctx context.Context) (context.Contex
 	}
 
 	return ctx, nil
+}
+
+func (cmd *RunCommand) attachDigestRateLimit(
+	ctx context.Context,
+	handlers *digest.Handlers,
+	conf config.RateLimit,
+) (context.Context, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
+	rules := conf.Rules()
+
+	handlerMap := map[string][]process.RateLimitRule{}
+	for i := range rules {
+		r := rules[i]
+
+		rs := r.Rules()
+		for j := range rs {
+			var prefix string
+			if k, found := digest.RateLimitHandlerMap[j]; !found {
+				return ctx, xerrors.Errorf("handler, %q for digest ratelimit not found", j)
+			} else {
+				prefix = k
+			}
+
+			log.Debug().
+				Str("handler", j).
+				Str("prefix", prefix).
+				Str("target", r.Target()).
+				Str("limit", fmt.Sprintf("%d/%s", rs[j].Limit, rs[j].Period.String())).
+				Msg("found ratelimit of handler")
+
+			handlerMap[prefix] = append(handlerMap[prefix], process.NewRateLimiterRule(r.IPNet(), rs[j]))
+		}
+	}
+
+	var store limiter.Store
+	if conf.Cache() != nil {
+		if i, err := quicnetwork.RateLimitStoreFromURI(conf.Cache().String()); err != nil {
+			return ctx, err
+		} else {
+			log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
+
+			store = i
+		}
+	}
+
+	_ = handlers.SetRateLimit(handlerMap, store)
+
+	return ctx, nil
+}
+
+func (cmd *RunCommand) setDigestSendHandler(
+	ctx context.Context,
+	conf config.LocalNode,
+	handlers *digest.Handlers,
+) (*digest.Handlers, error) {
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return nil, err
+	}
+
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return nil, err
+	}
+
+	suffrageNodes := suffrage.Nodes()
+	rns := make([]network.Node, len(suffrageNodes))
+	var j int
+	for i := range suffrageNodes {
+		s := suffrageNodes[i]
+		if n, found := nodepool.Node(s); !found {
+			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
+		} else {
+			rns[j] = n
+			j++
+		}
+	}
+
+	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rns))
+	cmd.Log().Debug().Msg("send handler attached")
+
+	return handlers, nil
 }
