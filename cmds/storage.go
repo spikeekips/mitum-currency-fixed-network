@@ -14,7 +14,7 @@ type StorageCommand struct {
 
 func NewStorageCommand() StorageCommand {
 	return StorageCommand{
-		Download:        mitumcmds.NewBlockDownloadCommand(),
+		Download:        mitumcmds.NewBlockDownloadCommand(Hinters),
 		BlockDataVerify: mitumcmds.NewBlockDataVerifyCommand(Hinters),
 		DatabaseVerify:  mitumcmds.NewDatabaseVerifyCommand(Hinters),
 		CleanStorage:    mitumcmds.NewCleanStorageCommand(false),
