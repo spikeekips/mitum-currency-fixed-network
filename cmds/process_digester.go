@@ -166,7 +166,7 @@ func digestFollowup(ctx context.Context, height base.Height) error {
 	}
 
 	for i := lastBlock; i <= height; i++ {
-		if blk, err := localfs.LoadBlock(blockData, i); err != nil {
+		if _, blk, err := localfs.LoadBlock(blockData, i); err != nil {
 			return err
 		} else if err := digest.DigestBlock(st, blk); err != nil {
 			return err
