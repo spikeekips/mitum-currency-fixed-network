@@ -221,9 +221,8 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 	if rules, found := hd.rateLimit[prefix]; found {
 		handler = process.NewRateLimitMiddleware(
 			process.NewRateLimit(rules, limiter.Rate{Limit: -1}), // NOTE by default, unlimited
-			handler,
 			hd.rateLimitStore,
-		)
+		).Middleware(handler)
 
 		hd.Log().Debug().Str("prefix", prefix).Msg("ratelimit middleware attached")
 	}
