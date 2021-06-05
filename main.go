@@ -28,6 +28,7 @@ type mainflags struct {
 	Key     cmds.KeyCommand     `cmd:"" help:"key"`
 	Seal    cmds.SealCommand    `cmd:"" help:"seal"`
 	Storage cmds.StorageCommand `cmd:"" help:"storage"`
+	Deploy  cmds.DeployCommand  `cmd:"" help:"deploy"`
 }
 
 func main() {
@@ -45,6 +46,7 @@ func main() {
 		Key:     cmds.NewKeyCommand(),
 		Seal:    cmds.NewSealCommand(),
 		Storage: cmds.NewStorageCommand(),
+		Deploy:  cmds.NewDeployCommand(),
 	}
 
 	var kctx *kong.Context
