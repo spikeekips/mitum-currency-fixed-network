@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	FeeOperationFactType = hint.MustNewType(0xa0, 0x12, "mitum-currency-fee-operation-fact")
-	FeeOperationFactHint = hint.MustHint(FeeOperationFactType, "0.0.1")
-	FeeOperationType     = hint.MustNewType(0xa0, 0x13, "mitum-currency-fee-operation")
-	FeeOperationHint     = hint.MustHint(FeeOperationType, "0.0.1")
+	FeeOperationFactType = hint.Type("mitum-currency-fee-operation-fact")
+	FeeOperationFactHint = hint.NewHint(FeeOperationFactType, "v0.0.1")
+	FeeOperationType     = hint.Type("mitum-currency-fee-operation")
+	FeeOperationHint     = hint.NewHint(FeeOperationType, "v0.0.1")
 )
 
 type FeeOperationFact struct {

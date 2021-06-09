@@ -13,7 +13,7 @@ var (
 
 func init() {
 	cmd := mitumcmds.NewBaseCommand("")
-	if i, err := cmd.LoadEncoders(Hinters); err != nil {
+	if i, err := cmd.LoadEncoders(Types, Hinters); err != nil {
 		panic(err)
 	} else {
 		encs = i

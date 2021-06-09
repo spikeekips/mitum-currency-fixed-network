@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	NodeInfoType = hint.MustNewType(0xa0, 0x15, "mitum-currency-node-info")
-	NodeInfoHint = hint.MustHint(NodeInfoType, "0.0.1")
+	NodeInfoType = hint.Type("mitum-currency-node-info")
+	NodeInfoHint = hint.NewHint(NodeInfoType, "v0.0.1")
 )
 
 type NodeInfo struct {

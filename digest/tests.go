@@ -16,7 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
@@ -56,43 +56,43 @@ func (t *baseTest) SetupSuite() {
 	t.DBType = "mongodb"
 	t.StorageSupportTest.SetupSuite()
 
-	for _, ht := range process.DefaultHinters {
-		_ = t.Encs.AddHinter(ht)
+	for _, ht := range launch.EncoderHinters {
+		_ = t.Encs.TestAddHinter(ht)
 	}
 
-	_ = t.Encs.AddHinter(AccountValue{})
-	_ = t.Encs.AddHinter(BaseHal{})
-	_ = t.Encs.AddHinter(NodeInfo{})
-	_ = t.Encs.AddHinter(OperationValue{})
-	_ = t.Encs.AddHinter(Problem{})
-	_ = t.Encs.AddHinter(currency.Account{})
-	_ = t.Encs.AddHinter(currency.Address(""))
-	_ = t.Encs.AddHinter(currency.Amount{})
-	_ = t.Encs.AddHinter(currency.CreateAccountsFact{})
-	_ = t.Encs.AddHinter(currency.CreateAccountsItemMultiAmountsHinter)
-	_ = t.Encs.AddHinter(currency.CreateAccountsItemSingleAmountHinter)
-	_ = t.Encs.AddHinter(currency.CreateAccounts{})
-	_ = t.Encs.AddHinter(currency.CurrencyDesign{})
-	_ = t.Encs.AddHinter(currency.CurrencyPolicyUpdaterFact{})
-	_ = t.Encs.AddHinter(currency.CurrencyPolicyUpdater{})
-	_ = t.Encs.AddHinter(currency.CurrencyRegisterFact{})
-	_ = t.Encs.AddHinter(currency.CurrencyRegister{})
-	_ = t.Encs.AddHinter(currency.FeeOperationFact{})
-	_ = t.Encs.AddHinter(currency.FeeOperation{})
-	_ = t.Encs.AddHinter(currency.FixedFeeer{})
-	_ = t.Encs.AddHinter(currency.GenesisCurrenciesFact{})
-	_ = t.Encs.AddHinter(currency.GenesisCurrencies{})
-	_ = t.Encs.AddHinter(currency.KeyUpdaterFact{})
-	_ = t.Encs.AddHinter(currency.KeyUpdater{})
-	_ = t.Encs.AddHinter(currency.Keys{})
-	_ = t.Encs.AddHinter(currency.Key{})
-	_ = t.Encs.AddHinter(currency.NilFeeer{})
-	_ = t.Encs.AddHinter(currency.RatioFeeer{})
-	_ = t.Encs.AddHinter(currency.TransfersFact{})
-	_ = t.Encs.AddHinter(currency.TransfersItemMultiAmountsHinter)
-	_ = t.Encs.AddHinter(currency.TransfersItemSingleAmountHinter)
-	_ = t.Encs.AddHinter(currency.Transfers{})
-	_ = t.Encs.AddHinter(currency.CurrencyPolicy{})
+	_ = t.Encs.TestAddHinter(AccountValue{})
+	_ = t.Encs.TestAddHinter(BaseHal{})
+	_ = t.Encs.TestAddHinter(NodeInfo{})
+	_ = t.Encs.TestAddHinter(OperationValue{})
+	_ = t.Encs.TestAddHinter(Problem{})
+	_ = t.Encs.TestAddHinter(currency.Account{})
+	_ = t.Encs.TestAddHinter(currency.Address(""))
+	_ = t.Encs.TestAddHinter(currency.Amount{})
+	_ = t.Encs.TestAddHinter(currency.CreateAccountsFact{})
+	_ = t.Encs.TestAddHinter(currency.CreateAccountsItemMultiAmountsHinter)
+	_ = t.Encs.TestAddHinter(currency.CreateAccountsItemSingleAmountHinter)
+	_ = t.Encs.TestAddHinter(currency.CreateAccounts{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyDesign{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdaterFact{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdater{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyRegisterFact{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyRegister{})
+	_ = t.Encs.TestAddHinter(currency.FeeOperationFact{})
+	_ = t.Encs.TestAddHinter(currency.FeeOperation{})
+	_ = t.Encs.TestAddHinter(currency.FixedFeeer{})
+	_ = t.Encs.TestAddHinter(currency.GenesisCurrenciesFact{})
+	_ = t.Encs.TestAddHinter(currency.GenesisCurrencies{})
+	_ = t.Encs.TestAddHinter(currency.KeyUpdaterFact{})
+	_ = t.Encs.TestAddHinter(currency.KeyUpdater{})
+	_ = t.Encs.TestAddHinter(currency.Keys{})
+	_ = t.Encs.TestAddHinter(currency.Key{})
+	_ = t.Encs.TestAddHinter(currency.NilFeeer{})
+	_ = t.Encs.TestAddHinter(currency.RatioFeeer{})
+	_ = t.Encs.TestAddHinter(currency.TransfersFact{})
+	_ = t.Encs.TestAddHinter(currency.TransfersItemMultiAmountsHinter)
+	_ = t.Encs.TestAddHinter(currency.TransfersItemSingleAmountHinter)
+	_ = t.Encs.TestAddHinter(currency.Transfers{})
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicy{})
 
 	t.networkID = util.UUID().Bytes()
 

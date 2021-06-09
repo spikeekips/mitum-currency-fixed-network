@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	KeyUpdaterFactType = hint.MustNewType(0xa0, 0x09, "mitum-currency-keyupdater-operation-fact")
-	KeyUpdaterFactHint = hint.MustHint(KeyUpdaterFactType, "0.0.1")
-	KeyUpdaterType     = hint.MustNewType(0xa0, 0x10, "mitum-currency-keyupdater-operation")
-	KeyUpdaterHint     = hint.MustHint(KeyUpdaterType, "0.0.1")
+	KeyUpdaterFactType = hint.Type("mitum-currency-keyupdater-operation-fact")
+	KeyUpdaterFactHint = hint.NewHint(KeyUpdaterFactType, "v0.0.1")
+	KeyUpdaterType     = hint.Type("mitum-currency-keyupdater-operation")
+	KeyUpdaterHint     = hint.NewHint(KeyUpdaterType, "v0.0.1")
 )
 
 type KeyUpdaterFact struct {

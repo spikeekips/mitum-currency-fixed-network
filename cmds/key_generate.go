@@ -48,7 +48,7 @@ func (cmd *GenerateKeyCommand) Run(version util.Version) error {
 			},
 		})
 	} else {
-		cmd.print("      hint: %s", priv.Hint().Verbose())
+		cmd.print("      hint: %s", priv.Hint())
 		cmd.print("privatekey: %s", priv.String())
 		cmd.print(" publickey: %s", priv.Publickey().String())
 	}

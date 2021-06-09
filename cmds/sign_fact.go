@@ -48,7 +48,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 		if u, ok := op.(operation.FactSignUpdater); !ok {
 			cmd.Log().Debug().
 				Interface("operation", op).
-				Hinted("operation_type", op.Hint()).
+				Str("operation_type", op.Hint().String()).
 				Msg("not operation.FactSignUpdater")
 
 			nops[i] = op

@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	CurrencyPolicyUpdaterFactType = hint.MustNewType(0xa0, 0x34, "mitum-currency-currency-policy-updater-operation-fact")
-	CurrencyPolicyUpdaterFactHint = hint.MustHint(CurrencyPolicyUpdaterFactType, "0.0.1")
-	CurrencyPolicyUpdaterType     = hint.MustNewType(0xa0, 0x35, "mitum-currency-currency-policy-updater-operation")
-	CurrencyPolicyUpdaterHint     = hint.MustHint(CurrencyPolicyUpdaterType, "0.0.1")
+	CurrencyPolicyUpdaterFactType = hint.Type("mitum-currency-currency-policy-updater-operation-fact")
+	CurrencyPolicyUpdaterFactHint = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
+	CurrencyPolicyUpdaterType     = hint.Type("mitum-currency-currency-policy-updater-operation")
+	CurrencyPolicyUpdaterHint     = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
 )
 
 type CurrencyPolicyUpdaterFact struct {

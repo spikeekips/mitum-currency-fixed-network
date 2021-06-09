@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -274,8 +275,12 @@ func (opr *OperationProcessor) getNewProcessorFromHintset(op state.Processor) (s
 	var f GetNewProcessor
 	if hinter, ok := op.(hint.Hinter); !ok {
 		return nil, nil
-	} else if i, found := opr.processorHintSet.Get(hinter); !found {
-		return nil, nil
+	} else if i, err := opr.processorHintSet.Compatible(hinter); err != nil {
+		if xerrors.Is(err, util.NotFoundError) {
+			return nil, nil
+		}
+
+		return nil, err
 	} else if j, ok := i.(GetNewProcessor); !ok {
 		return nil, xerrors.Errorf("invalid GetNewProcessor func, %%", i)
 	} else {

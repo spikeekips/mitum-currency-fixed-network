@@ -29,7 +29,7 @@ func NewNodeInfoCommand() NodeInfoCommand {
 
 func (cmd *NodeInfoCommand) Run(version util.Version) error {
 	if cmd.Encoders() == nil {
-		if _, err := cmd.LoadEncoders(Hinters); err != nil {
+		if _, err := cmd.LoadEncoders(Types, Hinters); err != nil {
 			return err
 		}
 	}

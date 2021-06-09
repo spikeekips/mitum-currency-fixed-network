@@ -34,7 +34,7 @@ func (t *testHandlerOperation) TestNew() {
 		var reason operation.ReasonError
 		var inState bool = true
 		if i%2 == 0 {
-			reason = operation.NewBaseReasonError("%d", i).SetData(map[string]interface{}{"i": float64(i)})
+			reason = operation.NewBaseReasonError("showme %d", i).SetData(map[string]interface{}{"i": float64(i)})
 			inState = false
 		}
 

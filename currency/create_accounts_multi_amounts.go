@@ -9,8 +9,8 @@ import (
 var maxCurenciesCreateAccountsItemMultiAmounts int = 10
 
 var (
-	CreateAccountsItemMultiAmountsType   = hint.MustNewType(0xa0, 0x24, "mitum-currency-create-accounts-multiple-amounts")
-	CreateAccountsItemMultiAmountsHint   = hint.MustHint(CreateAccountsItemMultiAmountsType, "0.0.1")
+	CreateAccountsItemMultiAmountsType   = hint.Type("mitum-currency-create-accounts-multiple-amounts")
+	CreateAccountsItemMultiAmountsHint   = hint.NewHint(CreateAccountsItemMultiAmountsType, "v0.0.1")
 	CreateAccountsItemMultiAmountsHinter = BaseCreateAccountsItem{hint: CreateAccountsItemMultiAmountsHint}
 )
 

@@ -21,8 +21,8 @@ type testGenesisCurrencies struct {
 
 func (t *testGenesisCurrencies) TestLoad() {
 	encs := encoder.NewEncoders()
-	encs.AddHinter(key.BTCPrivatekeyHinter)
-	encs.AddHinter(key.BTCPublickeyHinter)
+	encs.TestAddHinter(key.BTCPrivatekeyHinter)
+	encs.TestAddHinter(key.BTCPublickeyHinter)
 
 	enc := jsonenc.NewEncoder()
 	encs.AddEncoder(enc)

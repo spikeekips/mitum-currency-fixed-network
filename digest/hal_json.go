@@ -14,7 +14,7 @@ var HALJSONConfigDefault = jsoniter.Config{
 
 type BaseHalJSONPacker struct {
 	jsonenc.HintedHead
-	HINT map[string]interface{} `json:"hint,omitempty"`
+	HINT hint.Hint              `json:"hint,omitempty"`
 	I    interface{}            `json:"_embedded,omitempty"`
 	LS   map[string]HalLink     `json:"_links,omitempty"`
 	EX   map[string]interface{} `json:"_extra,omitempty"`
@@ -24,12 +24,9 @@ func (hal BaseHal) MarshalJSON() ([]byte, error) {
 	ls := hal.Links()
 	ls["self"] = hal.Self()
 
-	var ht map[string]interface{}
+	var ht hint.Hint
 	if hinter, ok := hal.i.(hint.Hinter); ok {
-		ht = map[string]interface{}{
-			"name": hinter.Hint().Type().Name(),
-			"hint": hinter.Hint().String(),
-		}
+		ht = hinter.Hint()
 	}
 
 	return jsonenc.Marshal(BaseHalJSONPacker{

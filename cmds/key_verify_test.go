@@ -20,7 +20,7 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 	parser, err := kong.New(&cli, cmds.LogVars, cmds.PprofVars)
 	t.NoError(err)
 
-	_, err = parser.Parse([]string{"KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1"})
+	_, err = parser.Parse([]string{"KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX:btc-priv-v0.0.1"})
 	t.NoError(err)
 
 	var buf bytes.Buffer
@@ -28,10 +28,10 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 
 	t.NoError(cli.Run(util.Version("0.1.1")))
 
-	t.Equal(`privatekey hint: hint{type="btc-privatekey" code="0112" version="0.0.1"}
-     privatekey: KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX-0112:0.0.1
- publickey hint: hint{type="btc-publickey" code="0113" version="0.0.1"}
-      publickey: mbxYSTvbpdN7ANWEav536HzDivVu9tqGgKzZjcXJLYKY-0113:0.0.1
+	t.Equal(`privatekey hint: btc-priv-v0.0.1
+     privatekey: KzbpUPUhHPxHnaQZndkfQvKoj2MxLjhjQLAGs42kuM3UEsgFNUoX:btc-priv-v0.0.1
+ publickey hint: btc-pub-v0.0.1
+      publickey: mbxYSTvbpdN7ANWEav536HzDivVu9tqGgKzZjcXJLYKY:btc-pub-v0.0.1
 `, buf.String())
 }
 

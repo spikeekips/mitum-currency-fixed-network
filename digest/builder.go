@@ -59,7 +59,7 @@ func (bl Builder) FactTemplate(ht hint.Hint) (Hal, error) {
 	case currency.CurrencyPolicyUpdaterType:
 		return bl.templateCurrencyPolicyUpdaterFact(), nil
 	default:
-		return nil, xerrors.Errorf("unknown operation, %v", ht.Verbose())
+		return nil, xerrors.Errorf("unknown operation, %q", ht)
 	}
 }
 

@@ -19,12 +19,12 @@ const (
 )
 
 var (
-	NilFeeerType   = hint.MustNewType(0xa0, 0x31, "mitum-currency-nil-feeer")
-	NilFeeerHint   = hint.MustHint(NilFeeerType, "0.0.1")
-	FixedFeeerType = hint.MustNewType(0xa0, 0x32, "mitum-currency-fixed-feeer")
-	FixedFeeerHint = hint.MustHint(FixedFeeerType, "0.0.1")
-	RatioFeeerType = hint.MustNewType(0xa0, 0x33, "mitum-currency-ratio-feeer")
-	RatioFeeerHint = hint.MustHint(RatioFeeerType, "0.0.1")
+	NilFeeerType   = hint.Type("mitum-currency-nil-feeer")
+	NilFeeerHint   = hint.NewHint(NilFeeerType, "v0.0.1")
+	FixedFeeerType = hint.Type("mitum-currency-fixed-feeer")
+	FixedFeeerHint = hint.NewHint(FixedFeeerType, "v0.0.1")
+	RatioFeeerType = hint.Type("mitum-currency-ratio-feeer")
+	RatioFeeerHint = hint.NewHint(RatioFeeerType, "v0.0.1")
 )
 
 var UnlimitedMaxFeeAmount = NewBig(-1)

@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	GenesisCurrenciesFactType = hint.MustNewType(0xa0, 0x20, "mitum-currency-genesis-currencies-operation-fact")
-	GenesisCurrenciesFactHint = hint.MustHint(GenesisCurrenciesFactType, "0.0.1")
-	GenesisCurrenciesType     = hint.MustNewType(0xa0, 0x21, "mitum-currency-genesis-currencies-operation")
-	GenesisCurrenciesHint     = hint.MustHint(GenesisCurrenciesType, "0.0.1")
+	GenesisCurrenciesFactType = hint.Type("mitum-currency-genesis-currencies-operation-fact")
+	GenesisCurrenciesFactHint = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
+	GenesisCurrenciesType     = hint.Type("mitum-currency-genesis-currencies-operation")
+	GenesisCurrenciesHint     = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
 )
 
 type GenesisCurrenciesFact struct {

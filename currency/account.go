@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	AccountType = hint.MustNewType(0xa0, 0x14, "mitum-currency-account")
-	AccountHint = hint.MustHint(AccountType, "0.0.1")
+	AccountType = hint.Type("mitum-currency-account")
+	AccountHint = hint.NewHint(AccountType, "v0.0.1")
 )
 
 type Account struct {

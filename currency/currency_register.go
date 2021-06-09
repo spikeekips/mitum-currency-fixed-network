@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	CurrencyRegisterFactType = hint.MustNewType(0xa0, 0x28, "mitum-currency-currency-register-operation-fact")
-	CurrencyRegisterFactHint = hint.MustHint(CurrencyRegisterFactType, "0.0.1")
-	CurrencyRegisterType     = hint.MustNewType(0xa0, 0x29, "mitum-currency-currency-register-operation")
-	CurrencyRegisterHint     = hint.MustHint(CurrencyRegisterType, "0.0.1")
+	CurrencyRegisterFactType = hint.Type("mitum-currency-currency-register-operation-fact")
+	CurrencyRegisterFactHint = hint.NewHint(CurrencyRegisterFactType, "v0.0.1")
+	CurrencyRegisterType     = hint.Type("mitum-currency-currency-register-operation")
+	CurrencyRegisterHint     = hint.NewHint(CurrencyRegisterType, "v0.0.1")
 )
 
 type CurrencyRegisterFact struct {

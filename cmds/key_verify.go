@@ -76,11 +76,11 @@ func (cmd *VerifyKeyCommand) Run(version util.Version) error {
 	}
 
 	if priv != nil {
-		cmd.print("privatekey hint: %s", priv.Hint().Verbose())
+		cmd.print("privatekey hint: %s", priv.Hint())
 		cmd.print("     privatekey: %s", priv.String())
 	}
 
-	cmd.print(" publickey hint: %s", pub.Hint().Verbose())
+	cmd.print(" publickey hint: %s", pub.Hint())
 	cmd.print("      publickey: %s", pub.String())
 
 	return nil

@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	CreateAccountsFactType = hint.MustNewType(0xa0, 0x05, "mitum-currency-create-accounts-operation-fact")
-	CreateAccountsFactHint = hint.MustHint(CreateAccountsFactType, "0.0.1")
-	CreateAccountsType     = hint.MustNewType(0xa0, 0x06, "mitum-currency-create-accounts-operation")
-	CreateAccountsHint     = hint.MustHint(CreateAccountsType, "0.0.1")
+	CreateAccountsFactType = hint.Type("mitum-currency-create-accounts-operation-fact")
+	CreateAccountsFactHint = hint.NewHint(CreateAccountsFactType, "v0.0.1")
+	CreateAccountsType     = hint.Type("mitum-currency-create-accounts-operation")
+	CreateAccountsHint     = hint.NewHint(CreateAccountsType, "v0.0.1")
 )
 
 var MaxCreateAccountsItems uint = 10

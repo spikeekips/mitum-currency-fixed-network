@@ -1,5 +1,5 @@
-address: mc-node0-010a:0.0.1
-privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w-0112:0.0.1
+address: mc-node:sa-v0.0.1
+privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w:btc-priv-v0.0.1
 storage:
     database:
         uri: mongodb://127.0.0.1:27017/mc
@@ -14,8 +14,8 @@ genesis-operations:
     - type: genesis-currencies
       account-keys:
         keys:
-            - publickey: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7-0115:0.0.1
-              # privatekey: c741259e1444ce46e08c2489f3112fb8f0b9f85cb11c84ced9d948cef259ce74-0114:0.0.1
+            - publickey: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7:ether-pub-v0.0.1
+              # privatekey: c741259e1444ce46e08c2489f3112fb8f0b9f85cb11c84ced9d948cef259ce74:ether-priv-v0.0.1
               weight: 100
         threshold: 100
       currencies:

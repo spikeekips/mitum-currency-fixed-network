@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	OperationValueType = hint.MustNewType(0xa0, 0x19, "mitum-currency-operation-value")
-	OperationValueHint = hint.MustHint(OperationValueType, "0.0.1")
+	OperationValueType = hint.Type("mitum-currency-operation-value")
+	OperationValueHint = hint.NewHint(OperationValueType, "v0.0.1")
 )
 
 type OperationValue struct {

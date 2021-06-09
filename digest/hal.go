@@ -19,8 +19,8 @@ type Hal interface {
 }
 
 var (
-	BaseHalType = hint.MustNewType(0xa0, 0x16, "mitum-currency-hal")
-	BaseHalHint = hint.MustHint(BaseHalType, "0.0.1")
+	BaseHalType = hint.Type("mitum-currency-hal")
+	BaseHalHint = hint.NewHint(BaseHalType, "v0.0.1")
 )
 
 type BaseHal struct {

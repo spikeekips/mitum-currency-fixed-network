@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	AddressType = hint.MustNewType(0xa0, 0x00, "mitum-currency-address")
-	AddressHint = hint.MustHint(AddressType, "0.0.1")
+	AddressType = hint.Type("mca")
+	AddressHint = hint.NewHint(AddressType, "v0.0.1")
 )
 
 var EmptyAddress = Address("")

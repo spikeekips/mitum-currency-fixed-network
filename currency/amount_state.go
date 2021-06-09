@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	AmountStateType = hint.MustNewType(0xa0, 0x23, "mitum-currency-amount-state")
-	AmountStateHint = hint.MustHint(AmountStateType, "0.0.1")
+	AmountStateType = hint.Type("mitum-currency-amount-state")
+	AmountStateHint = hint.NewHint(AmountStateType, "v0.0.1")
 )
 
 type AmountState struct {

@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	TransfersFactType = hint.MustNewType(0xa0, 0x01, "mitum-currency-transfers-operation-fact")
-	TransfersFactHint = hint.MustHint(TransfersFactType, "0.0.1")
-	TransfersType     = hint.MustNewType(0xa0, 0x02, "mitum-currency-transfers-operation")
-	TransfersHint     = hint.MustHint(TransfersType, "0.0.1")
+	TransfersFactType = hint.Type("mitum-currency-transfers-operation-fact")
+	TransfersFactHint = hint.NewHint(TransfersFactType, "v0.0.1")
+	TransfersType     = hint.Type("mitum-currency-transfers-operation")
+	TransfersHint     = hint.NewHint(TransfersType, "v0.0.1")
 )
 
 var MaxTransferItems uint = 10

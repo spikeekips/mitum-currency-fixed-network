@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	CurrencyDesignType = hint.MustNewType(0xa0, 0x30, "mitum-currency-currency-design")
-	CurrencyDesignHint = hint.MustHint(CurrencyDesignType, "0.0.1")
+	CurrencyDesignType = hint.Type("mitum-currency-currency-design")
+	CurrencyDesignHint = hint.NewHint(CurrencyDesignType, "v0.0.1")
 )
 
 type CurrencyDesign struct {

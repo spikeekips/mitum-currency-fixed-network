@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	KeyType  = hint.MustNewType(0xa0, 0x03, "mitum-currency-key")
-	KeyHint  = hint.MustHint(KeyType, "0.0.1")
-	KeysType = hint.MustNewType(0xa0, 0x04, "mitum-currency-keys")
-	KeysHint = hint.MustHint(KeysType, "0.0.1")
+	KeyType  = hint.Type("mitum-currency-key")
+	KeyHint  = hint.NewHint(KeyType, "v0.0.1")
+	KeysType = hint.Type("mitum-currency-keys")
+	KeysHint = hint.NewHint(KeysType, "v0.0.1")
 )
 
 var (

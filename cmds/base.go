@@ -34,7 +34,7 @@ import (
 var BaseNodeCommandHooks = func(cmd *BaseNodeCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
-			process.HookNameAddHinters, process.HookAddHinters(Hinters)).
+			process.HookNameAddHinters, process.HookAddHinters(Types, Hinters)).
 			SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
 			"load_digest_config", cmd.hookLoadDigestConfig).

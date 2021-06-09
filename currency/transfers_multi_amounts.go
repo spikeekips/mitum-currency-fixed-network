@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	TransfersItemMultiAmountsType   = hint.MustNewType(0xa0, 0x26, "mitum-currency-transfers-item-multi-amounts")
-	TransfersItemMultiAmountsHint   = hint.MustHint(TransfersItemMultiAmountsType, "0.0.1")
+	TransfersItemMultiAmountsType   = hint.Type("mitum-currency-transfers-item-multi-amounts")
+	TransfersItemMultiAmountsHint   = hint.NewHint(TransfersItemMultiAmountsType, "v0.0.1")
 	TransfersItemMultiAmountsHinter = BaseTransfersItem{hint: TransfersItemMultiAmountsHint}
 )
 

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	CreateAccountsItemSingleAmountType   = hint.MustNewType(0xa0, 0x25, "mitum-currency-create-accounts-single-amount")
-	CreateAccountsItemSingleAmountHint   = hint.MustHint(CreateAccountsItemSingleAmountType, "0.0.1")
+	CreateAccountsItemSingleAmountType   = hint.Type("mitum-currency-create-accounts-single-amount")
+	CreateAccountsItemSingleAmountHint   = hint.NewHint(CreateAccountsItemSingleAmountType, "v0.0.1")
 	CreateAccountsItemSingleAmountHinter = BaseCreateAccountsItem{hint: CreateAccountsItemSingleAmountHint}
 )
 

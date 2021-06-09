@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	AccountValueType = hint.MustNewType(0xa0, 0x18, "mitum-currency-account-value")
-	AccountValueHint = hint.MustHint(AccountValueType, "0.0.1")
+	AccountValueType = hint.Type("mitum-currency-account-value")
+	AccountValueHint = hint.NewHint(AccountValueType, "v0.0.1")
 )
 
 type AccountValue struct {

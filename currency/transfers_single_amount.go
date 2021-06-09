@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	TransfersItemSingleAmountType   = hint.MustNewType(0xa0, 0x27, "mitum-currency-transfers-item-single-amount")
-	TransfersItemSingleAmountHint   = hint.MustHint(TransfersItemSingleAmountType, "0.0.1")
+	TransfersItemSingleAmountType   = hint.Type("mitum-currency-transfers-item-single-amount")
+	TransfersItemSingleAmountHint   = hint.NewHint(TransfersItemSingleAmountType, "v0.0.1")
 	TransfersItemSingleAmountHinter = BaseTransfersItem{hint: TransfersItemSingleAmountHint}
 )
 

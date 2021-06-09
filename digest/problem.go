@@ -15,8 +15,8 @@ const (
 )
 
 var (
-	ProblemType = hint.MustNewType(0xa0, 0x17, "mitum-currency-problem")
-	ProblemHint = hint.MustHint(ProblemType, "0.0.1")
+	ProblemType = hint.Type("mitum-currency-problem")
+	ProblemHint = hint.NewHint(ProblemType, "v0.0.1")
 )
 
 // Problem implements "Problem Details for HTTP

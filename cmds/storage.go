@@ -15,11 +15,11 @@ type StorageCommand struct {
 
 func NewStorageCommand() StorageCommand {
 	return StorageCommand{
-		Download:         mitumcmds.NewBlockDownloadCommand(Hinters),
-		BlockDataVerify:  mitumcmds.NewBlockDataVerifyCommand(Hinters),
-		DatabaseVerify:   mitumcmds.NewDatabaseVerifyCommand(Hinters),
+		Download:         mitumcmds.NewBlockDownloadCommand(Types, Hinters),
+		BlockDataVerify:  mitumcmds.NewBlockDataVerifyCommand(Types, Hinters),
+		DatabaseVerify:   mitumcmds.NewDatabaseVerifyCommand(Types, Hinters),
 		CleanStorage:     mitumcmds.NewCleanStorageCommand(false),
-		Restore:          mitumcmds.NewRestoreCommand(Hinters),
+		Restore:          mitumcmds.NewRestoreCommand(Types, Hinters),
 		SetBlockDataMaps: mitumcmds.NewSetBlockDataMapsCommand(),
 	}
 }
