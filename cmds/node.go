@@ -7,18 +7,14 @@ type NodeCommand struct {
 }
 
 func NewNodeCommand() (NodeCommand, error) {
-	var initCommand InitCommand
-	if i, err := NewInitCommand(false); err != nil {
+	initCommand, err := NewInitCommand(false)
+	if err != nil {
 		return NodeCommand{}, err
-	} else {
-		initCommand = i
 	}
 
-	var runCommand RunCommand
-	if i, err := NewRunCommand(false); err != nil {
+	runCommand, err := NewRunCommand(false)
+	if err != nil {
 		return NodeCommand{}, err
-	} else {
-		runCommand = i
 	}
 
 	return NodeCommand{

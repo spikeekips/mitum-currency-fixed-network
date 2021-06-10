@@ -38,11 +38,9 @@ func NewBlockSession(st *Database, blk block.Block) (*BlockSession, error) {
 		return nil, xerrors.Errorf("readonly mode")
 	}
 
-	var nst *Database
-	if n, err := st.New(); err != nil {
+	nst, err := st.New()
+	if err != nil {
 		return nil, err
-	} else {
-		nst = n
 	}
 
 	return &BlockSession{
@@ -64,11 +62,7 @@ func (bs *BlockSession) Prepare() error {
 		return err
 	}
 
-	if err := bs.prepareAccounts(); err != nil {
-		return err
-	}
-
-	return nil
+	return bs.prepareAccounts()
 }
 
 func (bs *BlockSession) Commit(ctx context.Context) error {
@@ -94,11 +88,7 @@ func (bs *BlockSession) Commit(ctx context.Context) error {
 		return err
 	}
 
-	if err := bs.writeModels(ctx, defaultColNameBalance, bs.balanceModels); err != nil {
-		return err
-	}
-
-	return nil
+	return bs.writeModels(ctx, defaultColNameBalance, bs.balanceModels)
 }
 
 func (bs *BlockSession) Close() error {
@@ -144,16 +134,12 @@ func (bs *BlockSession) prepareOperations() error {
 	for i := range bs.block.Operations() {
 		op := bs.block.Operations()[i]
 
-		var inState bool
-		var reason operation.ReasonError
-		if found, i, j := node(op.Fact().Hash()); !found {
+		found, inState, reason := node(op.Fact().Hash())
+		if !found {
 			return util.NotFoundError.Errorf("operation, %s not found in operations tree", op.Fact().Hash().String())
-		} else {
-			inState = i
-			reason = j
 		}
 
-		if doc, err := NewOperationDoc(
+		doc, err := NewOperationDoc(
 			op,
 			bs.st.database.Encoder(),
 			bs.block.Height(),
@@ -161,11 +147,11 @@ func (bs *BlockSession) prepareOperations() error {
 			inState,
 			reason,
 			uint64(i),
-		); err != nil {
+		)
+		if err != nil {
 			return err
-		} else {
-			bs.operationModels[i] = mongo.NewInsertOneModel().SetDocument(doc)
 		}
+		bs.operationModels[i] = mongo.NewInsertOneModel().SetDocument(doc)
 	}
 
 	return nil
@@ -182,17 +168,17 @@ func (bs *BlockSession) prepareAccounts() error {
 		st := bs.block.States()[i]
 		switch {
 		case currency.IsStateAccountKey(st.Key()):
-			if j, err := bs.handleAccountState(st); err != nil {
+			j, err := bs.handleAccountState(st)
+			if err != nil {
 				return err
-			} else {
-				accountModels = append(accountModels, j...)
 			}
+			accountModels = append(accountModels, j...)
 		case currency.IsStateBalanceKey(st.Key()):
-			if j, err := bs.handleBalanceState(st); err != nil {
+			j, err := bs.handleBalanceState(st)
+			if err != nil {
 				return err
-			} else {
-				balanceModels = append(balanceModels, j...)
 			}
+			balanceModels = append(balanceModels, j...)
 		default:
 			continue
 		}
@@ -215,11 +201,11 @@ func (bs *BlockSession) handleAccountState(st state.State) ([]mongo.WriteModel, 
 }
 
 func (bs *BlockSession) handleBalanceState(st state.State) ([]mongo.WriteModel, error) {
-	if doc, err := NewBalanceDoc(st, bs.st.database.Encoder()); err != nil {
+	doc, err := NewBalanceDoc(st, bs.st.database.Encoder())
+	if err != nil {
 		return nil, err
-	} else {
-		return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
 	}
+	return []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}, nil
 }
 
 func (bs *BlockSession) writeModels(ctx context.Context, col string, models []mongo.WriteModel) error {

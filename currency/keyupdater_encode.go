@@ -16,11 +16,9 @@ func (fact *KeyUpdaterFact) unpack(
 	bks []byte,
 	cr string,
 ) error {
-	var target base.Address
-	if a, err := btarget.Encode(enc); err != nil {
+	target, err := btarget.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		target = a
 	}
 
 	var keys Keys

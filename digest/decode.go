@@ -16,9 +16,8 @@ func loadOperationHash(decoder func(interface{}) error) (valuehash.Hash, error) 
 
 	if err := decoder(&doc); err != nil {
 		return nil, err
-	} else {
-		return doc.FH, nil
 	}
+	return doc.FH, nil
 }
 
 func loadOperation(decoder func(interface{}) error, encs *encoder.Encoders) (OperationValue, error) {

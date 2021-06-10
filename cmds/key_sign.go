@@ -13,8 +13,8 @@ import (
 
 type SignKeyCommand struct {
 	*BaseCommand
-	Key   StringLoad `arg:"" name:"privatekey" help:"privatekey" required:""`
-	Base  string     `arg:"" name:"signature base" help:"signature base for signing" required:""`
+	Key   StringLoad `arg:"" name:"privatekey" help:"privatekey" required:"true"`
+	Base  string     `arg:"" name:"signature base" help:"signature base for signing" required:"true"`
 	Quite bool       `name:"quite" short:"q" help:"keep silence"`
 }
 
@@ -32,7 +32,7 @@ func (cmd *SignKeyCommand) Run(version util.Version) error {
 	var priv key.Privatekey
 	if k, err := loadKey(cmd.Key.Bytes()); err != nil {
 		if cmd.Quite {
-			os.Exit(1)
+			os.Exit(1) // revive:disable-line:deep-exit
 		}
 
 		return err
@@ -53,11 +53,11 @@ func (cmd *SignKeyCommand) Run(version util.Version) error {
 		base = b
 	}
 
-	if sig, err := priv.Sign(base); err != nil {
+	sig, err := priv.Sign(base)
+	if err != nil {
 		return xerrors.Errorf("failed to sign base: %w", err)
-	} else {
-		cmd.print(sig.String())
 	}
+	cmd.print(sig.String())
 
 	return nil
 }

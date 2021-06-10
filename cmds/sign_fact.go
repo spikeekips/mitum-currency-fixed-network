@@ -10,8 +10,8 @@ import (
 
 type SignFactCommand struct {
 	*BaseCommand
-	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:""`
-	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:""`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:"true"`
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:"true"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
 	Seal       FileLoad                `help:"seal" optional:""`
 }
@@ -56,28 +56,28 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 			fsu = u
 		}
 
-		if sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.NetworkID()); err != nil {
+		sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.NetworkID())
+		if err != nil {
 			return err
-		} else {
-			f := operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
-
-			if nop, err := fsu.AddFactSigns(f); err != nil {
-				return err
-			} else {
-				nops[i] = nop.(operation.Operation)
-			}
 		}
+		f := operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
+
+		nop, err := fsu.AddFactSigns(f)
+		if err != nil {
+			return err
+		}
+		nops[i] = nop.(operation.Operation)
 	}
 
 	sl = sl.(operation.SealUpdater).SetOperations(nops).(operation.Seal)
 
-	if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID()); err != nil {
+	s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+	if err != nil {
 		return err
-	} else {
-		sl = s.(operation.Seal)
-
-		cmd.Log().Debug().Msg("seal signed")
 	}
+	sl = s.(operation.Seal)
+
+	cmd.Log().Debug().Msg("seal signed")
 
 	cmd.pretty(cmd.Pretty, sl)
 

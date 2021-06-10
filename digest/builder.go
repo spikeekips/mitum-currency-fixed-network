@@ -63,7 +63,7 @@ func (bl Builder) FactTemplate(ht hint.Hint) (Hal, error) {
 	}
 }
 
-func (bl Builder) templateCreateAccountsFact() Hal {
+func (Builder) templateCreateAccountsFact() Hal {
 	nkey, _ := currency.NewKey(templatePublickey, 100)
 	nkeys, _ := currency.NewKeys([]currency.Key{nkey}, 100)
 
@@ -86,7 +86,7 @@ func (bl Builder) templateCreateAccountsFact() Hal {
 	})
 }
 
-func (bl Builder) templateKeyUpdaterFact() Hal {
+func (Builder) templateKeyUpdaterFact() Hal {
 	nkey, _ := currency.NewKey(templatePublickey, 100)
 	nkeys, _ := currency.NewKeys([]currency.Key{nkey}, 100)
 
@@ -106,7 +106,7 @@ func (bl Builder) templateKeyUpdaterFact() Hal {
 	})
 }
 
-func (bl Builder) templateTransfersFact() Hal {
+func (Builder) templateTransfersFact() Hal {
 	fact := currency.NewTransfersFact(
 		templateToken,
 		templateSender,
@@ -127,7 +127,7 @@ func (bl Builder) templateTransfersFact() Hal {
 	})
 }
 
-func (bl Builder) templateCurrencyRegisterFact() Hal {
+func (Builder) templateCurrencyRegisterFact() Hal {
 	po := currency.NewCurrencyPolicy(templateBig, currency.NewNilFeeer())
 	de := currency.NewCurrencyDesign(
 		currency.NewAmount(templateBig, templateCurrencyID),
@@ -147,7 +147,7 @@ func (bl Builder) templateCurrencyRegisterFact() Hal {
 	})
 }
 
-func (bl Builder) templateCurrencyPolicyUpdaterFact() Hal {
+func (Builder) templateCurrencyPolicyUpdaterFact() Hal {
 	po := currency.NewCurrencyPolicy(templateBig, currency.NewNilFeeer())
 	fact := currency.NewCurrencyPolicyUpdaterFact(templateToken, templateCurrencyID, po)
 
@@ -187,11 +187,9 @@ func (bl Builder) BuildFact(b []byte) (Hal, error) {
 }
 
 func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal, error) {
-	var token []byte
-	if t, err := bl.checkToken(fact.Token()); err != nil {
+	token, err := bl.checkToken(fact.Token())
+	if err != nil {
 		return nil, err
-	} else {
-		token = t
 	}
 
 	items := make([]currency.CreateAccountsItem, len(fact.Items()))
@@ -201,32 +199,32 @@ func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal
 			return nil, xerrors.Errorf("empty Amounts")
 		}
 
-		if ks, err := currency.NewKeys(item.Keys().Keys(), item.Keys().Threshold()); err != nil {
-			return nil, err
-		} else {
-			items[i] = currency.NewCreateAccountsItemSingleAmount(ks, item.Amounts()[0])
+		ks, e := currency.NewKeys(item.Keys().Keys(), item.Keys().Threshold())
+		if e != nil {
+			return nil, e
 		}
+		items[i] = currency.NewCreateAccountsItemSingleAmount(ks, item.Amounts()[0])
 	}
 
 	nfact := currency.NewCreateAccountsFact(token, fact.Sender(), items)
 	nfact = nfact.Rebulild()
-	if err := bl.isValidFactCreateAccounts(nfact); err != nil {
+	if err = bl.isValidFactCreateAccounts(nfact); err != nil {
 		return nil, err
 	}
 
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
-	if op, err := currency.NewCreateAccounts(
+	op, err := currency.NewCreateAccounts(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
 		},
 		"",
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.SetInterface(op)
 	}
+	hal = hal.SetInterface(op)
 
 	return hal.
 		AddExtras("default", map[string]interface{}{
@@ -237,38 +235,34 @@ func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal
 }
 
 func (bl Builder) buildFactKeyUpdater(fact currency.KeyUpdaterFact) (Hal, error) {
-	var token []byte
-	if t, err := bl.checkToken(fact.Token()); err != nil {
+	token, err := bl.checkToken(fact.Token())
+	if err != nil {
 		return nil, err
-	} else {
-		token = t
 	}
 
-	var ks currency.Keys
-	if k, err := currency.NewKeys(fact.Keys().Keys(), fact.Keys().Threshold()); err != nil {
+	ks, err := currency.NewKeys(fact.Keys().Keys(), fact.Keys().Threshold())
+	if err != nil {
 		return nil, err
-	} else {
-		ks = k
 	}
 
 	nfact := currency.NewKeyUpdaterFact(token, fact.Target(), ks, fact.Currency())
-	if err := bl.isValidFactKeyUpdater(nfact); err != nil {
+	if err = bl.isValidFactKeyUpdater(nfact); err != nil {
 		return nil, err
 	}
 
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
-	if op, err := currency.NewKeyUpdater(
+	op, err := currency.NewKeyUpdater(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
 		},
 		"",
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.SetInterface(op)
 	}
+	hal = hal.SetInterface(op)
 
 	return hal.
 		AddExtras("default", map[string]interface{}{
@@ -279,32 +273,30 @@ func (bl Builder) buildFactKeyUpdater(fact currency.KeyUpdaterFact) (Hal, error)
 }
 
 func (bl Builder) buildFactTransfers(fact currency.TransfersFact) (Hal, error) {
-	var token []byte
-	if t, err := bl.checkToken(fact.Token()); err != nil {
+	token, err := bl.checkToken(fact.Token())
+	if err != nil {
 		return nil, err
-	} else {
-		token = t
 	}
 
 	nfact := currency.NewTransfersFact(token, fact.Sender(), fact.Items())
 	nfact = nfact.Rebulild()
-	if err := bl.isValidFactTransfers(nfact); err != nil {
+	if err = bl.isValidFactTransfers(nfact); err != nil {
 		return nil, err
 	}
 
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
-	if op, err := currency.NewTransfers(
+	op, err := currency.NewTransfers(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
 		},
 		"",
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.SetInterface(op)
 	}
+	hal = hal.SetInterface(op)
 
 	return hal.
 		AddExtras("default", map[string]interface{}{
@@ -315,31 +307,29 @@ func (bl Builder) buildFactTransfers(fact currency.TransfersFact) (Hal, error) {
 }
 
 func (bl Builder) buildFactCurrencyRegister(fact currency.CurrencyRegisterFact) (Hal, error) {
-	var token []byte
-	if t, err := bl.checkToken(fact.Token()); err != nil {
+	token, err := bl.checkToken(fact.Token())
+	if err != nil {
 		return nil, err
-	} else {
-		token = t
 	}
 
 	nfact := currency.NewCurrencyRegisterFact(token, fact.Currency())
-	if err := bl.isValidFactCurrencyRegister(nfact); err != nil {
+	if err = bl.isValidFactCurrencyRegister(nfact); err != nil {
 		return nil, err
 	}
 
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
-	if op, err := currency.NewCurrencyRegister(
+	op, err := currency.NewCurrencyRegister(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
 		},
 		"",
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.SetInterface(op)
 	}
+	hal = hal.SetInterface(op)
 
 	return hal.
 		AddExtras("default", map[string]interface{}{
@@ -350,31 +340,29 @@ func (bl Builder) buildFactCurrencyRegister(fact currency.CurrencyRegisterFact) 
 }
 
 func (bl Builder) buildFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpdaterFact) (Hal, error) {
-	var token []byte
-	if t, err := bl.checkToken(fact.Token()); err != nil {
+	token, err := bl.checkToken(fact.Token())
+	if err != nil {
 		return nil, err
-	} else {
-		token = t
 	}
 
 	nfact := currency.NewCurrencyPolicyUpdaterFact(token, fact.Currency(), fact.Policy())
-	if err := bl.isValidFactCurrencyPolicyUpdater(nfact); err != nil {
+	if err = bl.isValidFactCurrencyPolicyUpdater(nfact); err != nil {
 		return nil, err
 	}
 
 	var hal Hal
 	hal = NewBaseHal(nil, HalLink{})
-	if op, err := currency.NewCurrencyPolicyUpdater(
+	op, err := currency.NewCurrencyPolicyUpdater(
 		nfact,
 		[]operation.FactSign{
 			operation.RawBaseFactSign(templatePublickey, templateSignature, templateSignedAt),
 		},
 		"",
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.SetInterface(op)
 	}
+	hal = hal.SetInterface(op)
 
 	return hal.
 		AddExtras("default", map[string]interface{}{
@@ -384,7 +372,7 @@ func (bl Builder) buildFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpd
 		AddExtras("signature_base", operation.NewBytesForFactSignature(nfact, bl.networkID)), nil
 }
 
-func (bl Builder) isValidFactCreateAccounts(fact currency.CreateAccountsFact) error {
+func (Builder) isValidFactCreateAccounts(fact currency.CreateAccountsFact) error {
 	if err := fact.IsValid(nil); err != nil {
 		return err
 	}
@@ -406,7 +394,7 @@ func (bl Builder) isValidFactCreateAccounts(fact currency.CreateAccountsFact) er
 	return nil
 }
 
-func (bl Builder) isValidFactKeyUpdater(fact currency.KeyUpdaterFact) error {
+func (Builder) isValidFactKeyUpdater(fact currency.KeyUpdaterFact) error {
 	if err := fact.IsValid(nil); err != nil {
 		return err
 	}
@@ -426,7 +414,7 @@ func (bl Builder) isValidFactKeyUpdater(fact currency.KeyUpdaterFact) error {
 	return nil
 }
 
-func (bl Builder) isValidFactTransfers(fact currency.TransfersFact) error {
+func (Builder) isValidFactTransfers(fact currency.TransfersFact) error {
 	if err := fact.IsValid(nil); err != nil {
 		return err
 	}
@@ -448,7 +436,7 @@ func (bl Builder) isValidFactTransfers(fact currency.TransfersFact) error {
 	return nil
 }
 
-func (bl Builder) isValidFactCurrencyRegister(fact currency.CurrencyRegisterFact) error {
+func (Builder) isValidFactCurrencyRegister(fact currency.CurrencyRegisterFact) error {
 	if err := fact.IsValid(nil); err != nil {
 		return err
 	}
@@ -468,7 +456,7 @@ func (bl Builder) isValidFactCurrencyRegister(fact currency.CurrencyRegisterFact
 	return nil
 }
 
-func (bl Builder) isValidFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpdaterFact) error {
+func (Builder) isValidFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpdaterFact) error {
 	if err := fact.IsValid(nil); err != nil {
 		return err
 	}
@@ -604,7 +592,7 @@ func (bl Builder) buildCurrencyPolicyUpdater(op currency.CurrencyPolicyUpdater) 
 
 // checkToken checks token is valid; empty token will be updated with current
 // time.
-func (bl Builder) checkToken(token []byte) ([]byte, error) {
+func (Builder) checkToken(token []byte) ([]byte, error) {
 	if len(token) < 1 {
 		return nil, xerrors.Errorf("empty token")
 	}
@@ -617,7 +605,7 @@ func (bl Builder) checkToken(token []byte) ([]byte, error) {
 }
 
 // updateFactSigns regenerate the newly added factsign.
-func (bl Builder) updateFactSigns(fss []operation.FactSign) []operation.FactSign {
+func (Builder) updateFactSigns(fss []operation.FactSign) []operation.FactSign {
 	ufss := make([]operation.FactSign, len(fss))
 	for i := range fss {
 		fs := fss[i]

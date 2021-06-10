@@ -45,15 +45,15 @@ func (pr *Problem) UnmarshalJSON(b []byte) error {
 		pr.t = n
 	}
 
-	if s, err := c("title"); err != nil {
+	var err error
+	pr.title, err = c("title")
+	if err != nil {
 		return err
-	} else {
-		pr.title = s
 	}
-	if s, err := c("detail"); err != nil {
+
+	pr.detail, err = c("detail")
+	if err != nil {
 		return err
-	} else {
-		pr.detail = s
 	}
 
 	extra := map[string]interface{}{}

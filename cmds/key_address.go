@@ -42,11 +42,11 @@ func (cmd *KeyAddressCommand) Run(version util.Version) error {
 
 	cmd.Log().Debug().Int("number_of_keys", len(ks)).Interface("keys", keys).Msg("keys loaded")
 
-	if a, err := currency.NewAddressFromKeys(keys); err != nil {
+	a, err := currency.NewAddressFromKeys(keys)
+	if err != nil {
 		return err
-	} else {
-		cmd.print(a.String())
 	}
+	cmd.print(a.String())
 
 	return nil
 }

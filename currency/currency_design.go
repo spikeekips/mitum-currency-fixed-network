@@ -41,7 +41,7 @@ func (de CurrencyDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (de CurrencyDesign) Hint() hint.Hint {
+func (CurrencyDesign) Hint() hint.Hint {
 	return CurrencyDesignHint
 }
 

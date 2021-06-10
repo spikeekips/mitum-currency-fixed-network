@@ -9,8 +9,8 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (op CurrencyRegister) Process(
-	func(key string) (state.State, bool, error),
+func (CurrencyRegister) Process(
+	func(string) (state.State, bool, error),
 	func(valuehash.Hash, ...state.State) error,
 ) error {
 	// NOTE Process is nil func
@@ -28,21 +28,21 @@ type CurrencyRegisterProcessor struct {
 
 func NewCurrencyRegisterProcessor(cp *CurrencyPool, pubs []key.Publickey, threshold base.Threshold) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
-		if i, ok := op.(CurrencyRegister); !ok {
+		i, ok := op.(CurrencyRegister)
+		if !ok {
 			return nil, xerrors.Errorf("not CurrencyRegister, %T", op)
-		} else {
-			return &CurrencyRegisterProcessor{
-				CurrencyRegister: i,
-				cp:               cp,
-				pubs:             pubs,
-				threshold:        threshold,
-			}, nil
 		}
+		return &CurrencyRegisterProcessor{
+			CurrencyRegister: i,
+			cp:               cp,
+			pubs:             pubs,
+			threshold:        threshold,
+		}, nil
 	}
 }
 
 func (opp *CurrencyRegisterProcessor) PreProcess(
-	getState func(key string) (state.State, bool, error),
+	getState func(string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
@@ -91,7 +91,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 }
 
 func (opp *CurrencyRegisterProcessor) Process(
-	_ func(key string) (state.State, bool, error),
+	_ func(string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := opp.Fact().(CurrencyRegisterFact)
@@ -99,11 +99,11 @@ func (opp *CurrencyRegisterProcessor) Process(
 	sts := make([]state.State, 2)
 
 	sts[0] = opp.ga.Add(fact.currency.Big())
-	if i, err := SetStateCurrencyDesignValue(opp.de, fact.currency); err != nil {
+	i, err := SetStateCurrencyDesignValue(opp.de, fact.currency)
+	if err != nil {
 		return err
-	} else {
-		sts[1] = i
 	}
+	sts[1] = i
 
 	return setState(fact.Hash(), sts...)
 }

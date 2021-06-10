@@ -87,11 +87,10 @@ func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
 	if err := digest.LoadCurrenciesFromDatabase(st, base.NilHeight, func(sta state.State) (bool, error) {
 		if err := cp.Set(sta); err != nil {
 			return false, err
-		} else {
-			log.Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
-
-			return true, nil
 		}
+		log.Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
+
+		return true, nil
 	}); err != nil {
 		return ctx, err
 	}
@@ -131,11 +130,11 @@ func HookInitializeProposalProcessor(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 
-	if opr, err := AttachProposalProcessor(policy, nodepool, suffrage, cp); err != nil {
+	opr, err := AttachProposalProcessor(policy, nodepool, suffrage, cp)
+	if err != nil {
 		return ctx, err
-	} else {
-		return InitializeProposalProcessor(ctx, opr)
 	}
+	return InitializeProposalProcessor(ctx, opr)
 }
 
 func AttachProposalProcessor(
@@ -153,21 +152,19 @@ func AttachProposalProcessor(
 		return nil, err
 	}
 
-	var threshold base.Threshold
-	if i, err := base.NewThreshold(uint(len(suffrage.Nodes())), policy.ThresholdRatio()); err != nil {
+	threshold, err := base.NewThreshold(uint(len(suffrage.Nodes())), policy.ThresholdRatio())
+	if err != nil {
 		return nil, err
-	} else {
-		threshold = i
 	}
 
 	suffrageNodes := suffrage.Nodes()
 	pubs := make([]key.Publickey, len(suffrageNodes))
 	for i := range suffrageNodes {
-		if n, found := nodepool.Node(suffrageNodes[i]); !found {
+		n, found := nodepool.Node(suffrageNodes[i])
+		if !found {
 			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
-		} else {
-			pubs[i] = n.Publickey()
 		}
+		pubs[i] = n.Publickey()
 	}
 
 	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
@@ -279,11 +276,11 @@ func (cmd *BaseNodeCommand) hookValidateDigestConfig(ctx context.Context) (conte
 	}
 
 	if design.Network() != nil {
-		if i, err := cmd.validateDigestConfigNetwork(ctx, conf, design); err != nil {
+		i, err := cmd.validateDigestConfigNetwork(ctx, conf, design)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = i
 		}
+		ctx = i
 	}
 
 	return ctx, nil
@@ -306,31 +303,31 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 	}
 
 	if len(design.Network().Certs()) < 1 && design.Network().Bind().Scheme == "https" {
-		if h := design.Network().Bind().Hostname(); strings.HasPrefix(h, "127.") || h == "localhost" {
-			if priv, err := util.GenerateED25519Privatekey(); err != nil {
-				return ctx, err
-			} else if ct, err := util.GenerateTLSCerts("localhost", priv); err != nil {
-				return ctx, err
-			} else if err := design.Network().SetCerts(ct); err != nil {
-				return ctx, err
-			}
-		} else {
+		if h := design.Network().Bind().Hostname(); !strings.HasPrefix(h, "127.") && h != "localhost" {
 			return ctx, xerrors.Errorf("missing certificates for https")
+		}
+
+		if priv, err := util.GenerateED25519Privatekey(); err != nil {
+			return ctx, err
+		} else if ct, err := util.GenerateTLSCerts("localhost", priv); err != nil {
+			return ctx, err
+		} else if err := design.Network().SetCerts(ct); err != nil {
+			return ctx, err
 		}
 	}
 
 	if design.Network().RateLimit() != nil {
-		if i, err := cmd.validateDigestConfigNetworkRateLimit(ctx, design); err != nil {
+		i, err := cmd.validateDigestConfigNetworkRateLimit(ctx, design)
+		if err != nil {
 			return i, err
-		} else {
-			ctx = i
 		}
+		ctx = i
 	}
 
 	return ctx, nil
 }
 
-func (cmd *BaseNodeCommand) validateDigestConfigNetworkRateLimit(
+func (*BaseNodeCommand) validateDigestConfigNetworkRateLimit(
 	ctx context.Context,
 	design DigestDesign,
 ) (context.Context, error) {
@@ -432,9 +429,9 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 }
 
 type OperationFlags struct {
-	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey to sign operation" required:""`
+	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey to sign operation" required:"true"`
 	Token      string                  `help:"token for operation" optional:""`
-	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:""`
+	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:"true"`
 	Memo       string                  `name:"memo" help:"memo"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
 }

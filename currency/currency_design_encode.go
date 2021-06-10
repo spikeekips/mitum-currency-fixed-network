@@ -6,23 +6,23 @@ import (
 )
 
 func (de *CurrencyDesign) unpack(enc encoder.Encoder, bam []byte, ga base.AddressDecoder, bpo []byte) error {
-	if i, err := DecodeAmount(enc, bam); err != nil {
+	i, err := DecodeAmount(enc, bam)
+	if err != nil {
 		return err
-	} else {
-		de.Amount = i
 	}
+	de.Amount = i
 
-	if i, err := ga.Encode(enc); err != nil {
+	a, err := ga.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		de.genesisAccount = i
 	}
+	de.genesisAccount = a
 
-	if i, err := DecodeCurrencyPolicy(enc, bpo); err != nil {
+	j, err := DecodeCurrencyPolicy(enc, bpo)
+	if err != nil {
 		return err
-	} else {
-		de.policy = i
 	}
+	de.policy = j
 
 	return nil
 }

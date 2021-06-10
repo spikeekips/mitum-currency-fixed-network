@@ -11,7 +11,7 @@ import (
 
 type VerifyKeyCommand struct {
 	*BaseCommand
-	Key    StringLoad `arg:"" name:"key" help:"key" required:""`
+	Key    StringLoad `arg:"" name:"key" help:"key" required:"true"`
 	Quite  bool       `name:"quite" short:"q" help:"keep silence"`
 	JSON   bool       `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool       `name:"pretty" help:"pretty format"`
@@ -28,15 +28,13 @@ func (cmd *VerifyKeyCommand) Run(version util.Version) error {
 		return xerrors.Errorf("failed to initialize command: %w", err)
 	}
 
-	var pk key.Key
-	if k, err := loadKey(cmd.Key.Bytes()); err != nil {
+	pk, err := loadKey(cmd.Key.Bytes())
+	if err != nil {
 		if cmd.Quite {
-			os.Exit(1)
+			os.Exit(1) // revive:disable-line:deep-exit
 		}
 
 		return err
-	} else {
-		pk = k
 	}
 
 	cmd.Log().Debug().Interface("key", pk).Msg("key parsed")

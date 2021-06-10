@@ -9,8 +9,8 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (op CurrencyPolicyUpdater) Process(
-	func(key string) (state.State, bool, error),
+func (CurrencyPolicyUpdater) Process(
+	func(string) (state.State, bool, error),
 	func(valuehash.Hash, ...state.State) error,
 ) error {
 	// NOTE Process is nil func
@@ -32,21 +32,21 @@ func NewCurrencyPolicyUpdaterProcessor(
 	threshold base.Threshold,
 ) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
-		if i, ok := op.(CurrencyPolicyUpdater); !ok {
+		i, ok := op.(CurrencyPolicyUpdater)
+		if !ok {
 			return nil, xerrors.Errorf("not CurrencyPolicyUpdater, %T", op)
-		} else {
-			return &CurrencyPolicyUpdaterProcessor{
-				CurrencyPolicyUpdater: i,
-				cp:                    cp,
-				pubs:                  pubs,
-				threshold:             threshold,
-			}, nil
 		}
+		return &CurrencyPolicyUpdaterProcessor{
+			CurrencyPolicyUpdater: i,
+			cp:                    cp,
+			pubs:                  pubs,
+			threshold:             threshold,
+		}, nil
 	}
 }
 
 func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
-	getState func(key string) (state.State, bool, error),
+	getState func(string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
@@ -77,25 +77,25 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	default:
 		opp.st = st
 
-		if de, err := StateCurrencyDesignValue(st); err != nil {
+		de, err := StateCurrencyDesignValue(st)
+		if err != nil {
 			return nil, err
-		} else {
-			opp.de = de
 		}
+		opp.de = de
 	}
 
 	return opp, nil
 }
 
 func (opp *CurrencyPolicyUpdaterProcessor) Process(
-	_ func(key string) (state.State, bool, error),
+	_ func(string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := opp.Fact().(CurrencyPolicyUpdaterFact)
 
-	if i, err := SetStateCurrencyDesignValue(opp.st, opp.de.SetPolicy(fact.Policy())); err != nil {
+	i, err := SetStateCurrencyDesignValue(opp.st, opp.de.SetPolicy(fact.Policy()))
+	if err != nil {
 		return err
-	} else {
-		return setState(fact.Hash(), i)
 	}
+	return setState(fact.Hash(), i)
 }

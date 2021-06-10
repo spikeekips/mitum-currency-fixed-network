@@ -42,7 +42,7 @@ func NewAccountFromKeys(keys Keys) (Account, error) {
 	}
 }
 
-func (ac Account) Hint() hint.Hint {
+func (Account) Hint() hint.Hint {
 	return AccountHint
 }
 

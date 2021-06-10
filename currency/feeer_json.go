@@ -15,7 +15,7 @@ func (fa NilFeeer) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (fa *NilFeeer) UnmarsahlJSON() error {
+func (*NilFeeer) UnmarsahlJSON() error {
 	return nil
 }
 

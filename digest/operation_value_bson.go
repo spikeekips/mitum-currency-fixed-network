@@ -47,11 +47,11 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		va.op = op
 	}
 
-	if i, err := operation.DecodeReasonError(enc, uva.RS); err != nil {
+	i, err := operation.DecodeReasonError(enc, uva.RS)
+	if err != nil {
 		return err
-	} else {
-		va.reason = i
 	}
+	va.reason = i
 
 	va.height = uva.HT
 	va.confirmedAt = uva.CT

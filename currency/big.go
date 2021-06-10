@@ -25,19 +25,19 @@ func NewBig(i int64) Big {
 }
 
 func NewBigFromString(s string) (Big, error) {
-	if i, ok := new(big.Int).SetString(s, 10); !ok {
+	i, ok := new(big.Int).SetString(s, 10)
+	if !ok {
 		return Big{}, xerrors.Errorf("not proper Big string, %q", s)
-	} else {
-		return NewBigFromBigInt(i), nil
 	}
+	return NewBigFromBigInt(i), nil
 }
 
 func MustBigFromString(s string) Big {
-	if i, ok := new(big.Int).SetString(s, 10); !ok {
-		panic(xerrors.Errorf("not proper Big string, %q", s))
-	} else {
+	i, ok := new(big.Int).SetString(s, 10)
+	if ok {
 		return NewBigFromBigInt(i)
 	}
+	panic(xerrors.Errorf("not proper Big string, %q", s))
 }
 
 func NewBigFromInterface(a interface{}) (Big, error) {
@@ -59,11 +59,11 @@ func NewBigFromInterface(a interface{}) (Big, error) {
 	case uint64:
 		return NewBig(int64(t)), nil
 	case string:
-		if n, err := NewBigFromString(t); err != nil {
+		n, err := NewBigFromString(t)
+		if err != nil {
 			return NilBig, xerrors.Errorf("invalid Big value, %q", t)
-		} else {
-			return n, nil
 		}
+		return n, nil
 	default:
 		return NilBig, xerrors.Errorf("unknown type of Big value, %T", a)
 	}
@@ -72,9 +72,8 @@ func NewBigFromInterface(a interface{}) (Big, error) {
 func (a Big) String() string {
 	if a.Int == nil {
 		return NilBigString
-	} else {
-		return a.Int.String()
 	}
+	return a.Int.String()
 }
 
 func (a Big) IsZero() bool {
@@ -117,7 +116,7 @@ func (a Big) Compare(b Big) int {
 	return a.Int.Cmp(b.Int)
 }
 
-func (a Big) IsValid([]byte) error {
+func (Big) IsValid([]byte) error {
 	return nil
 }
 

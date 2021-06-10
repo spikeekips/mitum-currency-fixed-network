@@ -40,7 +40,7 @@ func NewProblemFromError(err error) Problem {
 	}
 }
 
-func (pr Problem) Hint() hint.Hint {
+func (Problem) Hint() hint.Hint {
 	return ProblemHint
 }
 
@@ -77,7 +77,6 @@ func makeProblemNamespace(t string) string {
 func parseProblemNamespace(s string) (string, error) {
 	if !strings.HasPrefix(s, ProblemNamespace) {
 		return "", xerrors.Errorf("invalid problem namespace: %q", s)
-	} else {
-		return s[len(ProblemNamespace)+1:], nil
 	}
+	return s[len(ProblemNamespace)+1:], nil
 }

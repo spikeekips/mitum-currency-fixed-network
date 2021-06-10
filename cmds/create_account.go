@@ -17,9 +17,9 @@ import (
 type CreateAccountCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender    AddressFlag    `arg:"" name:"sender" help:"sender address" required:""`
-	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:""`
-	Big       BigFlag        `arg:"" name:"big" help:"big to send" required:""`
+	Sender    AddressFlag    `arg:"" name:"sender" help:"sender address" required:"true"`
+	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
+	Big       BigFlag        `arg:"" name:"big" help:"big to send" required:"true"`
 	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Keys      []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
 	Seal      FileLoad       `help:"seal" optional:""`
@@ -42,23 +42,21 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 		return err
 	}
 
-	var op operation.Operation
-	if o, err := cmd.createOperation(); err != nil {
+	op, err := cmd.createOperation()
+	if err != nil {
 		return err
-	} else {
-		op = o
 	}
 
-	if sl, err := loadSealAndAddOperation(
+	sl, err := loadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
 		cmd.NetworkID.NetworkID(),
 		op,
-	); err != nil {
+	)
+	if err != nil {
 		return err
-	} else {
-		cmd.pretty(cmd.Pretty, sl)
 	}
+	cmd.pretty(cmd.Pretty, sl)
 
 	return nil
 }
@@ -68,11 +66,11 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 		return err
 	}
 
-	if a, err := cmd.Sender.Encode(jenc); err != nil {
+	a, err := cmd.Sender.Encode(jenc)
+	if err != nil {
 		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
-	} else {
-		cmd.sender = a
 	}
+	cmd.sender = a
 
 	if len(cmd.Keys) < 1 {
 		return xerrors.Errorf("--key must be given at least one")
@@ -97,43 +95,43 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 }
 
 func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) { // nolint:dupl
-	var items []currency.CreateAccountsItem
-	if i, err := loadOperations(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
+	i, err := loadOperations(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
+	if err != nil {
 		return nil, err
-	} else {
-		for j := range i {
-			if t, ok := i[j].(currency.CreateAccounts); ok {
-				items = t.Fact().(currency.CreateAccountsFact).Items()
-			}
+	}
+	var items []currency.CreateAccountsItem
+	for j := range i {
+		if t, ok := i[j].(currency.CreateAccounts); ok {
+			items = t.Fact().(currency.CreateAccountsFact).Items()
 		}
 	}
 
 	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
-	if err := am.IsValid(nil); err != nil {
+	if err = am.IsValid(nil); err != nil {
 		return nil, err
 	}
 
 	item := currency.NewCreateAccountsItemSingleAmount(cmd.keys, am)
-	if err := item.IsValid(nil); err != nil {
+	if err = item.IsValid(nil); err != nil {
 		return nil, err
-	} else {
-		items = append(items, item)
 	}
+	items = append(items, item)
 
 	fact := currency.NewCreateAccountsFact([]byte(cmd.Token), cmd.sender, items)
 
-	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID()); err != nil {
+	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	if err != nil {
 		return nil, err
-	} else {
-		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
+	}
+	fs := []operation.FactSign{
+		operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig),
 	}
 
-	if op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo); err != nil {
+	op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
-	} else {
-		return op, nil
 	}
+	return op, nil
 }
 
 func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
@@ -157,15 +155,15 @@ func loadSealAndAddOperation(
 	op operation.Operation,
 ) (operation.Seal, error) {
 	if b == nil {
-		if bs, err := operation.NewBaseSeal(
+		bs, err := operation.NewBaseSeal(
 			privatekey,
 			[]operation.Operation{op},
 			networkID,
-		); err != nil {
+		)
+		if err != nil {
 			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
-		} else {
-			return bs, nil
 		}
+		return bs, nil
 	}
 
 	var sl operation.Seal
@@ -182,11 +180,11 @@ func loadSealAndAddOperation(
 	// NOTE add operation to existing seal
 	sl = sl.(operation.SealUpdater).SetOperations([]operation.Operation{op}).(operation.Seal)
 
-	if s, err := signSeal(sl, privatekey, networkID); err != nil {
+	s, err := signSeal(sl, privatekey, networkID)
+	if err != nil {
 		return nil, err
-	} else {
-		sl = s.(operation.Seal)
 	}
+	sl = s.(operation.Seal)
 
 	return sl, nil
 }

@@ -1,7 +1,6 @@
 package currency
 
 import (
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -13,18 +12,14 @@ func (op GenesisCurrencies) Process(
 ) error {
 	fact := op.Fact().(GenesisCurrenciesFact)
 
-	var newAddress base.Address
-	if a, err := fact.Address(); err != nil {
+	newAddress, err := fact.Address()
+	if err != nil {
 		return operation.NewBaseReasonErrorFromError(err)
-	} else {
-		newAddress = a
 	}
 
-	var ns state.State
-	if st, err := notExistsState(StateKeyAccount(newAddress), "key of genesis", getState); err != nil {
+	ns, err := notExistsState(StateKeyAccount(newAddress), "key of genesis", getState)
+	if err != nil {
 		return err
-	} else {
-		ns = st
 	}
 
 	gas := map[CurrencyID]state.State{}
@@ -32,17 +27,17 @@ func (op GenesisCurrencies) Process(
 	for i := range fact.cs {
 		c := fact.cs[i]
 
-		if st, err := notExistsState(StateKeyCurrencyDesign(c.Currency()), "currency", getState); err != nil {
+		st, err := notExistsState(StateKeyCurrencyDesign(c.Currency()), "currency", getState)
+		if err != nil {
 			return err
-		} else {
-			sts[c.Currency()] = st
 		}
+		sts[c.Currency()] = st
 
-		if st, err := notExistsState(StateKeyBalance(newAddress, c.Currency()), "balance of genesis", getState); err != nil {
+		st, err = notExistsState(StateKeyBalance(newAddress, c.Currency()), "balance of genesis", getState)
+		if err != nil {
 			return err
-		} else {
-			gas[c.Currency()] = NewAmountState(st, c.Currency())
 		}
+		gas[c.Currency()] = NewAmountState(st, c.Currency())
 	}
 
 	var states []state.State

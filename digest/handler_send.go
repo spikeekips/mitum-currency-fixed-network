@@ -106,11 +106,11 @@ func (hd *Handlers) sendOperations(v []json.RawMessage) (Hal, error) {
 }
 
 func (hd *Handlers) sendSeal(v interface{}) (Hal, error) {
-	if sl, err := hd.send(v); err != nil {
+	sl, err := hd.send(v)
+	if err != nil {
 		return nil, err
-	} else {
-		return hd.buildSealHal(sl)
 	}
+	return hd.buildSealHal(sl)
 }
 
 func (hd *Handlers) buildSealHal(sl seal.Seal) (Hal, error) {
@@ -118,11 +118,11 @@ func (hd *Handlers) buildSealHal(sl seal.Seal) (Hal, error) {
 	if t, ok := sl.(operation.Seal); ok {
 		for i := range t.Operations() {
 			op := t.Operations()[i]
-			if h, err := hd.combineURL(HandlerPathOperation, "hash", op.Fact().Hash().String()); err != nil {
+			h, err := hd.combineURL(HandlerPathOperation, "hash", op.Fact().Hash().String())
+			if err != nil {
 				return nil, err
-			} else {
-				hal.AddLink(fmt.Sprintf("operation:%d", i), NewHalLink(h, nil))
 			}
+			hal.AddLink(fmt.Sprintf("operation:%d", i), NewHalLink(h, nil))
 		}
 	}
 

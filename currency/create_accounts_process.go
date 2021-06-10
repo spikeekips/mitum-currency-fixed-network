@@ -8,7 +8,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (op CreateAccounts) Process(
+func (CreateAccounts) Process(
 	func(key string) (state.State, bool, error),
 	func(valuehash.Hash, ...state.State) error,
 ) error {
@@ -32,39 +32,38 @@ func (opp *CreateAccountsItemProcessor) PreProcess(
 
 		var policy CurrencyPolicy
 		if opp.cp != nil {
-			if i, found := opp.cp.Policy(am.Currency()); !found {
+			i, found := opp.cp.Policy(am.Currency())
+			if !found {
 				return xerrors.Errorf("currency not registered, %q", am.Currency())
-			} else {
-				policy = i
 			}
+			policy = i
 		}
 
 		if am.Big().Compare(policy.NewAccountMinBalance()) < 0 {
-			return xerrors.Errorf("amount should be over minimum balance, %v < %v", am.Big(), policy.NewAccountMinBalance())
+			return xerrors.Errorf(
+				"amount should be over minimum balance, %v < %v", am.Big(), policy.NewAccountMinBalance())
 		}
 	}
 
-	var target base.Address
-	if a, err := opp.item.Address(); err != nil {
+	target, err := opp.item.Address()
+	if err != nil {
 		return err
-	} else {
-		target = a
 	}
 
-	if st, err := notExistsState(StateKeyAccount(target), "keys of target", getState); err != nil {
+	st, err := notExistsState(StateKeyAccount(target), "keys of target", getState)
+	if err != nil {
 		return err
-	} else {
-		opp.ns = st
 	}
+	opp.ns = st
 
 	nb := map[CurrencyID]AmountState{}
 	for i := range opp.item.Amounts() {
 		am := opp.item.Amounts()[i]
-		if b, _, err := getState(StateKeyBalance(target, am.Currency())); err != nil {
+		b, _, err := getState(StateKeyBalance(target, am.Currency()))
+		if err != nil {
 			return err
-		} else {
-			nb[am.Currency()] = NewAmountState(b, am.Currency())
 		}
+		nb[am.Currency()] = NewAmountState(b, am.Currency())
 	}
 
 	opp.nb = nb
@@ -76,19 +75,17 @@ func (opp *CreateAccountsItemProcessor) Process(
 	_ func(key string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) ([]state.State, error) {
-	var nac Account
-	if ac, err := NewAccountFromKeys(opp.item.Keys()); err != nil {
+	nac, err := NewAccountFromKeys(opp.item.Keys())
+	if err != nil {
 		return nil, err
-	} else {
-		nac = ac
 	}
 
 	sts := make([]state.State, len(opp.item.Amounts())+1)
-	if st, err := SetStateAccountValue(opp.ns, nac); err != nil {
+	st, err := SetStateAccountValue(opp.ns, nac)
+	if err != nil {
 		return nil, err
-	} else {
-		sts[0] = st
 	}
+	sts[0] = st
 
 	for i := range opp.item.Amounts() {
 		am := opp.item.Amounts()[i]
@@ -108,14 +105,14 @@ type CreateAccountsProcessor struct {
 
 func NewCreateAccountsProcessor(cp *CurrencyPool) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
-		if i, ok := op.(CreateAccounts); !ok {
+		i, ok := op.(CreateAccounts)
+		if !ok {
 			return nil, xerrors.Errorf("not CreateAccounts, %T", op)
-		} else {
-			return &CreateAccountsProcessor{
-				cp:             cp,
-				CreateAccounts: i,
-			}, nil
 		}
+		return &CreateAccountsProcessor{
+			cp:             cp,
+			CreateAccounts: i,
+		}, nil
 	}
 }
 
@@ -165,11 +162,11 @@ func (opp *CreateAccountsProcessor) Process( // nolint:dupl
 
 	var sts []state.State // nolint:prealloc
 	for i := range opp.ns {
-		if s, err := opp.ns[i].Process(getState, setState); err != nil {
+		s, err := opp.ns[i].Process(getState, setState)
+		if err != nil {
 			return operation.NewBaseReasonError("failed to process create account item: %w", err)
-		} else {
-			sts = append(sts, s...)
 		}
+		sts = append(sts, s...)
 	}
 
 	for k := range opp.required {
@@ -211,17 +208,17 @@ func CalculateItemsFee(cp *CurrencyPool, items []AmountsItem) (map[CurrencyID][2
 				continue
 			}
 
-			if feeer, found := cp.Feeer(am.Currency()); !found {
+			feeer, found := cp.Feeer(am.Currency())
+			if !found {
 				return nil, xerrors.Errorf("unknown currency id found, %q", am.Currency())
-			} else {
-				switch k, err := feeer.Fee(am.Big()); {
-				case err != nil:
-					return nil, err
-				case !k.OverZero():
-					required[am.Currency()] = [2]Big{rq[0].Add(am.Big()), rq[1]}
-				default:
-					required[am.Currency()] = [2]Big{rq[0].Add(am.Big()).Add(k), rq[1].Add(k)}
-				}
+			}
+			switch k, err := feeer.Fee(am.Big()); {
+			case err != nil:
+				return nil, err
+			case !k.OverZero():
+				required[am.Currency()] = [2]Big{rq[0].Add(am.Big()), rq[1]}
+			default:
+				required[am.Currency()] = [2]Big{rq[0].Add(am.Big()).Add(k), rq[1].Add(k)}
 			}
 		}
 	}
@@ -239,26 +236,21 @@ func CheckEnoughBalance(
 	for cid := range required {
 		rq := required[cid]
 
-		var st state.State
-		if i, err := existsState(StateKeyBalance(holder, cid), "currency of holder", getState); err != nil {
+		st, err := existsState(StateKeyBalance(holder, cid), "currency of holder", getState)
+		if err != nil {
 			return nil, err
-		} else {
-			st = i
 		}
 
-		var am Amount
-		if b, err := StateBalanceValue(st); err != nil {
+		am, err := StateBalanceValue(st)
+		if err != nil {
 			return nil, operation.NewBaseReasonError("insufficient balance of sender: %w", err)
-		} else {
-			am = b
 		}
 
 		if am.Big().Compare(rq[0]) < 0 {
 			return nil, operation.NewBaseReasonError(
 				"insufficient balance of sender, %s; %d !> %d", holder.String(), am.Big(), rq[0])
-		} else {
-			sb[cid] = NewAmountState(st, cid)
 		}
+		sb[cid] = NewAmountState(st, cid)
 	}
 
 	return sb, nil

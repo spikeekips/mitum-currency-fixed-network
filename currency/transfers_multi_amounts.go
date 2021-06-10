@@ -12,7 +12,7 @@ var (
 	TransfersItemMultiAmountsHinter = BaseTransfersItem{hint: TransfersItemMultiAmountsHint}
 )
 
-var maxCurenciesTransfersItemMultiAmounts int = 10
+var maxCurenciesTransfersItemMultiAmounts = 10
 
 type TransfersItemMultiAmounts struct {
 	BaseTransfersItem

@@ -20,11 +20,11 @@ func (it *BaseCreateAccountsItem) unpack(enc encoder.Encoder, ht hint.Hint, bks 
 
 	amounts := make([]Amount, len(bas))
 	for i := range bas {
-		if j, err := DecodeAmount(enc, bas[i]); err != nil {
+		j, err := DecodeAmount(enc, bas[i])
+		if err != nil {
 			return err
-		} else {
-			amounts[i] = j
 		}
+		amounts[i] = j
 	}
 
 	it.amounts = amounts

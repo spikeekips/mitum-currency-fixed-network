@@ -45,7 +45,7 @@ func NewGenesisCurrenciesFact(
 	return fact
 }
 
-func (fact GenesisCurrenciesFact) Hint() hint.Hint {
+func (GenesisCurrenciesFact) Hint() hint.Hint {
 	return GenesisCurrenciesFactHint
 }
 
@@ -136,21 +136,20 @@ func NewGenesisCurrencies(
 ) (GenesisCurrencies, error) {
 	fact := NewGenesisCurrenciesFact(networkID, genesisNodeKey.Publickey(), keys, cs)
 
-	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(genesisNodeKey, fact, networkID); err != nil {
+	sig, err := operation.NewFactSignature(genesisNodeKey, fact, networkID)
+	if err != nil {
 		return GenesisCurrencies{}, err
-	} else {
-		fs = []operation.FactSign{operation.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
 	}
+	fs := []operation.FactSign{operation.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
 
-	if bo, err := operation.NewBaseOperationFromFact(GenesisCurrenciesHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(GenesisCurrenciesHint, fact, fs)
+	if err != nil {
 		return GenesisCurrencies{}, err
-	} else {
-		return GenesisCurrencies{BaseOperation: bo}, nil
 	}
+	return GenesisCurrencies{BaseOperation: bo}, nil
 }
 
-func (op GenesisCurrencies) Hint() hint.Hint {
+func (GenesisCurrencies) Hint() hint.Hint {
 	return GenesisCurrenciesHint
 }
 

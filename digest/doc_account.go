@@ -49,11 +49,9 @@ type BalanceDoc struct {
 
 // NewBalanceDoc gets the State of Amount
 func NewBalanceDoc(st state.State, enc encoder.Encoder) (BalanceDoc, error) {
-	var am currency.Amount
-	if i, err := currency.StateBalanceValue(st); err != nil {
+	am, err := currency.StateBalanceValue(st)
+	if err != nil {
 		return BalanceDoc{}, xerrors.Errorf("BalanceDoc needs Amount state: %w", err)
-	} else {
-		am = i
 	}
 
 	b, err := mongodbstorage.NewBaseDoc(nil, st, enc)

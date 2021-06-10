@@ -46,47 +46,45 @@ func ProcessDigestDatabase(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if st, err := loadDigestDatabase(mst, false); err != nil {
+	st, err := loadDigestDatabase(mst, false)
+	if err != nil {
 		return ctx, err
-	} else {
-		var log logging.Logger
-		if err := config.LoadLogContextValue(ctx, &log); err != nil {
-			return ctx, err
-		}
-
-		_ = st.SetLogger(log)
-
-		return context.WithValue(ctx, ContextValueDigestDatabase, st), nil
 	}
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
+	_ = st.SetLogger(log)
+
+	return context.WithValue(ctx, ContextValueDigestDatabase, st), nil
 }
 
 func loadDigestDatabase(st *mongodbstorage.Database, readonly bool) (*digest.Database, error) {
-	var mst, ost *mongodbstorage.Database
-	if nst, err := st.New(); err != nil {
+	mst := st
+	ost, err := st.New()
+	if err != nil {
 		return nil, err
-	} else {
-		mst = st
-		ost = nst
 	}
 
 	var dst *digest.Database
 	if readonly {
-		if s, err := digest.NewReadonlyDatabase(mst, ost); err != nil {
+		s, err := digest.NewReadonlyDatabase(mst, ost)
+		if err != nil {
 			return nil, err
-		} else {
-			dst = s
 		}
+		dst = s
 	} else {
-		if s, err := digest.NewDatabase(mst, ost); err != nil {
+		s, err := digest.NewDatabase(mst, ost)
+		if err != nil {
 			return nil, err
-		} else {
-			dst = s
 		}
+		dst = s
 	}
 
 	if err := dst.Initialize(); err != nil {
 		return nil, err
-	} else {
-		return dst, nil
 	}
+
+	return dst, nil
 }

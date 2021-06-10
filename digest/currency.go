@@ -39,11 +39,11 @@ func LoadCurrenciesFromDatabase(
 		var sta state.State
 		if err := st.Client().GetByFilter(mongodbstorage.ColNameState, q,
 			func(res *mongo.SingleResult) error {
-				if i, err := loadStateFromDecoder(res.Decode, st.Encoders()); err != nil {
+				i, err := loadStateFromDecoder(res.Decode, st.Encoders())
+				if err != nil {
 					return err
-				} else {
-					sta = i
 				}
+				sta = i
 
 				return nil
 			},

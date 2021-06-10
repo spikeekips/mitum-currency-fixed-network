@@ -57,13 +57,13 @@ func NewDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Database) (*
 }
 
 func NewReadonlyDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Database) (*Database, error) {
-	if st, err := NewDatabase(mitum, st); err != nil {
+	nst, err := NewDatabase(mitum, st)
+	if err != nil {
 		return nil, err
-	} else {
-		st.readonly = true
-
-		return st, nil
 	}
+	nst.readonly = true
+
+	return nst, nil
 }
 
 func (st *Database) New() (*Database, error) {
@@ -71,11 +71,11 @@ func (st *Database) New() (*Database, error) {
 		return nil, xerrors.Errorf("readonly mode")
 	}
 
-	if nst, err := st.database.New(); err != nil {
+	nst, err := st.database.New()
+	if err != nil {
 		return nil, err
-	} else {
-		return NewDatabase(st.mitum, nst)
 	}
+	return NewDatabase(st.mitum, nst)
 }
 
 func (st *Database) Readonly() bool {
@@ -154,12 +154,11 @@ func (st *Database) setLastBlock(height base.Height) error {
 		st.Log().Debug().Hinted("height", height).Msg("failed to set last block")
 
 		return err
-	} else {
-		st.lastBlock = height
-		st.Log().Debug().Hinted("height", height).Msg("set last block")
-
-		return nil
 	}
+	st.lastBlock = height
+	st.Log().Debug().Hinted("height", height).Msg("set last block")
+
+	return nil
 }
 
 func (st *Database) Clean() error {
@@ -283,14 +282,12 @@ func (st *Database) OperationsByAddress(
 	limit int64,
 	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
 ) error {
-	var filter bson.M
-	if f, err := buildOperationsFilterByAddress(address, offset, reverse); err != nil {
+	filter, err := buildOperationsFilterByAddress(address, offset, reverse)
+	if err != nil {
 		return err
-	} else {
-		filter = f
 	}
 
-	var sr int = 1
+	sr := 1
 	if reverse {
 		sr = -1
 	}
@@ -317,18 +314,18 @@ func (st *Database) OperationsByAddress(
 		filter,
 		func(cursor *mongo.Cursor) (bool, error) {
 			if !load {
-				if h, err := loadOperationHash(cursor.Decode); err != nil {
+				h, err := loadOperationHash(cursor.Decode)
+				if err != nil {
 					return false, err
-				} else {
-					return callback(h, OperationValue{})
 				}
+				return callback(h, OperationValue{})
 			}
 
-			if va, err := loadOperation(cursor.Decode, st.database.Encoders()); err != nil {
+			va, err := loadOperation(cursor.Decode, st.database.Encoders())
+			if err != nil {
 				return false, err
-			} else {
-				return callback(va.Operation().Fact().Hash(), va)
 			}
+			return callback(va.Operation().Fact().Hash(), va)
 		},
 		opt,
 	)
@@ -354,13 +351,13 @@ func (st *Database) Operation(
 				return nil
 			}
 
-			if i, err := loadOperation(res.Decode, st.database.Encoders()); err != nil {
+			i, err := loadOperation(res.Decode, st.database.Encoders())
+			if err != nil {
 				return err
-			} else {
-				va = i
-
-				return nil
 			}
+			va = i
+
+			return nil
 		},
 	); err != nil {
 		if xerrors.Is(err, util.NotFoundError) {
@@ -368,9 +365,8 @@ func (st *Database) Operation(
 		}
 
 		return OperationValue{}, false, err
-	} else {
-		return va, true, nil
 	}
+	return va, true, nil
 }
 
 // Operations returns operation.Operations by it's order, height and index.
@@ -381,7 +377,7 @@ func (st *Database) Operations(
 	limit int64,
 	callback func(valuehash.Hash /* fact hash */, OperationValue) (bool, error),
 ) error {
-	var sr int = 1
+	sr := 1
 	if reverse {
 		sr = -1
 	}
@@ -408,18 +404,18 @@ func (st *Database) Operations(
 		filter,
 		func(cursor *mongo.Cursor) (bool, error) {
 			if !load {
-				if h, err := loadOperationHash(cursor.Decode); err != nil {
+				h, err := loadOperationHash(cursor.Decode)
+				if err != nil {
 					return false, err
-				} else {
-					return callback(h, OperationValue{})
 				}
+				return callback(h, OperationValue{})
 			}
 
-			if va, err := loadOperation(cursor.Decode, st.database.Encoders()); err != nil {
+			va, err := loadOperation(cursor.Decode, st.database.Encoders())
+			if err != nil {
 				return false, err
-			} else {
-				return callback(va.Operation().Fact().Hash(), va)
 			}
+			return callback(va.Operation().Fact().Hash(), va)
 		},
 		opt,
 	)
@@ -432,13 +428,13 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 		defaultColNameAccount,
 		util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a)).D(),
 		func(res *mongo.SingleResult) error {
-			if i, err := loadAccountValue(res.Decode, st.database.Encoders()); err != nil {
+			i, err := loadAccountValue(res.Decode, st.database.Encoders())
+			if err != nil {
 				return err
-			} else {
-				rs = i
-
-				return nil
 			}
+			rs = i
+
+			return nil
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
@@ -482,13 +478,13 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 			defaultColNameBalance,
 			q,
 			func(res *mongo.SingleResult) error {
-				if i, err := loadBalance(res.Decode, st.database.Encoders()); err != nil {
+				i, err := loadBalance(res.Decode, st.database.Encoders())
+				if err != nil {
 					return err
-				} else {
-					sta = i
-
-					return nil
 				}
+				sta = i
+
+				return nil
 			},
 			options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 		); err != nil {
@@ -499,13 +495,13 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 			return nil, lastHeight, previousHeight, err
 		}
 
-		if i, err := currency.StateBalanceValue(sta); err != nil {
+		i, err := currency.StateBalanceValue(sta)
+		if err != nil {
 			return nil, lastHeight, previousHeight, err
-		} else {
-			amm[i.Currency()] = i
-
-			cids = append(cids, i.Currency().String())
 		}
+		amm[i.Currency()] = i
+
+		cids = append(cids, i.Currency().String())
 
 		if h := sta.Height(); h > lastHeight {
 			lastHeight = h
@@ -530,11 +526,11 @@ func loadLastBlock(st *Database) (base.Height, bool, error) {
 	case !found:
 		return base.NilHeight, false, nil
 	default:
-		if h, err := base.NewHeightFromBytes(b); err != nil {
+		h, err := base.NewHeightFromBytes(b)
+		if err != nil {
 			return base.NilHeight, false, err
-		} else {
-			return h, true, nil
 		}
+		return h, true, nil
 	}
 }
 
@@ -559,13 +555,9 @@ func buildOffset(height base.Height, index uint64) string {
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
 	filter := bson.M{"addresses": bson.M{"$in": []string{currency.StateAddressKeyPrefix(address)}}}
 	if len(offset) > 0 {
-		var height base.Height
-		var index uint64
-		if h, i, err := parseOffset(offset); err != nil {
+		height, index, err := parseOffset(offset)
+		if err != nil {
 			return nil, err
-		} else {
-			height = h
-			index = i
 		}
 
 		if reverse {

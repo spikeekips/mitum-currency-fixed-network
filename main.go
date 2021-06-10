@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	Version string = "v0.0.0"
-	options        = []kong.Option{
+	Version = "v0.0.0"
+	options = []kong.Option{
 		kong.Name("mitum-currency"),
 		kong.Description("mitum-currency tool"),
 		cmds.KeyAddressVars,
@@ -32,13 +32,11 @@ type mainflags struct {
 }
 
 func main() {
-	var nodeCommand cmds.NodeCommand
-	if i, err := cmds.NewNodeCommand(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %+v\n", err)
+	nodeCommand, err := cmds.NewNodeCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %+v\n", err) // revive:disable-line:unhandled-error
 
 		os.Exit(1)
-	} else {
-		nodeCommand = i
 	}
 
 	flags := mainflags{
@@ -49,13 +47,11 @@ func main() {
 		Deploy:  cmds.NewDeployCommand(),
 	}
 
-	var kctx *kong.Context
-	if i, err := mitumcmds.Context(os.Args[1:], &flags, options...); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %+v\n", err)
+	kctx, err := mitumcmds.Context(os.Args[1:], &flags, options...)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %+v\n", err) // revive:disable-line:unhandled-error
 
 		os.Exit(1)
-	} else {
-		kctx = i
 	}
 
 	version := util.Version(Version)
@@ -72,7 +68,7 @@ func main() {
 
 type VersionCommand struct{}
 
-func (cmd *VersionCommand) Run() error {
+func (*VersionCommand) Run() error {
 	version := util.Version(Version)
 
 	_, _ = fmt.Fprintln(os.Stdout, version)

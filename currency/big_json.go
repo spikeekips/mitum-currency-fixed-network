@@ -12,11 +12,11 @@ func (a *Big) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if i, err := NewBigFromString(s); err != nil {
+	i, err := NewBigFromString(s)
+	if err != nil {
 		return err
-	} else {
-		*a = i
 	}
+	*a = i
 
 	return nil
 }

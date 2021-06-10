@@ -47,7 +47,7 @@ func NewTransfersFact(token []byte, sender base.Address, items []TransfersItem) 
 	return fact
 }
 
-func (fact TransfersFact) Hint() hint.Hint {
+func (TransfersFact) Hint() hint.Hint {
 	return TransfersFactHint
 }
 
@@ -156,18 +156,18 @@ func NewTransfers(
 	fs []operation.FactSign,
 	memo string,
 ) (Transfers, error) {
-	if bo, err := operation.NewBaseOperationFromFact(TransfersHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(TransfersHint, fact, fs)
+	if err != nil {
 		return Transfers{}, err
-	} else {
-		op := Transfers{BaseOperation: bo, Memo: memo}
-
-		op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-		return op, nil
 	}
+	op := Transfers{BaseOperation: bo, Memo: memo}
+
+	op.BaseOperation = bo.SetHash(op.GenerateHash())
+
+	return op, nil
 }
 
-func (op Transfers) Hint() hint.Hint {
+func (Transfers) Hint() hint.Hint {
 	return TransfersHint
 }
 
@@ -193,11 +193,11 @@ func (op Transfers) GenerateHash() valuehash.Hash {
 }
 
 func (op Transfers) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	if o, err := op.BaseOperation.AddFactSigns(fs...); err != nil {
+	o, err := op.BaseOperation.AddFactSigns(fs...)
+	if err != nil {
 		return nil, err
-	} else {
-		op.BaseOperation = o.(operation.BaseOperation)
 	}
+	op.BaseOperation = o.(operation.BaseOperation)
 
 	op.BaseOperation = op.SetHash(op.GenerateHash())
 

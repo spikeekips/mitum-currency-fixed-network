@@ -64,9 +64,8 @@ func (op *Transfers) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var um MemoJSONUnpacker
 	if err := enc.Unmarshal(b, &um); err != nil {
 		return err
-	} else {
-		op.Memo = um.Memo
 	}
+	op.Memo = um.Memo
 
 	return nil
 }

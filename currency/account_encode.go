@@ -9,11 +9,11 @@ import (
 )
 
 func (ac *Account) unpack(enc encoder.Encoder, h valuehash.Hash, bad base.AddressDecoder, bks []byte) error {
-	if a, err := bad.Encode(enc); err != nil {
+	a, err := bad.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		ac.address = a
 	}
+	ac.address = a
 
 	if hinter, err := enc.DecodeByHint(bks); err != nil {
 		return err

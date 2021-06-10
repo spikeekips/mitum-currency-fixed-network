@@ -47,11 +47,11 @@ func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, e
 		router:           mux.NewRouter(),
 	}
 
-	if srv, err := newHTTP2Server(sv, certs); err != nil {
+	srv, err := newHTTP2Server(sv, certs)
+	if err != nil {
 		return nil, err
-	} else {
-		sv.srv = srv
 	}
+	sv.srv = srv
 
 	sv.ContextDaemon = util.NewContextDaemon("http2-server", sv.start)
 
@@ -77,9 +77,8 @@ func newHTTP2Server(sv *HTTP2Server, certs []tls.Certificate) (*http.Server, err
 		},
 	}); err != nil {
 		return nil, err
-	} else {
-		return srv, nil
 	}
+	return srv, nil
 }
 
 func (sv *HTTP2Server) Initialize() error {
@@ -110,42 +109,42 @@ func (sv *HTTP2Server) SetHandler(handler http.Handler) {
 }
 
 func (sv *HTTP2Server) start(ctx context.Context) error {
-	if ln, err := net.Listen("tcp", sv.bind); err != nil {
+	ln, err := net.Listen("tcp", sv.bind)
+	if err != nil {
 		return err
-	} else {
-		sv.srv.Handler = network.HTTPLogHandler(sv.srv.Handler, sv.Log())
+	}
+	sv.srv.Handler = network.HTTPLogHandler(sv.srv.Handler, sv.Log())
 
-		var listener net.Listener = tcpKeepAliveListener{
-			TCPListener:      ln.(*net.TCPListener),
-			keepAliveTimeout: sv.keepAliveTimeout,
-		}
+	var listener net.Listener = tcpKeepAliveListener{
+		TCPListener:      ln.(*net.TCPListener),
+		keepAliveTimeout: sv.keepAliveTimeout,
+	}
 
-		if len(sv.srv.TLSConfig.Certificates) > 0 {
-			listener = tls.NewListener(listener, sv.srv.TLSConfig)
-		}
+	if len(sv.srv.TLSConfig.Certificates) > 0 {
+		listener = tls.NewListener(listener, sv.srv.TLSConfig)
+	}
 
-		errchan := make(chan error)
-		sv.srv.ConnState = sv.idleTimeoutHook()
-		go func() {
-			errchan <- sv.srv.Serve(listener)
-		}()
+	errchan := make(chan error)
+	sv.srv.ConnState = sv.idleTimeoutHook()
+	go func() {
+		errchan <- sv.srv.Serve(listener)
+	}()
 
-		select {
-		case err := <-errchan:
-			if err != nil && xerrors.Is(err, http.ErrServerClosed) {
-				sv.Log().Debug().Msg("server closed")
+	select {
+	case err := <-errchan:
+		if err != nil && xerrors.Is(err, http.ErrServerClosed) {
+			sv.Log().Debug().Msg("server closed")
 
-				return nil
-			}
-
-			sv.Log().Error().Err(err).Msg("something wrong")
-
-			return err
-		case <-ctx.Done():
-			return sv.srv.Shutdown(context.Background())
-		default:
 			return nil
 		}
+
+		sv.Log().Error().Err(err).Msg("something wrong")
+
+		return err
+	case <-ctx.Done():
+		return sv.srv.Shutdown(context.Background())
+	default:
+		return nil
 	}
 }
 
@@ -169,7 +168,10 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 			return
 		}
 		m[c] = time.AfterFunc(d, func() {
-			sv.Log().Debug().Dur("idle-timeout", d).Str("remote", c.RemoteAddr().String()).Msg("closing idle conn after timeout")
+			sv.Log().Debug().
+				Dur("idle-timeout", d).
+				Str("remote", c.RemoteAddr().String()).
+				Msg("closing idle conn after timeout")
 
 			go func() {
 				if err := c.Close(); err != nil {
@@ -186,17 +188,17 @@ type tcpKeepAliveListener struct {
 }
 
 func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
-	if tc, err := ln.AcceptTCP(); err != nil {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
 		return nil, err
-	} else {
-		if err := tc.SetKeepAlive(true); err != nil {
-			return nil, err
-		}
-
-		if err := tc.SetKeepAlivePeriod(ln.keepAliveTimeout); err != nil {
-			return nil, err
-		}
-
-		return tc, nil
 	}
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+
+	if err := tc.SetKeepAlivePeriod(ln.keepAliveTimeout); err != nil {
+		return nil, err
+	}
+
+	return tc, nil
 }

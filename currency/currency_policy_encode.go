@@ -5,11 +5,11 @@ import (
 )
 
 func (po *CurrencyPolicy) unpack(enc encoder.Encoder, mn Big, bfe []byte) error {
-	if i, err := DecodeFeeer(enc, bfe); err != nil {
+	i, err := DecodeFeeer(enc, bfe)
+	if err != nil {
 		return err
-	} else {
-		po.feeer = i
 	}
+	po.feeer = i
 
 	po.newAccountMinBalance = mn
 

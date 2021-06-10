@@ -8,20 +8,20 @@ import (
 
 func (va *AccountValue) unpack(enc encoder.Encoder, bac []byte, bb [][]byte, height, previousHeight base.Height) error {
 	if bac != nil {
-		if i, err := currency.DecodeAccount(enc, bac); err != nil {
+		i, err := currency.DecodeAccount(enc, bac)
+		if err != nil {
 			return err
-		} else {
-			va.ac = i
 		}
+		va.ac = i
 	}
 
 	balance := make([]currency.Amount, len(bb))
 	for i := range bb {
-		if j, err := currency.DecodeAmount(enc, bb[i]); err != nil {
+		j, err := currency.DecodeAmount(enc, bb[i])
+		if err != nil {
 			return err
-		} else {
-			balance[i] = j
 		}
+		balance[i] = j
 	}
 
 	va.balance = balance

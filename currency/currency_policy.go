@@ -20,7 +20,7 @@ func NewCurrencyPolicy(newAccountMinBalance Big, feeer Feeer) CurrencyPolicy {
 	return CurrencyPolicy{newAccountMinBalance: newAccountMinBalance, feeer: feeer}
 }
 
-func (po CurrencyPolicy) Hint() hint.Hint {
+func (CurrencyPolicy) Hint() hint.Hint {
 	return CurrencyPolicyHint
 }
 
@@ -33,11 +33,7 @@ func (po CurrencyPolicy) IsValid([]byte) error {
 		return xerrors.Errorf("NewAccountMinBalance under zero")
 	}
 
-	if err := po.feeer.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return po.feeer.IsValid(nil)
 }
 
 func (po CurrencyPolicy) NewAccountMinBalance() Big {

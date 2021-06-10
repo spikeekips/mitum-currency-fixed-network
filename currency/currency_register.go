@@ -34,7 +34,7 @@ func NewCurrencyRegisterFact(token []byte, de CurrencyDesign) CurrencyRegisterFa
 	return fact
 }
 
-func (fact CurrencyRegisterFact) Hint() hint.Hint {
+func (CurrencyRegisterFact) Hint() hint.Hint {
 	return CurrencyRegisterFactHint
 }
 
@@ -87,18 +87,18 @@ type CurrencyRegister struct {
 }
 
 func NewCurrencyRegister(fact CurrencyRegisterFact, fs []operation.FactSign, memo string) (CurrencyRegister, error) {
-	if bo, err := operation.NewBaseOperationFromFact(CurrencyRegisterHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(CurrencyRegisterHint, fact, fs)
+	if err != nil {
 		return CurrencyRegister{}, err
-	} else {
-		op := CurrencyRegister{BaseOperation: bo, Memo: memo}
-
-		op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-		return op, nil
 	}
+	op := CurrencyRegister{BaseOperation: bo, Memo: memo}
+
+	op.BaseOperation = bo.SetHash(op.GenerateHash())
+
+	return op, nil
 }
 
-func (op CurrencyRegister) Hint() hint.Hint {
+func (CurrencyRegister) Hint() hint.Hint {
 	return CurrencyRegisterHint
 }
 

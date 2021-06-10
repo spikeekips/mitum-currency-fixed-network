@@ -14,11 +14,7 @@ import (
 
 func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -60,50 +56,51 @@ func (hd *Handlers) handleAccountInGroup(address base.Address) (interface{}, err
 	case !found:
 		return nil, util.NotFoundError
 	default:
-		if hal, err := hd.buildAccountHal(va); err != nil {
+		hal, err := hd.buildAccountHal(va)
+		if err != nil {
 			return nil, err
-		} else {
-			return hd.enc.Marshal(hal)
 		}
+		return hd.enc.Marshal(hal)
 	}
 }
 
 func (hd *Handlers) buildAccountHal(va AccountValue) (Hal, error) {
-	var hal Hal
 	hinted := va.Account().Address().String()
-	if h, err := hd.combineURL(HandlerPathAccount, "address", hinted); err != nil {
+	h, err := hd.combineURL(HandlerPathAccount, "address", hinted)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = NewBaseHal(va, NewHalLink(h, nil))
 	}
 
-	if h, err := hd.combineURL(HandlerPathAccountOperations, "address", hinted); err != nil {
-		return nil, err
-	} else {
-		hal = hal.
-			AddLink("operations", NewHalLink(h, nil)).
-			AddLink("operations:{offset}", NewHalLink(h+"?offset={offset}", nil).SetTemplated()).
-			AddLink("operations:{offset,reverse}", NewHalLink(h+"?offset={offset}&reverse=1", nil).SetTemplated())
-	}
+	var hal Hal
+	hal = NewBaseHal(va, NewHalLink(h, nil))
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", va.Height().String()); err != nil {
+	h, err = hd.combineURL(HandlerPathAccountOperations, "address", hinted)
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("block", NewHalLink(h, nil))
 	}
+	hal = hal.
+		AddLink("operations", NewHalLink(h, nil)).
+		AddLink("operations:{offset}", NewHalLink(h+"?offset={offset}", nil).SetTemplated()).
+		AddLink("operations:{offset,reverse}", NewHalLink(h+"?offset={offset}&reverse=1", nil).SetTemplated())
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", va.Height().String()); err != nil {
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", va.Height().String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("block", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("block", NewHalLink(h, nil))
+
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", va.Height().String())
+	if err != nil {
+		return nil, err
+	}
+	hal = hal.AddLink("block", NewHalLink(h, nil))
 
 	if va.PreviousHeight() > base.PreGenesisHeight {
-		if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", va.PreviousHeight().String()); err != nil {
+		h, err = hd.combineURL(HandlerPathBlockByHeight, "height", va.PreviousHeight().String())
+		if err != nil {
 			return nil, err
-		} else {
-			hal = hal.AddLink("previous_block", NewHalLink(h, nil))
 		}
+		hal = hal.AddLink("previous_block", NewHalLink(h, nil))
 	}
 
 	return hal, nil
@@ -126,10 +123,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
 	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -151,7 +145,7 @@ func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Reque
 		hd.writeHalBytes(w, b, http.StatusOK)
 
 		if !shared {
-			var expire time.Duration = time.Second * 3
+			expire := time.Second * 3
 			if filled {
 				expire = time.Hour * 30
 			}
@@ -171,11 +165,11 @@ func (hd *Handlers) handleAccountOperationsInGroup(
 	if err := hd.database.OperationsByAddress(
 		address, true, reverse, offset, limit,
 		func(_ valuehash.Hash, va OperationValue) (bool, error) {
-			if hal, err := hd.buildOperationHal(va); err != nil {
+			hal, err := hd.buildOperationHal(va)
+			if err != nil {
 				return false, err
-			} else {
-				vas = append(vas, hal)
 			}
+			vas = append(vas, hal)
 
 			return true, nil
 		},
@@ -185,12 +179,13 @@ func (hd *Handlers) handleAccountOperationsInGroup(
 		return nil, false, util.NotFoundError.Errorf("operations not found")
 	}
 
-	if i, err := hd.buildAccountOperationsHal(address, vas, offset, reverse); err != nil {
+	i, err := hd.buildAccountOperationsHal(address, vas, offset, reverse)
+	if err != nil {
 		return nil, false, err
-	} else {
-		b, err := hd.enc.Marshal(i)
-		return b, int64(len(vas)) == limit, err
 	}
+
+	b, err := hd.enc.Marshal(i)
+	return b, int64(len(vas)) == limit, err
 }
 
 func (hd *Handlers) buildAccountOperationsHal(
@@ -199,28 +194,27 @@ func (hd *Handlers) buildAccountOperationsHal(
 	offset string,
 	reverse bool,
 ) (Hal, error) {
+	baseSelf, err := hd.combineURL(HandlerPathAccountOperations, "address", address.String())
+	if err != nil {
+		return nil, err
+	}
+
+	self := baseSelf
+	if len(offset) > 0 {
+		self = addQueryValue(baseSelf, stringOffsetQuery(offset))
+	}
+	if reverse {
+		self = addQueryValue(baseSelf, stringBoolQuery("reverse", reverse))
+	}
+
 	var hal Hal
-	var baseSelf string
-	if h, err := hd.combineURL(HandlerPathAccountOperations, "address", address.String()); err != nil {
-		return nil, err
-	} else {
-		baseSelf = h
+	hal = NewBaseHal(vas, NewHalLink(self, nil))
 
-		var self string = baseSelf
-		if len(offset) > 0 {
-			self = addQueryValue(baseSelf, stringOffsetQuery(offset))
-		}
-		if reverse {
-			self = addQueryValue(h, stringBoolQuery("reverse", reverse))
-		}
-		hal = NewBaseHal(vas, NewHalLink(self, nil))
-	}
-
-	if h, err := hd.combineURL(HandlerPathAccount, "address", address.String()); err != nil {
+	h, err := hd.combineURL(HandlerPathAccount, "address", address.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("account", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("account", NewHalLink(h, nil))
 
 	var nextoffset string
 	if len(vas) > 0 {
@@ -229,7 +223,7 @@ func (hd *Handlers) buildAccountOperationsHal(
 	}
 
 	if len(nextoffset) > 0 {
-		var next string = baseSelf
+		next := baseSelf
 		if len(nextoffset) > 0 {
 			next = addQueryValue(next, stringOffsetQuery(nextoffset))
 		}

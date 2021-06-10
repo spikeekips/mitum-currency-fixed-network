@@ -19,11 +19,11 @@ func (fact *FeeOperationFact) unpack(
 
 	amounts := make([]Amount, len(bam))
 	for i := range bam {
-		if j, err := DecodeAmount(enc, bam[i]); err != nil {
+		j, err := DecodeAmount(enc, bam[i])
+		if err != nil {
 			return err
-		} else {
-			amounts[i] = j
 		}
+		amounts[i] = j
 	}
 
 	fact.amounts = amounts

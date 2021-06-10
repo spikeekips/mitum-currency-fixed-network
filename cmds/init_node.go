@@ -51,11 +51,9 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 		BaseNodeCommand: NewBaseNodeCommand(co.Logging),
 	}
 
-	ps := co.Processes()
-	if i, err := cmd.BaseProcesses(ps); err != nil {
+	ps, err := cmd.BaseProcesses(co.Processes())
+	if err != nil {
 		return cmd, err
-	} else {
-		ps = i
 	}
 
 	hooks := InitCommandHooks(&cmd)
@@ -70,7 +68,7 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 	return cmd, nil
 }
 
-func (cmd *InitCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
+func (*InitCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
 		if !xerrors.Is(err, util.ContextValueNotFoundError) {
@@ -111,11 +109,11 @@ func GenesisOperationsHandlerGenesisCurrencies(
 	for i := range de.Currencies {
 		c := de.Currencies[i]
 
-		if j, err := loadCurrencyDesign(*c, de.AccountKeys.Address); err != nil {
+		j, err := loadCurrencyDesign(*c, de.AccountKeys.Address)
+		if err != nil {
 			return nil, err
-		} else {
-			cds[i] = j
 		}
+		cds[i] = j
 	}
 
 	if op, err := currency.NewGenesisCurrencies(
@@ -133,12 +131,11 @@ func GenesisOperationsHandlerGenesisCurrencies(
 }
 
 func loadCurrencyDesign(de CurrencyDesign, ga base.Address) (currency.CurrencyDesign, error) {
-	var po currency.CurrencyPolicy
-	if j, err := loadGenesisCurrenciesFeeer(*de.Feeer, ga); err != nil {
+	j, err := loadGenesisCurrenciesFeeer(*de.Feeer, ga)
+	if err != nil {
 		return currency.CurrencyDesign{}, err
-	} else {
-		po = currency.NewCurrencyPolicy(de.NewAccountMinBalance, j)
 	}
+	po := currency.NewCurrencyPolicy(de.NewAccountMinBalance, j)
 
 	cd := currency.NewCurrencyDesign(de.Balance, nil, po)
 	if err := cd.IsValid(nil); err != nil {

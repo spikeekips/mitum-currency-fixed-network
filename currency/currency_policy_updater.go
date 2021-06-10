@@ -36,7 +36,7 @@ func NewCurrencyPolicyUpdaterFact(token []byte, cid CurrencyID, policy CurrencyP
 	return fact
 }
 
-func (fact CurrencyPolicyUpdaterFact) Hint() hint.Hint {
+func (CurrencyPolicyUpdaterFact) Hint() hint.Hint {
 	return CurrencyPolicyUpdaterFactHint
 }
 
@@ -98,18 +98,18 @@ func NewCurrencyPolicyUpdater(
 	fs []operation.FactSign,
 	memo string,
 ) (CurrencyPolicyUpdater, error) {
-	if bo, err := operation.NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs)
+	if err != nil {
 		return CurrencyPolicyUpdater{}, err
-	} else {
-		op := CurrencyPolicyUpdater{BaseOperation: bo, Memo: memo}
-
-		op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-		return op, nil
 	}
+	op := CurrencyPolicyUpdater{BaseOperation: bo, Memo: memo}
+
+	op.BaseOperation = bo.SetHash(op.GenerateHash())
+
+	return op, nil
 }
 
-func (op CurrencyPolicyUpdater) Hint() hint.Hint {
+func (CurrencyPolicyUpdater) Hint() hint.Hint {
 	return CurrencyPolicyUpdaterHint
 }
 

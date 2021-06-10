@@ -6,7 +6,7 @@ type SealCommand struct {
 	Transfer              TransferCommand              `cmd:"" name:"transfer" help:"transfer big"`
 	KeyUpdater            KeyUpdaterCommand            `cmd:"" name:"key-updater" help:"update keys"`
 	CurrencyRegister      CurrencyRegisterCommand      `cmd:"" name:"currency-register" help:"register new currency"`
-	CurrencyPolicyUpdater CurrencyPolicyUpdaterCommand `cmd:"" name:"currency-policy-updater" help:"update currency policy"` // nolint:lll
+	CurrencyPolicyUpdater CurrencyPolicyUpdaterCommand `cmd:"" name:"currency-policy-updater" help:"update currency policy"` // revive:disable-line:line-length-limit
 	Sign                  SignSealCommand              `cmd:"" name:"sign" help:"sign seal"`
 	SignFact              SignFactCommand              `cmd:"" name:"sign-fact" help:"sign facts of operation seal"`
 }

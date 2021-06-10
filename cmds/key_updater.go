@@ -13,8 +13,8 @@ import (
 type KeyUpdaterCommand struct {
 	*BaseCommand
 	OperationFlags
-	Target    AddressFlag    `arg:"" name:"target" help:"target address" required:""`
-	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:""`
+	Target    AddressFlag    `arg:"" name:"target" help:"target address" required:"true"`
+	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
 	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Keys      []KeyFlag      `name:"key" help:"key for account (ex: \"<public key>,<weight>\")" sep:"@"`
 	target    base.Address
@@ -36,22 +36,20 @@ func (cmd *KeyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 		return err
 	}
 
-	var op operation.Operation
-	if o, err := cmd.createOperation(); err != nil {
+	op, err := cmd.createOperation()
+	if err != nil {
 		return err
-	} else {
-		op = o
 	}
 
-	if bs, err := operation.NewBaseSeal(
+	bs, err := operation.NewBaseSeal(
 		cmd.Privatekey,
 		[]operation.Operation{op},
 		cmd.NetworkID.NetworkID(),
-	); err != nil {
+	)
+	if err != nil {
 		return xerrors.Errorf("failed to create operation.Seal: %w", err)
-	} else {
-		cmd.pretty(cmd.Pretty, bs)
 	}
+	cmd.pretty(cmd.Pretty, bs)
 
 	return nil
 }
@@ -65,11 +63,11 @@ func (cmd *KeyUpdaterCommand) parseFlags() error {
 		return xerrors.Errorf("--key must be given at least one")
 	}
 
-	if a, err := cmd.Target.Encode(jenc); err != nil {
+	a, err := cmd.Target.Encode(jenc)
+	if err != nil {
 		return xerrors.Errorf("invalid target format, %q: %w", cmd.Target.String(), err)
-	} else {
-		cmd.target = a
 	}
+	cmd.target = a
 
 	{
 		ks := make([]currency.Key, len(cmd.Keys))
@@ -98,15 +96,15 @@ func (cmd *KeyUpdaterCommand) createOperation() (operation.Operation, error) {
 	)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID()); err != nil {
+	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	if err != nil {
 		return nil, err
-	} else {
-		fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 	}
+	fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 
-	if op, err := currency.NewKeyUpdater(fact, fs, cmd.Memo); err != nil {
+	op, err := currency.NewKeyUpdater(fact, fs, cmd.Memo)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to create key-updater operation: %w", err)
-	} else {
-		return op, nil
 	}
+	return op, nil
 }

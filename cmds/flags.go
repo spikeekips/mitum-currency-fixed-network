@@ -24,11 +24,11 @@ type KeyFlag struct {
 
 func (v *KeyFlag) UnmarshalText(b []byte) error {
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
+		c, err := mitumcmds.LoadFromStdInput()
+		if err != nil {
 			return err
-		} else {
-			b = c
 		}
+		b = c
 	}
 
 	l := strings.SplitN(string(b), ",", 2)
@@ -67,13 +67,13 @@ type StringLoad []byte
 
 func (v *StringLoad) UnmarshalText(b []byte) error {
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
+		c, err := mitumcmds.LoadFromStdInput()
+		if err != nil {
 			return err
-		} else {
-			*v = c
-
-			return nil
 		}
+		*v = c
+
+		return nil
 	}
 
 	*v = b
@@ -118,14 +118,14 @@ type AddressFlag struct {
 }
 
 func (v *AddressFlag) UnmarshalText(b []byte) error {
-	if ht, s, err := hint.ParseHintedString(string(b)); err != nil {
+	ht, s, err := hint.ParseHintedString(string(b))
+	if err != nil {
 		return err
-	} else {
-		v.s = string(b)
-		v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(ht, s)}
-
-		return nil
 	}
+	v.s = string(b)
+	v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(ht, s)}
+
+	return nil
 }
 
 func (v *AddressFlag) String() string {
@@ -156,22 +156,22 @@ type FileLoad []byte
 
 func (v *FileLoad) UnmarshalText(b []byte) error {
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := mitumcmds.LoadFromStdInput(); err != nil {
+		c, err := mitumcmds.LoadFromStdInput()
+		if err != nil {
 			return err
-		} else {
-			*v = c
-
-			return nil
 		}
-	}
-
-	if c, err := os.ReadFile(filepath.Clean(string(b))); err != nil {
-		return err
-	} else {
 		*v = c
 
 		return nil
 	}
+
+	c, err := os.ReadFile(filepath.Clean(string(b)))
+	if err != nil {
+		return err
+	}
+	*v = c
+
+	return nil
 }
 
 func (v FileLoad) Bytes() []byte {
@@ -190,11 +190,10 @@ func (v *CurrencyIDFlag) UnmarshalText(b []byte) error {
 	cid := currency.CurrencyID(string(b))
 	if err := cid.IsValid(nil); err != nil {
 		return err
-	} else {
-		v.CID = cid
-
-		return nil
 	}
+	v.CID = cid
+
+	return nil
 }
 
 func (v *CurrencyIDFlag) String() string {

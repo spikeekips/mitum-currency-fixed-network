@@ -42,7 +42,7 @@ func NewBaseHal(i interface{}, self HalLink) BaseHal {
 	}
 }
 
-func (hal BaseHal) Hint() hint.Hint {
+func (BaseHal) Hint() hint.Hint {
 	return BaseHalHint
 }
 
@@ -86,8 +86,8 @@ func (hal BaseHal) Self() HalLink {
 	return hal.self
 }
 
-func (hal BaseHal) SetSelf(url HalLink) Hal {
-	hal.self = url
+func (hal BaseHal) SetSelf(u HalLink) Hal {
+	hal.self = u
 
 	return hal
 }

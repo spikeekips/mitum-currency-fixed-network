@@ -22,10 +22,7 @@ func (hd *Handlers) handleCurrencies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -47,11 +44,11 @@ func (hd *Handlers) handleCurrenciesInGroup() ([]byte, error) {
 	hal = hal.AddLink("currency:{currencyid}", NewHalLink(HandlerPathCurrency, nil).SetTemplated())
 
 	for cid := range hd.cp.Designs() {
-		if h, err := hd.combineURL(HandlerPathCurrency, "currencyid", cid.String()); err != nil {
+		h, err := hd.combineURL(HandlerPathCurrency, "currencyid", cid.String())
+		if err != nil {
 			return nil, err
-		} else {
-			hal = hal.AddLink(fmt.Sprintf("currency:%s", cid), NewHalLink(h, nil))
 		}
+		hal = hal.AddLink(fmt.Sprintf("currency:%s", cid), NewHalLink(h, nil))
 	}
 
 	return hd.enc.Marshal(hal)
@@ -59,27 +56,25 @@ func (hd *Handlers) handleCurrenciesInGroup() ([]byte, error) {
 
 func (hd *Handlers) handleCurrency(w http.ResponseWriter, r *http.Request) {
 	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	var cid string
-	if s, found := mux.Vars(r)["currencyid"]; !found {
+	s, found := mux.Vars(r)["currencyid"]
+	if !found {
 		hd.problemWithError(w, xerrors.Errorf("empty currency id"), http.StatusNotFound)
 
 		return
-	} else {
-		s = strings.TrimSpace(s)
-		if len(s) < 1 {
-			hd.problemWithError(w, xerrors.Errorf("empty currency id"), http.StatusBadRequest)
-
-			return
-		}
-		cid = s
 	}
+
+	s = strings.TrimSpace(s)
+	if len(s) < 1 {
+		hd.problemWithError(w, xerrors.Errorf("empty currency id"), http.StatusBadRequest)
+
+		return
+	}
+	cid = s
 
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleCurrencyInGroup(cid)
@@ -108,36 +103,36 @@ func (hd *Handlers) handleCurrencyInGroup(cid string) ([]byte, error) {
 		st = j
 	}
 
-	if i, err := hd.buildCurrency(de, st); err != nil {
+	i, err := hd.buildCurrency(de, st)
+	if err != nil {
 		return nil, err
-	} else {
-		return hd.enc.Marshal(i)
 	}
+	return hd.enc.Marshal(i)
 }
 
 func (hd *Handlers) buildCurrency(de currency.CurrencyDesign, st state.State) (Hal, error) {
-	var hal Hal
-
-	if h, err := hd.combineURL(HandlerPathCurrency, "currencyid", de.Currency().String()); err != nil {
+	h, err := hd.combineURL(HandlerPathCurrency, "currencyid", de.Currency().String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = NewBaseHal(de, NewHalLink(h, nil))
 	}
+
+	var hal Hal
+	hal = NewBaseHal(de, NewHalLink(h, nil))
 
 	hal = hal.AddLink("currency:{currencyid}", NewHalLink(HandlerPathCurrency, nil).SetTemplated())
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", st.Height().String()); err != nil {
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", st.Height().String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("block", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("block", NewHalLink(h, nil))
 
 	for i := range st.Operations() {
-		if h, err := hd.combineURL(HandlerPathOperation, "hash", st.Operations()[i].String()); err != nil {
+		h, err := hd.combineURL(HandlerPathOperation, "hash", st.Operations()[i].String())
+		if err != nil {
 			return nil, err
-		} else {
-			hal = hal.AddLink("operations", NewHalLink(h, nil))
 		}
+		hal = hal.AddLink("operations", NewHalLink(h, nil))
 	}
 
 	return hal, nil

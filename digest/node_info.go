@@ -21,7 +21,7 @@ func NewNodeInfo(ni network.NodeInfoV0) NodeInfo {
 	}
 }
 
-func (ni NodeInfo) Hint() hint.Hint {
+func (NodeInfo) Hint() hint.Hint {
 	return NodeInfoHint
 }
 

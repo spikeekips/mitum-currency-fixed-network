@@ -13,11 +13,7 @@ import (
 )
 
 func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
 		return
 	}
 
@@ -40,21 +36,16 @@ func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Reques
 }
 
 func (hd *Handlers) handleManifestByHash(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
 		return
 	}
 
 	var h valuehash.Hash
-	if i, err := parseHashFromPath(mux.Vars(r)["hash"]); err != nil {
+	h, err := parseHashFromPath(mux.Vars(r)["hash"])
+	if err != nil {
 		hd.problemWithError(w, xerrors.Errorf("invalid hash for manifest by hash: %w", err), http.StatusBadRequest)
 
 		return
-	} else {
-		h = i
 	}
 
 	hd.handleManifest(w, r, func() (block.Manifest, bool, error) {
@@ -88,40 +79,40 @@ func (hd *Handlers) handleManifestInGroup(get func() (block.Manifest, bool, erro
 		manifest = m
 	}
 
-	if i, err := hd.buildManifestHal(manifest); err != nil {
+	i, err := hd.buildManifestHal(manifest)
+	if err != nil {
 		return nil, err
-	} else {
-		return hd.enc.Marshal(i)
 	}
+	return hd.enc.Marshal(i)
 }
 
 func (hd *Handlers) buildManifestHal(manifest block.Manifest) (Hal, error) {
 	height := manifest.Height()
 
 	var hal Hal
-	if h, err := hd.combineURL(HandlerPathManifestByHeight, "height", height.String()); err != nil {
+	h, err := hd.combineURL(HandlerPathManifestByHeight, "height", height.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = NewBaseHal(manifest, NewHalLink(h, nil))
 	}
+	hal = NewBaseHal(manifest, NewHalLink(h, nil))
 
-	if h, err := hd.combineURL(HandlerPathManifestByHash, "hash", manifest.Hash().String()); err != nil {
+	h, err = hd.combineURL(HandlerPathManifestByHash, "hash", manifest.Hash().String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("alternate", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("alternate", NewHalLink(h, nil))
 
-	if h, err := hd.combineURL(HandlerPathManifestByHeight, "height", (height + 1).String()); err != nil {
+	h, err = hd.combineURL(HandlerPathManifestByHeight, "height", (height + 1).String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("next", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("next", NewHalLink(h, nil))
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", height.String()); err != nil {
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", height.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("block", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("block", NewHalLink(h, nil))
 
 	for k := range halBlockTemplate {
 		hal = hal.AddLink(k, halBlockTemplate[k])
@@ -135,23 +126,19 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
 	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	var height base.Height = base.NilHeight
 	if len(offset) > 0 {
-		if ht, err := base.NewHeightFromString(offset); err != nil {
+		ht, err := base.NewHeightFromString(offset)
+		if err != nil {
 			hd.problemWithError(w, err, http.StatusBadRequest)
 
 			return
-		} else {
-			height = ht
 		}
+		height = ht
 	}
 
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
@@ -172,7 +159,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 		hd.writeHalBytes(w, b, http.StatusOK)
 
 		if !shared {
-			var expire time.Duration = time.Second * 3
+			expire := time.Second * 3
 			if filled {
 				expire = time.Hour * 30
 			}
@@ -193,11 +180,11 @@ func (hd *Handlers) handleManifestsInGroup(height base.Height, offset string, re
 				return !reverse, nil
 			}
 
-			if hal, err := hd.buildManifestHal(va); err != nil {
+			hal, err := hd.buildManifestHal(va)
+			if err != nil {
 				return false, err
-			} else {
-				vas = append(vas, hal)
 			}
+			vas = append(vas, hal)
 
 			return true, nil
 		},
@@ -207,31 +194,28 @@ func (hd *Handlers) handleManifestsInGroup(height base.Height, offset string, re
 		return nil, false, util.NotFoundError.Errorf("manifests not found")
 	}
 
-	if i, err := hd.buildManifestsHAL(vas, offset, reverse); err != nil {
+	i, err := hd.buildManifestsHAL(vas, offset, reverse)
+	if err != nil {
 		return nil, false, err
-	} else {
-		b, err := hd.enc.Marshal(i)
-		return b, int64(len(vas)) == limit, err
 	}
+	b, err := hd.enc.Marshal(i)
+	return b, int64(len(vas)) == limit, err
 }
 
 func (hd *Handlers) buildManifestsHAL(vas []Hal, offset string, reverse bool) (Hal, error) {
-	var hal Hal
-	var baseSelf string
-	if h, err := hd.combineURL(HandlerPathManifests); err != nil {
+	baseSelf, err := hd.combineURL(HandlerPathManifests)
+	if err != nil {
 		return nil, err
-	} else {
-		baseSelf = h
-
-		var self string = baseSelf
-		if len(offset) > 0 {
-			self = addQueryValue(baseSelf, stringOffsetQuery(offset))
-		}
-		if reverse {
-			self = addQueryValue(h, stringBoolQuery("reverse", reverse))
-		}
-		hal = NewBaseHal(vas, NewHalLink(self, nil))
 	}
+	self := baseSelf
+	if len(offset) > 0 {
+		self = addQueryValue(baseSelf, stringOffsetQuery(offset))
+	}
+	if reverse {
+		self = addQueryValue(baseSelf, stringBoolQuery("reverse", reverse))
+	}
+	var hal Hal
+	hal = NewBaseHal(vas, NewHalLink(self, nil))
 
 	var nextoffset string
 	if len(vas) > 0 {
@@ -240,7 +224,7 @@ func (hd *Handlers) buildManifestsHAL(vas []Hal, offset string, reverse bool) (H
 	}
 
 	if len(nextoffset) > 0 {
-		var next string = baseSelf
+		next := baseSelf
 		if len(nextoffset) > 0 {
 			next = addQueryValue(next, stringOffsetQuery(nextoffset))
 		}

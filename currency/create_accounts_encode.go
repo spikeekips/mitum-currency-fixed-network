@@ -13,20 +13,18 @@ func (fact *CreateAccountsFact) unpack(
 	bSender base.AddressDecoder,
 	bits [][]byte,
 ) error {
-	var sender base.Address
-	if a, err := bSender.Encode(enc); err != nil {
+	sender, err := bSender.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		sender = a
 	}
 
 	its := make([]CreateAccountsItem, len(bits))
 	for i := range bits {
-		if j, err := DecodeCreateAccountsItem(enc, bits[i]); err != nil {
+		j, err := DecodeCreateAccountsItem(enc, bits[i])
+		if err != nil {
 			return err
-		} else {
-			its[i] = j
 		}
+		its[i] = j
 	}
 
 	fact.h = h

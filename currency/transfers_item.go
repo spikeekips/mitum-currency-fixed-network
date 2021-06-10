@@ -50,9 +50,8 @@ func (it BaseTransfersItem) IsValid([]byte) error {
 		am := it.amounts[i]
 		if _, found := founds[am.Currency()]; found {
 			return xerrors.Errorf("duplicated currency found, %q", am.Currency())
-		} else {
-			founds[am.Currency()] = struct{}{}
 		}
+		founds[am.Currency()] = struct{}{}
 
 		if err := am.IsValid(nil); err != nil {
 			return err

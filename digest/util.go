@@ -16,11 +16,11 @@ func IsAccountState(st state.State) (currency.Account, bool, error) {
 		return currency.Account{}, false, nil
 	}
 
-	if ac, err := currency.LoadStateAccountValue(st); err != nil {
+	ac, err := currency.LoadStateAccountValue(st)
+	if err != nil {
 		return currency.Account{}, false, err
-	} else {
-		return ac, true, nil
 	}
+	return ac, true, nil
 }
 
 func IsBalanceState(st state.State) (currency.Amount, bool, error) {
@@ -28,11 +28,11 @@ func IsBalanceState(st state.State) (currency.Amount, bool, error) {
 		return currency.Amount{}, false, nil
 	}
 
-	if am, err := currency.StateBalanceValue(st); err != nil {
+	am, err := currency.StateBalanceValue(st)
+	if err != nil {
 		return currency.Amount{}, false, err
-	} else {
-		return am, true, nil
 	}
+	return am, true, nil
 }
 
 func parseHeightFromPath(s string) (base.Height, error) {
@@ -81,14 +81,14 @@ func stringBoolQuery(key string, v bool) string { // nolint:unparam
 	return ""
 }
 
-func addQueryValue(base, s string) string {
+func addQueryValue(b, s string) string {
 	if len(s) < 1 {
-		return base
+		return b
 	}
 
-	if !strings.Contains(base, "?") {
-		return base + "?" + s
+	if !strings.Contains(b, "?") {
+		return b + "?" + s
 	}
 
-	return base + "&" + s
+	return b + "&" + s
 }

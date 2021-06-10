@@ -20,11 +20,11 @@ func (a *Big) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("can not read string")
 	}
 
-	if ua, err := NewBigFromString(s); err != nil {
+	ua, err := NewBigFromString(s)
+	if err != nil {
 		return err
-	} else {
-		*a = ua
 	}
+	*a = ua
 
 	return nil
 }

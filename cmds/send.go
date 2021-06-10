@@ -3,17 +3,16 @@ package cmds
 import (
 	"context"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kong"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/seal"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/xerrors"
 )
 
 var SendVars = kong.Vars{
@@ -47,21 +46,19 @@ func (cmd *SendCommand) Run(version util.Version) error {
 		cmd.Timeout = time.Second * 5
 	}
 
-	var sl seal.Seal
-	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
+	sl, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
+	if err != nil {
 		return err
-	} else {
-		sl = s
 	}
 
 	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
-		if s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID()); err != nil {
+		s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+		if err != nil {
 			return err
-		} else {
-			sl = s
 		}
+		sl = s
 
 		cmd.Log().Debug().Msg("seal signed")
 	}
@@ -86,16 +83,15 @@ func (cmd *SendCommand) Run(version util.Version) error {
 }
 
 func (cmd *SendCommand) send(sl seal.Seal) error {
-	var urls []*url.URL
+	var urls []*url.URL // nolint:prealloc
 	founds := map[string]struct{}{}
 	for i := range cmd.URL {
 		u := cmd.URL[i]
 		if _, found := founds[u.String()]; found {
 			continue
-		} else {
-			founds[u.String()] = struct{}{}
-			urls = append(urls, u)
 		}
+		founds[u.String()] = struct{}{}
+		urls = append(urls, u)
 	}
 
 	if len(urls) < 1 {
@@ -112,35 +108,24 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 			u.RawQuery = query.Encode()
 		}
 
-		if ch, err := process.LoadNodeChannel(u, encs, cmd.Timeout); err != nil {
-			return err
-		} else {
-			channels[i] = ch
-		}
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(len(channels))
-
-	errchan := make(chan error, len(channels))
-	for i := range channels {
-		go func(channel network.Channel) {
-			defer wg.Done()
-
-			ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
-			defer cancel()
-
-			errchan <- channel.SendSeal(ctx, sl)
-		}(channels[i])
-	}
-	wg.Wait()
-	close(errchan)
-
-	for err := range errchan {
+		ch, err := process.LoadNodeChannel(u, encs, cmd.Timeout)
 		if err != nil {
 			return err
 		}
+		channels[i] = ch
 	}
 
-	return nil
+	eg, ctx := errgroup.WithContext(context.Background())
+
+	for i := range channels {
+		ch := channels[i]
+		eg.Go(func() error {
+			ictx, cancel := context.WithTimeout(ctx, cmd.Timeout)
+			defer cancel()
+
+			return ch.SendSeal(ictx, sl)
+		})
+	}
+
+	return eg.Wait()
 }

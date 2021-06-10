@@ -35,7 +35,7 @@ func NewAmountState(st state.State, cid CurrencyID) AmountState {
 	}
 }
 
-func (st AmountState) Hint() hint.Hint {
+func (AmountState) Hint() hint.Hint {
 	return AmountStateHint
 }
 
@@ -62,20 +62,19 @@ func (st AmountState) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(st.Bytes())
 }
 
-func (st AmountState) Merge(base state.State) (state.State, error) {
+func (st AmountState) Merge(b state.State) (state.State, error) {
 	var am Amount
-	if b, err := StateBalanceValue(base); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
-			am = NewZeroAmount(st.cid)
-		} else {
+	if b, err := StateBalanceValue(b); err != nil {
+		if !xerrors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
+		am = NewZeroAmount(st.cid)
 	} else {
 		am = b
 	}
 
 	return SetStateBalanceValue(
-		st.AddFee(base.(AmountState).fee),
+		st.AddFee(b.(AmountState).fee),
 		am.WithBig(am.Big().Add(st.add)),
 	)
 }
@@ -107,23 +106,23 @@ func (st AmountState) Sub(a Big) AmountState {
 }
 
 func (st AmountState) SetValue(v state.Value) (state.State, error) {
-	if s, err := st.State.SetValue(v); err != nil {
+	s, err := st.State.SetValue(v)
+	if err != nil {
 		return nil, err
-	} else {
-		st.State = s
-
-		return st, nil
 	}
+	st.State = s
+
+	return st, nil
 }
 
 func (st AmountState) SetHash(h valuehash.Hash) (state.State, error) {
-	if s, err := st.State.SetHash(h); err != nil {
+	s, err := st.State.SetHash(h)
+	if err != nil {
 		return nil, err
-	} else {
-		st.State = s
-
-		return st, nil
 	}
+	st.State = s
+
+	return st, nil
 }
 
 func (st AmountState) SetHeight(h base.Height) state.State {
@@ -133,13 +132,13 @@ func (st AmountState) SetHeight(h base.Height) state.State {
 }
 
 func (st AmountState) SetPreviousHeight(h base.Height) (state.State, error) {
-	if s, err := st.State.SetPreviousHeight(h); err != nil {
+	s, err := st.State.SetPreviousHeight(h)
+	if err != nil {
 		return nil, err
-	} else {
-		st.State = s
-
-		return st, nil
 	}
+	st.State = s
+
+	return st, nil
 }
 
 func (st AmountState) SetOperation(ops []valuehash.Hash) state.State {

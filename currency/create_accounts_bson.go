@@ -60,9 +60,8 @@ func (op *CreateAccounts) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var um MemoBSONUnpacker
 	if err := enc.Unmarshal(b, &um); err != nil {
 		return err
-	} else {
-		op.Memo = um.Memo
 	}
+	op.Memo = um.Memo
 
 	return nil
 }

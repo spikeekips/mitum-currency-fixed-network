@@ -68,11 +68,9 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 		BaseNodeCommand: NewBaseNodeCommand(co.Logging),
 	}
 
-	ps := co.Processes()
-	if i, err := cmd.BaseProcesses(ps); err != nil {
+	ps, err := cmd.BaseProcesses(co.Processes())
+	if err != nil {
 		return cmd, err
-	} else {
-		ps = i
 	}
 
 	for i := range RunCommandProcesses {
@@ -147,11 +145,10 @@ func (cmd *RunCommand) whenBlockSaved(
 		if err := digest.LoadCurrenciesFromDatabase(st, blocks[0].Height(), func(sta state.State) (bool, error) {
 			if err := cp.Set(sta); err != nil {
 				return false, err
-			} else {
-				cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum database")
-
-				return true, nil
 			}
+			cmd.Log().Debug().Interface("currency", sta).Msg("currency updated from mitum database")
+
+			return true, nil
 		}); err != nil {
 			cmd.Log().Error().Err(err).Msg("failed to load currency designs from database")
 		}
@@ -160,7 +157,7 @@ func (cmd *RunCommand) whenBlockSaved(
 	}
 }
 
-func (cmd *RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Context, error) {
+func (*RunCommand) hookSetNetworkHandlers(ctx context.Context) (context.Context, error) {
 	var nt network.Server
 	if err := process.LoadNetworkContextValue(ctx, &nt); err != nil {
 		return ctx, err
@@ -188,45 +185,39 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 		return nil, err
 	}
 
-	var cache digest.Cache
-	if i, err := cmd.loadCache(ctx, design); err != nil {
+	cache, err := cmd.loadCache(ctx, design)
+	if err != nil {
 		return ctx, err
-	} else {
-		cache = i
 	}
 
-	var handlers *digest.Handlers
-	if i, err := cmd.setDigestHandlers(ctx, conf, design, cache); err != nil {
+	handlers, err := cmd.setDigestHandlers(ctx, conf, design, cache)
+	if err != nil {
 		return ctx, err
-	} else {
-		_ = i.SetLogger(cmd.Log())
+	}
+	_ = handlers.SetLogger(cmd.Log())
 
-		if err := i.Initialize(); err != nil {
-			return ctx, err
-		} else {
-			handlers = i
-		}
+	if err := handlers.Initialize(); err != nil {
+		return ctx, err
 	}
 
 	var dnt *digest.HTTP2Server
 	if err := LoadDigestNetworkContextValue(ctx, &dnt); err != nil {
 		return ctx, err
-	} else {
-		dnt.SetHandler(handlers.Handler())
-
-		return ctx, nil
 	}
+	dnt.SetHandler(handlers.Handler())
+
+	return ctx, nil
 }
 
 func (cmd *RunCommand) loadCache(_ context.Context, design DigestDesign) (digest.Cache, error) {
-	if c, err := digest.NewCacheFromURI(design.Cache().String()); err != nil {
+	c, err := digest.NewCacheFromURI(design.Cache().String())
+	if err != nil {
 		cmd.Log().Error().Err(err).Str("cache", design.Cache().String()).Msg("failed to connect cache server")
 		cmd.Log().Warn().Msg("instead of remote cache server, internal mem cache can be available, `memory://`")
 
 		return nil, err
-	} else {
-		return c, nil
 	}
+	return c, nil
 }
 
 func (cmd *RunCommand) setDigestHandlers(
@@ -253,11 +244,11 @@ func (cmd *RunCommand) setDigestHandlers(
 	handlers := digest.NewHandlers(conf.NetworkID(), encs, jenc, st, cache, cp).
 		SetNodeInfoHandler(nt.NodeInfoHandler())
 
-	if i, err := cmd.setDigestSendHandler(ctx, conf, handlers); err != nil {
+	i, err := cmd.setDigestSendHandler(ctx, conf, handlers)
+	if err != nil {
 		return nil, err
-	} else {
-		handlers = i
 	}
+	handlers = i
 
 	if nc := design.Network(); nc != nil && nc.RateLimit() != nil {
 		if _, err := cmd.attachDigestRateLimit(ctx, handlers, nc.RateLimit()); err != nil {
@@ -268,7 +259,7 @@ func (cmd *RunCommand) setDigestHandlers(
 	return handlers, nil
 }
 
-func (cmd *RunCommand) enteringBootingState(ctx context.Context) (context.Context, error) {
+func (*RunCommand) enteringBootingState(ctx context.Context) (context.Context, error) {
 	var cs states.States
 	var bcs *basicstates.States
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
@@ -286,7 +277,7 @@ func (cmd *RunCommand) enteringBootingState(ctx context.Context) (context.Contex
 	return ctx, nil
 }
 
-func (cmd *RunCommand) attachDigestRateLimit(
+func (*RunCommand) attachDigestRateLimit(
 	ctx context.Context,
 	handlers *digest.Handlers,
 	conf config.RateLimit,
@@ -304,11 +295,9 @@ func (cmd *RunCommand) attachDigestRateLimit(
 
 		rs := r.Rules()
 		for j := range rs {
-			var prefix string
-			if k, found := digest.RateLimitHandlerMap[j]; !found {
+			prefix, found := digest.RateLimitHandlerMap[j]
+			if !found {
 				return ctx, xerrors.Errorf("handler, %q for digest ratelimit not found", j)
-			} else {
-				prefix = k
 			}
 
 			log.Debug().
@@ -324,13 +313,13 @@ func (cmd *RunCommand) attachDigestRateLimit(
 
 	var store limiter.Store
 	if conf.Cache() != nil {
-		if i, err := quicnetwork.RateLimitStoreFromURI(conf.Cache().String()); err != nil {
+		i, err := quicnetwork.RateLimitStoreFromURI(conf.Cache().String())
+		if err != nil {
 			return ctx, err
-		} else {
-			log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
-
-			store = i
 		}
+		log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
+
+		store = i
 	}
 
 	_ = handlers.SetRateLimit(handlerMap, store)
@@ -358,12 +347,12 @@ func (cmd *RunCommand) setDigestSendHandler(
 	var j int
 	for i := range suffrageNodes {
 		s := suffrageNodes[i]
-		if n, found := nodepool.Node(s); !found {
+		n, found := nodepool.Node(s)
+		if !found {
 			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
-		} else {
-			rns[j] = n
-			j++
 		}
+		rns[j] = n
+		j++
 	}
 
 	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rns))

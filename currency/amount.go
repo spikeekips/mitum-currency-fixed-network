@@ -40,7 +40,7 @@ func MustNewAmount(big Big, cid CurrencyID) Amount {
 	return am
 }
 
-func (am Amount) Hint() hint.Hint {
+func (Amount) Hint() hint.Hint {
 	return AmountHint
 }
 

@@ -123,9 +123,8 @@ func HookDigesterFollowUp(ctx context.Context) (context.Context, error) {
 			log.Error().Err(err).Msg("failed to follow up")
 
 			return ctx, err
-		} else {
-			log.Info().Msg("digested new blocks")
 		}
+		log.Info().Msg("digested new blocks")
 	default:
 		log.Info().Msg("digested blocks is up-to-dated")
 	}

@@ -41,8 +41,8 @@ var (
 	HandlerPathOperationsByHeight         = `/block/{height:[0-9]+}/operations`
 	HandlerPathManifestByHeight           = `/block/{height:[0-9]+}/manifest`
 	HandlerPathManifestByHash             = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
-	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}`            // nolint:lll
-	HandlerPathAccountOperations          = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}/operations` // nolint:lll
+	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}`            // revive:disable-line:line-length-limit
+	HandlerPathAccountOperations          = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}/operations` // revive:disable-line:line-length-limit
 	HandlerPathOperationBuildFactTemplate = `/builder/operation/fact/template/{fact:[\w][\w\-]*}`
 	HandlerPathOperationBuildFact         = `/builder/operation/fact`
 	HandlerPathOperationBuildSign         = `/builder/operation/sign`
@@ -258,18 +258,18 @@ func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 	if n := len(pairs); n%2 != 0 {
 		return "", xerrors.Errorf("failed to combine url; uneven pairs to combine url")
 	} else if n < 1 {
-		if u, err := hd.routes[path].URL(); err != nil {
+		u, err := hd.routes[path].URL()
+		if err != nil {
 			return "", xerrors.Errorf("failed to combine url: %w", err)
-		} else {
-			return u.String(), nil
 		}
-	}
-
-	if u, err := hd.routes[path].URLPath(pairs...); err != nil {
-		return "", xerrors.Errorf("failed to combine url: %w", err)
-	} else {
 		return u.String(), nil
 	}
+
+	u, err := hd.routes[path].URLPath(pairs...)
+	if err != nil {
+		return "", xerrors.Errorf("failed to combine url: %w", err)
+	}
+	return u.String(), nil
 }
 
 func (hd *Handlers) notSupported(w http.ResponseWriter, err error) {
@@ -324,7 +324,7 @@ func (hd *Handlers) writeHalBytes(w http.ResponseWriter, b []byte, status int) {
 	_, _ = w.Write(b)
 }
 
-func (hd *Handlers) writeCache(w http.ResponseWriter, key string, expire time.Duration) {
+func (*Handlers) writeCache(w http.ResponseWriter, key string, expire time.Duration) {
 	if cw, ok := w.(*CacheResponseWriter); ok {
 		_ = cw.SetKey(key).SetExpire(expire)
 	}
@@ -338,7 +338,7 @@ func (hd *Handlers) SetRateLimit(rules map[string][]process.RateLimitRule, store
 }
 
 func (hd *Handlers) handleError(w http.ResponseWriter, err error) {
-	var status int = http.StatusInternalServerError
+	status := http.StatusInternalServerError
 	switch {
 	case xerrors.Is(err, util.NotFoundError):
 		status = http.StatusNotFound

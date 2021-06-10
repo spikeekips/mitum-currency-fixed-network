@@ -39,7 +39,7 @@ func NewAccountValue(st state.State) (AccountValue, error) {
 	}, nil
 }
 
-func (va AccountValue) Hint() hint.Hint {
+func (AccountValue) Hint() hint.Hint {
 	return AccountValueHint
 }
 

@@ -29,17 +29,15 @@ func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs 
 func checkFactSignsByState(
 	address base.Address,
 	fs []operation.FactSign,
-	getState func(key string) (state.State, bool, error),
+	getState func(string) (state.State, bool, error),
 ) error {
-	var keys Keys
-	if st, err := existsState(StateKeyAccount(address), "keys of account", getState); err != nil {
+	st, err := existsState(StateKeyAccount(address), "keys of account", getState)
+	if err != nil {
 		return err
-	} else {
-		if ks, err := StateKeysValue(st); err != nil {
-			return operation.NewBaseReasonErrorFromError(err)
-		} else {
-			keys = ks
-		}
+	}
+	keys, err := StateKeysValue(st)
+	if err != nil {
+		return operation.NewBaseReasonErrorFromError(err)
 	}
 
 	if err := checkThreshold(fs, keys); err != nil {

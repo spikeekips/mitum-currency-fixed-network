@@ -19,11 +19,7 @@ var halBlockTemplate = map[string]HalLink{
 
 func (hd *Handlers) handleBlock(w http.ResponseWriter, r *http.Request) {
 	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -42,69 +38,66 @@ func (hd *Handlers) handleBlock(w http.ResponseWriter, r *http.Request) {
 func (hd *Handlers) handleBlockInGroup(vars map[string]string) ([]byte, error) {
 	var hal Hal
 	if s, found := vars["height"]; found {
-		var height base.Height
-		if h, err := parseHeightFromPath(s); err != nil {
+		height, err := parseHeightFromPath(s)
+		if err != nil {
 			return nil, quicnetwork.BadRequestError.Errorf("invalid height found for block by height: %w", err)
-		} else {
-			height = h
 		}
 
-		if h, err := hd.buildBlockHalByHeight(height); err != nil {
+		h, err := hd.buildBlockHalByHeight(height)
+		if err != nil {
 			return nil, err
-		} else {
-			hal = h
 		}
+		hal = h
 	} else if s, found := vars["hash"]; found {
-		var h valuehash.Hash
-		if b, err := parseHashFromPath(s); err != nil {
+		h, err := parseHashFromPath(s)
+		if err != nil {
 			return nil, quicnetwork.BadRequestError.Errorf("invalid hash for block by hash: %w", err)
-		} else {
-			h = b
 		}
 
-		if h, err := hd.buildBlockHalByHash(h); err != nil {
+		i, err := hd.buildBlockHalByHash(h)
+		if err != nil {
 			return nil, err
-		} else {
-			hal = h
 		}
+		hal = i
 	}
 
 	return hd.enc.Marshal(hal)
 }
 
 func (hd *Handlers) buildBlockHalByHeight(height base.Height) (Hal, error) {
-	var hal Hal
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", height.String()); err != nil {
+	h, err := hd.combineURL(HandlerPathBlockByHeight, "height", height.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = NewBaseHal(nil, NewHalLink(h, nil))
 	}
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", (height + 1).String()); err != nil {
+	var hal Hal
+	hal = NewBaseHal(nil, NewHalLink(h, nil))
+
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", (height + 1).String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("next", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("next", NewHalLink(h, nil))
 
 	if height > base.PreGenesisHeight+1 {
-		if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", (height - 1).String()); err != nil {
+		h, err = hd.combineURL(HandlerPathBlockByHeight, "height", (height - 1).String())
+		if err != nil {
 			return nil, err
-		} else {
-			hal = hal.AddLink("prev", NewHalLink(h, nil))
 		}
+		hal = hal.AddLink("prev", NewHalLink(h, nil))
 	}
 
-	if h, err := hd.combineURL(HandlerPathBlockByHeight, "height", height.String()); err != nil {
+	h, err = hd.combineURL(HandlerPathBlockByHeight, "height", height.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("current", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("current", NewHalLink(h, nil))
 
-	if h, err := hd.combineURL(HandlerPathManifestByHeight, "height", height.String()); err != nil {
+	h, err = hd.combineURL(HandlerPathManifestByHeight, "height", height.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("current-manifest", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("current-manifest", NewHalLink(h, nil))
 
 	for k := range halBlockTemplate {
 		hal = hal.AddLink(k, halBlockTemplate[k])
@@ -114,18 +107,19 @@ func (hd *Handlers) buildBlockHalByHeight(height base.Height) (Hal, error) {
 }
 
 func (hd *Handlers) buildBlockHalByHash(h valuehash.Hash) (Hal, error) {
-	var hal Hal
-	if h, err := hd.combineURL(HandlerPathBlockByHash, "hash", h.String()); err != nil {
+	i, err := hd.combineURL(HandlerPathBlockByHash, "hash", h.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = NewBaseHal(nil, NewHalLink(h, nil))
 	}
 
-	if h, err := hd.combineURL(HandlerPathManifestByHash, "hash", h.String()); err != nil {
+	var hal Hal
+	hal = NewBaseHal(nil, NewHalLink(i, nil))
+
+	i, err = hd.combineURL(HandlerPathManifestByHash, "hash", h.String())
+	if err != nil {
 		return nil, err
-	} else {
-		hal = hal.AddLink("manifest", NewHalLink(h, nil))
 	}
+	hal = hal.AddLink("manifest", NewHalLink(i, nil))
 
 	for k := range halBlockTemplate {
 		hal = hal.AddLink(k, halBlockTemplate[k])

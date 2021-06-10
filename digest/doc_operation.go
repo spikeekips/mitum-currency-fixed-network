@@ -30,13 +30,13 @@ func NewOperationDoc(
 ) (OperationDoc, error) {
 	var addresses []string
 	if ads, ok := op.Fact().(currency.Addresses); ok {
-		if as, err := ads.Addresses(); err != nil {
+		as, err := ads.Addresses()
+		if err != nil {
 			return OperationDoc{}, err
-		} else {
-			addresses = make([]string, len(as))
-			for i := range as {
-				addresses[i] = currency.StateAddressKeyPrefix(as[i])
-			}
+		}
+		addresses = make([]string, len(as))
+		for i := range as {
+			addresses[i] = currency.StateAddressKeyPrefix(as[i])
 		}
 	}
 

@@ -6,7 +6,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-var maxCurenciesCreateAccountsItemMultiAmounts int = 10
+var maxCurenciesCreateAccountsItemMultiAmounts = 10
 
 var (
 	CreateAccountsItemMultiAmountsType   = hint.Type("mitum-currency-create-accounts-multiple-amounts")

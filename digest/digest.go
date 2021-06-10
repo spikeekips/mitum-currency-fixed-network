@@ -125,16 +125,13 @@ func (di *Digester) digest(blk block.Block) error {
 }
 
 func DigestBlock(st *Database, blk block.Block) error {
-	var bs *BlockSession
-	if s, err := NewBlockSession(st, blk); err != nil {
+	bs, err := NewBlockSession(st, blk)
+	if err != nil {
 		return err
-	} else {
-		bs = s
-
-		defer func() {
-			_ = bs.Close()
-		}()
 	}
+	defer func() {
+		_ = bs.Close()
+	}()
 
 	if err := bs.Prepare(); err != nil {
 		return err

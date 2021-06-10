@@ -54,9 +54,8 @@ func (op *CurrencyPolicyUpdater) UnpackBSON(b []byte, enc *bsonenc.Encoder) erro
 	var um MemoBSONUnpacker
 	if err := enc.Unmarshal(b, &um); err != nil {
 		return err
-	} else {
-		op.Memo = um.Memo
 	}
+	op.Memo = um.Memo
 
 	return nil
 }

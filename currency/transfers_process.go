@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (op Transfers) Process(
+func (Transfers) Process(
 	func(key string) (state.State, bool, error),
 	func(valuehash.Hash, ...state.State) error,
 ) error {
@@ -42,11 +42,11 @@ func (opp *TransfersItemProcessor) PreProcess(
 			}
 		}
 
-		if st, _, err := getState(StateKeyBalance(opp.item.Receiver(), am.Currency())); err != nil {
+		st, _, err := getState(StateKeyBalance(opp.item.Receiver(), am.Currency()))
+		if err != nil {
 			return err
-		} else {
-			rb[am.Currency()] = NewAmountState(st, am.Currency())
 		}
+		rb[am.Currency()] = NewAmountState(st, am.Currency())
 	}
 
 	opp.rb = rb
@@ -77,14 +77,14 @@ type TransfersProcessor struct {
 
 func NewTransfersProcessor(cp *CurrencyPool) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
-		if i, ok := op.(Transfers); !ok {
+		i, ok := op.(Transfers)
+		if !ok {
 			return nil, xerrors.Errorf("not Transfers, %T", op)
-		} else {
-			return &TransfersProcessor{
-				cp:        cp,
-				Transfers: i,
-			}, nil
 		}
+		return &TransfersProcessor{
+			cp:        cp,
+			Transfers: i,
+		}, nil
 	}
 }
 
@@ -134,11 +134,11 @@ func (opp *TransfersProcessor) Process( // nolint:dupl
 
 	var sts []state.State // nolint:prealloc
 	for i := range opp.rb {
-		if s, err := opp.rb[i].Process(getState, setState); err != nil {
+		s, err := opp.rb[i].Process(getState, setState)
+		if err != nil {
 			return operation.NewBaseReasonError("failed to process transfer item: %w", err)
-		} else {
-			sts = append(sts, s...)
 		}
+		sts = append(sts, s...)
 	}
 
 	for k := range opp.required {

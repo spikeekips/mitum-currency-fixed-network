@@ -15,11 +15,9 @@ func (fact *GenesisCurrenciesFact) unpack(
 	bks []byte,
 	bcs [][]byte,
 ) error {
-	var gkey key.Publickey
-	if k, err := genesisNodeKey.Encode(enc); err != nil {
+	gkey, err := genesisNodeKey.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		gkey = k
 	}
 
 	var keys Keys
@@ -36,16 +34,14 @@ func (fact *GenesisCurrenciesFact) unpack(
 	fact.genesisNodeKey = gkey
 	fact.keys = keys
 
-	cs := make([]CurrencyDesign, len(bcs))
+	fact.cs = make([]CurrencyDesign, len(bcs))
 	for i := range bcs {
-		if j, err := DecodeCurrencyDesign(enc, bcs[i]); err != nil {
+		j, err := DecodeCurrencyDesign(enc, bcs[i])
+		if err != nil {
 			return err
-		} else {
-			cs[i] = j
 		}
+		fact.cs[i] = j
 	}
-
-	fact.cs = cs
 
 	return nil
 }

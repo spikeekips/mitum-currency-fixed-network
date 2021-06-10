@@ -17,11 +17,11 @@ func (fact *CurrencyPolicyUpdaterFact) unpack(
 
 	fact.cid = CurrencyID(scid)
 
-	if i, err := DecodeCurrencyPolicy(enc, bpo); err != nil {
+	i, err := DecodeCurrencyPolicy(enc, bpo)
+	if err != nil {
 		return err
-	} else {
-		fact.policy = i
 	}
+	fact.policy = i
 
 	return nil
 }

@@ -35,9 +35,9 @@ type Key struct {
 }
 
 func NewKey(k key.Publickey, w uint) (Key, error) {
-	key := Key{k: k, w: w}
+	ky := Key{k: k, w: w}
 
-	return key, key.IsValid(nil)
+	return ky, ky.IsValid(nil)
 }
 
 func (ky Key) IsValid([]byte) error {
@@ -45,11 +45,7 @@ func (ky Key) IsValid([]byte) error {
 		return xerrors.Errorf("invalid key weight, 1 <= weight <= 100")
 	}
 
-	if err := ky.k.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return ky.k.IsValid(nil)
 }
 
 func (ky Key) Weight() uint {
@@ -60,7 +56,7 @@ func (ky Key) Key() key.Publickey {
 	return ky.k
 }
 
-func (ky Key) Hint() hint.Hint {
+func (Key) Hint() hint.Hint {
 	return KeyHint
 }
 
@@ -88,16 +84,16 @@ type Keys struct {
 
 func NewKeys(keys []Key, threshold uint) (Keys, error) {
 	ks := Keys{keys: keys, threshold: threshold}
-	if h, err := ks.GenerateHash(); err != nil {
+	h, err := ks.GenerateHash()
+	if err != nil {
 		return Keys{}, err
-	} else {
-		ks.h = h
 	}
+	ks.h = h
 
 	return ks, ks.IsValid(nil)
 }
 
-func (ks Keys) Hint() hint.Hint {
+func (Keys) Hint() hint.Hint {
 	return KeysHint
 }
 
@@ -142,13 +138,13 @@ func (ks Keys) IsValid([]byte) error {
 
 	m := map[string]struct{}{}
 	for i := range ks.keys {
-		key := ks.keys[i]
-		if err := key.IsValid(nil); err != nil {
+		k := ks.keys[i]
+		if err := k.IsValid(nil); err != nil {
 			return err
-		} else if _, found := m[key.Key().String()]; found {
+		} else if _, found := m[k.Key().String()]; found {
 			return xerrors.Errorf("duplicated keys found")
 		} else {
-			m[key.Key().String()] = struct{}{}
+			m[k.Key().String()] = struct{}{}
 		}
 	}
 
@@ -217,11 +213,11 @@ func (ks Keys) Equal(b Keys) bool {
 func checkThreshold(fs []operation.FactSign, keys Keys) error {
 	var sum uint
 	for i := range fs {
-		if ky, found := keys.Key(fs[i].Signer()); found {
-			sum += ky.Weight()
-		} else {
+		ky, found := keys.Key(fs[i].Signer())
+		if !found {
 			return xerrors.Errorf("unknown key found, %s", fs[i].Signer())
 		}
+		sum += ky.Weight()
 	}
 
 	if sum < keys.Threshold() {

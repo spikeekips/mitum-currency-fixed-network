@@ -28,14 +28,8 @@ func (fl *CurrencyFixedFeeerFlags) IsValid([]byte) error {
 		receiver = a
 	}
 
-	feeer := currency.NewFixedFeeer(receiver, fl.Amount.Big)
-	if err := feeer.IsValid(nil); err != nil {
-		return err
-	} else {
-		fl.feeer = feeer
-	}
-
-	return nil
+	fl.feeer = currency.NewFixedFeeer(receiver, fl.Amount.Big)
+	return fl.feeer.IsValid(nil)
 }
 
 type CurrencyRatioFeeerFlags struct {
@@ -60,30 +54,24 @@ func (fl *CurrencyRatioFeeerFlags) IsValid([]byte) error {
 		receiver = a
 	}
 
-	feeer := currency.NewRatioFeeer(receiver, fl.Ratio, fl.Min.Big, fl.Max.Big)
-	if err := feeer.IsValid(nil); err != nil {
-		return err
-	} else {
-		fl.feeer = feeer
-	}
-
-	return nil
+	fl.feeer = currency.NewRatioFeeer(receiver, fl.Ratio, fl.Min.Big, fl.Max.Big)
+	return fl.feeer.IsValid(nil)
 }
 
 type CurrencyPolicyFlags struct {
 	NewAccountMinBalance BigFlag `name:"new-account-min-balance" help:"minimum balance for new account"` // nolint lll
 }
 
-func (fl *CurrencyPolicyFlags) IsValid([]byte) error {
+func (*CurrencyPolicyFlags) IsValid([]byte) error {
 	return nil
 }
 
 type CurrencyDesignFlags struct {
-	Currency                CurrencyIDFlag `arg:"" name:"currency-id" help:"currency id" required:""`
-	GenesisAmount           BigFlag        `arg:"" name:"genesis-amount" help:"genesis amount" required:""`
-	GenesisAccount          AddressFlag    `arg:"" name:"genesis-account" help:"genesis-account address for genesis balance" required:""` // nolint lll
-	CurrencyPolicyFlags     `prefix:"policy-" help:"currency policy" required:""`
-	FeeerString             string `name:"feeer" help:"feeer type, {nil, fixed, ratio}" required:""`
+	Currency                CurrencyIDFlag `arg:"" name:"currency-id" help:"currency id" required:"true"`
+	GenesisAmount           BigFlag        `arg:"" name:"genesis-amount" help:"genesis amount" required:"true"`
+	GenesisAccount          AddressFlag    `arg:"" name:"genesis-account" help:"genesis-account address for genesis balance" required:"true"` // nolint lll
+	CurrencyPolicyFlags     `prefix:"policy-" help:"currency policy" required:"true"`
+	FeeerString             string `name:"feeer" help:"feeer type, {nil, fixed, ratio}" required:"true"`
 	CurrencyFixedFeeerFlags `prefix:"feeer-fixed-" help:"fixed feeer"`
 	CurrencyRatioFeeerFlags `prefix:"feeer-ratio-" help:"ratio feeer"`
 	currencyDesign          currency.CurrencyDesign
@@ -135,14 +123,8 @@ func (fl *CurrencyDesignFlags) IsValid([]byte) error {
 		return err
 	}
 
-	de := currency.NewCurrencyDesign(am, genesisAccount, po)
-	if err := de.IsValid(nil); err != nil {
-		return err
-	} else {
-		fl.currencyDesign = de
-	}
-
-	return nil
+	fl.currencyDesign = currency.NewCurrencyDesign(am, genesisAccount, po)
+	return fl.currencyDesign.IsValid(nil)
 }
 
 type CurrencyRegisterCommand struct {
@@ -177,17 +159,17 @@ func (cmd *CurrencyRegisterCommand) Run(version util.Version) error { // nolint:
 		op = i
 	}
 
-	if i, err := operation.NewBaseSeal(
+	i, err := operation.NewBaseSeal(
 		cmd.OperationFlags.Privatekey,
 		[]operation.Operation{op},
 		[]byte(cmd.OperationFlags.NetworkID),
-	); err != nil {
+	)
+	if err != nil {
 		return xerrors.Errorf("failed to create operation.Seal: %w", err)
-	} else {
-		cmd.Log().Debug().Interface("seal", i).Msg("seal loaded")
-
-		cmd.pretty(cmd.Pretty, i)
 	}
+	cmd.Log().Debug().Interface("seal", i).Msg("seal loaded")
+
+	cmd.pretty(cmd.Pretty, i)
 
 	return nil
 }
@@ -208,15 +190,15 @@ func (cmd *CurrencyRegisterCommand) createOperation() (currency.CurrencyRegister
 	fact := currency.NewCurrencyRegisterFact([]byte(cmd.Token), cmd.currencyDesign)
 
 	var fs []operation.FactSign
-	if sig, err := operation.NewFactSignature(
+	sig, err := operation.NewFactSignature(
 		cmd.OperationFlags.Privatekey,
 		fact,
 		[]byte(cmd.OperationFlags.NetworkID),
-	); err != nil {
+	)
+	if err != nil {
 		return currency.CurrencyRegister{}, err
-	} else {
-		fs = append(fs, operation.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
 	}
+	fs = append(fs, operation.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
 
 	return currency.NewCurrencyRegister(fact, fs, cmd.OperationFlags.Memo)
 }

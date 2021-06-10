@@ -40,27 +40,27 @@ func LoadStateAccountValue(st state.State) (Account, error) {
 		return Account{}, util.NotFoundError.Errorf("account not found in State")
 	}
 
-	if s, ok := v.Interface().(Account); !ok {
+	s, ok := v.Interface().(Account)
+	if !ok {
 		return Account{}, xerrors.Errorf("invalid account value found, %T", v.Interface())
-	} else {
-		return s, nil
 	}
+	return s, nil
 }
 
 func SetStateAccountValue(st state.State, v Account) (state.State, error) {
-	if uv, err := state.NewHintedValue(v); err != nil {
+	uv, err := state.NewHintedValue(v)
+	if err != nil {
 		return nil, err
-	} else {
-		return st.SetValue(uv)
 	}
+	return st.SetValue(uv)
 }
 
 func StateKeysValue(st state.State) (Keys, error) {
-	if ac, err := LoadStateAccountValue(st); err != nil {
+	ac, err := LoadStateAccountValue(st)
+	if err != nil {
 		return Keys{}, err
-	} else {
-		return ac.Keys(), nil
 	}
+	return ac.Keys(), nil
 }
 
 func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
@@ -70,11 +70,11 @@ func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 			return nil, err
 		}
 
-		if n, err := NewAccountFromKeys(v); err != nil {
+		n, err := NewAccountFromKeys(v)
+		if err != nil {
 			return nil, err
-		} else {
-			ac = n
 		}
+		ac = n
 	} else {
 		ac = a
 	}
@@ -102,19 +102,19 @@ func StateBalanceValue(st state.State) (Amount, error) {
 		return Amount{}, util.NotFoundError.Errorf("balance not found in State")
 	}
 
-	if s, ok := v.Interface().(Amount); !ok {
+	s, ok := v.Interface().(Amount)
+	if !ok {
 		return Amount{}, xerrors.Errorf("invalid balance value found, %T", v.Interface())
-	} else {
-		return s, nil
 	}
+	return s, nil
 }
 
 func SetStateBalanceValue(st state.State, v Amount) (state.State, error) {
-	if uv, err := state.NewHintedValue(v); err != nil {
+	uv, err := state.NewHintedValue(v)
+	if err != nil {
 		return nil, err
-	} else {
-		return st.SetValue(uv)
 	}
+	return st.SetValue(uv)
 }
 
 func IsStateCurrencyDesignKey(key string) bool {
@@ -131,19 +131,19 @@ func StateCurrencyDesignValue(st state.State) (CurrencyDesign, error) {
 		return CurrencyDesign{}, util.NotFoundError.Errorf("currency design not found in State")
 	}
 
-	if s, ok := v.Interface().(CurrencyDesign); !ok {
+	s, ok := v.Interface().(CurrencyDesign)
+	if !ok {
 		return CurrencyDesign{}, xerrors.Errorf("invalid currency design value found, %T", v.Interface())
-	} else {
-		return s, nil
 	}
+	return s, nil
 }
 
 func SetStateCurrencyDesignValue(st state.State, v CurrencyDesign) (state.State, error) {
-	if uv, err := state.NewHintedValue(v); err != nil {
+	uv, err := state.NewHintedValue(v)
+	if err != nil {
 		return nil, err
-	} else {
-		return st.SetValue(uv)
 	}
+	return st.SetValue(uv)
 }
 
 func checkExistsState(

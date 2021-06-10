@@ -52,7 +52,7 @@ func NewCreateAccountsFact(token []byte, sender base.Address, items []CreateAcco
 	return fact
 }
 
-func (fact CreateAccountsFact) Hint() hint.Hint {
+func (CreateAccountsFact) Hint() hint.Hint {
 	return CreateAccountsFactHint
 }
 
@@ -137,11 +137,11 @@ func (fact CreateAccountsFact) Items() []CreateAccountsItem {
 func (fact CreateAccountsFact) Targets() ([]base.Address, error) {
 	as := make([]base.Address, len(fact.items))
 	for i := range fact.items {
-		if a, err := fact.items[i].Address(); err != nil {
+		a, err := fact.items[i].Address()
+		if err != nil {
 			return nil, err
-		} else {
-			as[i] = a
 		}
+		as[i] = a
 	}
 
 	return as, nil
@@ -150,11 +150,11 @@ func (fact CreateAccountsFact) Targets() ([]base.Address, error) {
 func (fact CreateAccountsFact) Addresses() ([]base.Address, error) {
 	as := make([]base.Address, len(fact.items)+1)
 
-	if tas, err := fact.Targets(); err != nil {
+	tas, err := fact.Targets()
+	if err != nil {
 		return nil, err
-	} else {
-		copy(as, tas)
 	}
+	copy(as, tas)
 
 	as[len(fact.items)] = fact.Sender()
 
@@ -180,18 +180,18 @@ type CreateAccounts struct {
 }
 
 func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo string) (CreateAccounts, error) {
-	if bo, err := operation.NewBaseOperationFromFact(CreateAccountsHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(CreateAccountsHint, fact, fs)
+	if err != nil {
 		return CreateAccounts{}, err
-	} else {
-		op := CreateAccounts{BaseOperation: bo, Memo: memo}
-
-		op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-		return op, nil
 	}
+	op := CreateAccounts{BaseOperation: bo, Memo: memo}
+
+	op.BaseOperation = bo.SetHash(op.GenerateHash())
+
+	return op, nil
 }
 
-func (op CreateAccounts) Hint() hint.Hint {
+func (CreateAccounts) Hint() hint.Hint {
 	return CreateAccountsHint
 }
 
@@ -217,11 +217,11 @@ func (op CreateAccounts) GenerateHash() valuehash.Hash {
 }
 
 func (op CreateAccounts) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	if o, err := op.BaseOperation.AddFactSigns(fs...); err != nil {
+	o, err := op.BaseOperation.AddFactSigns(fs...)
+	if err != nil {
 		return nil, err
-	} else {
-		op.BaseOperation = o.(operation.BaseOperation)
 	}
+	op.BaseOperation = o.(operation.BaseOperation)
 
 	op.BaseOperation = op.SetHash(op.GenerateHash())
 

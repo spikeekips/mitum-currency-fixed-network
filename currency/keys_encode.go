@@ -11,11 +11,11 @@ import (
 func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) error {
 	ky.w = w
 
-	if k, err := kd.Encode(enc); err != nil {
+	k, err := kd.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		ky.k = k
 	}
+	ky.k = k
 
 	return nil
 }

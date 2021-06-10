@@ -45,31 +45,31 @@ func NewNilFeeer() NilFeeer {
 	return NilFeeer{}
 }
 
-func (fa NilFeeer) Type() string {
+func (NilFeeer) Type() string {
 	return FeeerNil
 }
 
-func (fa NilFeeer) Hint() hint.Hint {
+func (NilFeeer) Hint() hint.Hint {
 	return NilFeeerHint
 }
 
-func (fa NilFeeer) Bytes() []byte {
+func (NilFeeer) Bytes() []byte {
 	return nil
 }
 
-func (fa NilFeeer) Receiver() base.Address {
+func (NilFeeer) Receiver() base.Address {
 	return nil
 }
 
-func (fa NilFeeer) Min() Big {
+func (NilFeeer) Min() Big {
 	return ZeroBig
 }
 
-func (fa NilFeeer) Fee(Big) (Big, error) {
+func (NilFeeer) Fee(Big) (Big, error) {
 	return ZeroBig, nil
 }
 
-func (fa NilFeeer) IsValid([]byte) error {
+func (NilFeeer) IsValid([]byte) error {
 	return nil
 }
 
@@ -82,11 +82,11 @@ func NewFixedFeeer(receiver base.Address, amount Big) FixedFeeer {
 	return FixedFeeer{receiver: receiver, amount: amount}
 }
 
-func (fa FixedFeeer) Type() string {
+func (FixedFeeer) Type() string {
 	return FeeerFixed
 }
 
-func (fa FixedFeeer) Hint() hint.Hint {
+func (FixedFeeer) Hint() hint.Hint {
 	return FixedFeeerHint
 }
 
@@ -142,11 +142,11 @@ func NewRatioFeeer(receiver base.Address, ratio float64, min, max Big) RatioFeee
 	}
 }
 
-func (fa RatioFeeer) Type() string {
+func (RatioFeeer) Type() string {
 	return FeeerRatio
 }
 
-func (fa RatioFeeer) Hint() hint.Hint {
+func (RatioFeeer) Hint() hint.Hint {
 	return RatioFeeerHint
 }
 
@@ -179,9 +179,8 @@ func (fa RatioFeeer) Fee(a Big) (Big, error) {
 	} else {
 		if !fa.isUnlimited() && f.Compare(fa.max) > 0 {
 			return fa.max, nil
-		} else {
-			return f, nil
 		}
+		return f, nil
 	}
 }
 

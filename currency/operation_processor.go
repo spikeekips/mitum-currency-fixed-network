@@ -67,9 +67,8 @@ func (opr *OperationProcessor) SetProcessor(
 ) (prprocessor.OperationProcessor, error) {
 	if err := opr.processorHintSet.Add(hinter, newProcessor); err != nil {
 		return nil, err
-	} else {
-		return opr, nil
 	}
+	return opr, nil
 }
 
 func (opr *OperationProcessor) setState(op valuehash.Hash, sts ...state.State) error {
@@ -103,11 +102,9 @@ func (opr *OperationProcessor) PreProcess(op state.Processor) (state.Processor, 
 		sp = i
 	}
 
-	var pop state.Processor
-	if pr, err := sp.(state.PreProcessor).PreProcess(opr.pool.Get, opr.setState); err != nil {
+	pop, err := sp.(state.PreProcessor).PreProcess(opr.pool.Get, opr.setState)
+	if err != nil {
 		return nil, err
-	} else {
-		pop = pr
 	}
 
 	if err := opr.checkDuplication(op); err != nil {
@@ -126,11 +123,11 @@ func (opr *OperationProcessor) Process(op state.Processor) error {
 		*CurrencyPolicyUpdaterProcessor:
 		return opr.process(op)
 	case Transfers, CreateAccounts, KeyUpdater, CurrencyRegister, CurrencyPolicyUpdater:
-		if pr, err := opr.PreProcess(op); err != nil {
+		pr, err := opr.PreProcess(op)
+		if err != nil {
 			return err
-		} else {
-			return opr.process(pr)
 		}
+		return opr.process(pr)
 	default:
 		return op.Process(opr.pool.Get, opr.pool.Set)
 	}
@@ -167,11 +164,11 @@ func (opr *OperationProcessor) checkDuplication(op state.Processor) error {
 		didtype = DuplicationTypeSender
 	case CreateAccounts:
 		fact := t.Fact().(CreateAccountsFact)
-		if as, err := fact.Targets(); err != nil {
+		as, err := fact.Targets()
+		if err != nil {
 			return xerrors.Errorf("failed to get Addresses")
-		} else {
-			newAddresses = as
 		}
+		newAddresses = as
 
 		did = fact.Sender().String()
 		didtype = DuplicationTypeSender
@@ -236,9 +233,8 @@ func (opr *OperationProcessor) Close() error {
 		pr := NewFeeOperationProcessor(opr.cp, op)
 		if err := pr.Process(opr.pool.Get, opr.pool.Set); err != nil {
 			return err
-		} else {
-			opr.pool.AddOperations(op)
 		}
+		opr.pool.AddOperations(op)
 	}
 
 	return nil

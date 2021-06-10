@@ -38,7 +38,7 @@ func NewKeyUpdaterFact(token []byte, target base.Address, keys Keys, currency Cu
 	return fact
 }
 
-func (fact KeyUpdaterFact) Hint() hint.Hint {
+func (KeyUpdaterFact) Hint() hint.Hint {
 	return KeyUpdaterFactHint
 }
 
@@ -106,18 +106,18 @@ type KeyUpdater struct {
 }
 
 func NewKeyUpdater(fact KeyUpdaterFact, fs []operation.FactSign, memo string) (KeyUpdater, error) {
-	if bo, err := operation.NewBaseOperationFromFact(KeyUpdaterHint, fact, fs); err != nil {
+	bo, err := operation.NewBaseOperationFromFact(KeyUpdaterHint, fact, fs)
+	if err != nil {
 		return KeyUpdater{}, err
-	} else {
-		op := KeyUpdater{BaseOperation: bo, Memo: memo}
-
-		op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-		return op, nil
 	}
+	op := KeyUpdater{BaseOperation: bo, Memo: memo}
+
+	op.BaseOperation = bo.SetHash(op.GenerateHash())
+
+	return op, nil
 }
 
-func (op KeyUpdater) Hint() hint.Hint {
+func (KeyUpdater) Hint() hint.Hint {
 	return KeyUpdaterHint
 }
 
@@ -143,11 +143,11 @@ func (op KeyUpdater) GenerateHash() valuehash.Hash {
 }
 
 func (op KeyUpdater) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	if o, err := op.BaseOperation.AddFactSigns(fs...); err != nil {
+	o, err := op.BaseOperation.AddFactSigns(fs...)
+	if err != nil {
 		return nil, err
-	} else {
-		op.BaseOperation = o.(operation.BaseOperation)
 	}
+	op.BaseOperation = o.(operation.BaseOperation)
 
 	op.BaseOperation = op.SetHash(op.GenerateHash())
 

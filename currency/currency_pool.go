@@ -33,11 +33,9 @@ func (cp *CurrencyPool) Set(st state.State) error {
 	cp.Lock()
 	defer cp.Unlock()
 
-	var de CurrencyDesign
-	if i, err := StateCurrencyDesignValue(st); err != nil {
+	de, err := StateCurrencyDesignValue(st)
+	if err != nil {
 		return err
-	} else {
-		de = i
 	}
 
 	cp.demap[de.Currency()] = de
@@ -79,27 +77,24 @@ func (cp *CurrencyPool) States() map[CurrencyID]state.State {
 }
 
 func (cp *CurrencyPool) Policy(cid CurrencyID) (CurrencyPolicy, bool) {
-	if i, found := cp.Get(cid); !found {
+	i, found := cp.Get(cid)
+	if !found {
 		return CurrencyPolicy{}, false
-	} else {
-		return i.Policy(), true
 	}
+	return i.Policy(), true
 }
 
 func (cp *CurrencyPool) Feeer(cid CurrencyID) (Feeer, bool) {
-	if i, found := cp.Get(cid); !found {
+	i, found := cp.Get(cid)
+	if !found {
 		return nil, false
-	} else {
-		return i.Policy().Feeer(), true
 	}
+	return i.Policy().Feeer(), true
 }
 
 func (cp *CurrencyPool) State(cid CurrencyID) (state.State, bool) {
-	if i, found := cp.stsmap[cid]; !found {
-		return nil, false
-	} else {
-		return i, true
-	}
+	i, found := cp.stsmap[cid]
+	return i, found
 }
 
 func (cp *CurrencyPool) TraverseDesign(callback func(cid CurrencyID, de CurrencyDesign) bool) {
@@ -137,9 +132,6 @@ func (cp *CurrencyPool) Get(cid CurrencyID) (CurrencyDesign, bool) {
 	cp.RLock()
 	defer cp.RUnlock()
 
-	if i, found := cp.demap[cid]; !found {
-		return CurrencyDesign{}, false
-	} else {
-		return i, true
-	}
+	i, found := cp.demap[cid]
+	return i, found
 }

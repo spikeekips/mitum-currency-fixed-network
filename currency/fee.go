@@ -45,7 +45,7 @@ func NewFeeOperationFact(height base.Height, ams map[CurrencyID]Big) FeeOperatio
 	return fact
 }
 
-func (fact FeeOperationFact) Hint() hint.Hint {
+func (FeeOperationFact) Hint() hint.Hint {
 	return FeeOperationFactHint
 }
 
@@ -102,7 +102,7 @@ func NewFeeOperation(fact FeeOperationFact) FeeOperation {
 	return op
 }
 
-func (op FeeOperation) Hint() hint.Hint {
+func (FeeOperation) Hint() hint.Hint {
 	return FeeOperationHint
 }
 
@@ -114,7 +114,7 @@ func (op FeeOperation) Hash() valuehash.Hash {
 	return op.h
 }
 
-func (op FeeOperation) Signs() []operation.FactSign {
+func (FeeOperation) Signs() []operation.FactSign {
 	return nil
 }
 
@@ -144,15 +144,15 @@ func (op FeeOperation) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(op.Fact().Hash().Bytes())
 }
 
-func (op FeeOperation) AddFactSigns(...operation.FactSign) (operation.FactSignUpdater, error) {
+func (FeeOperation) AddFactSigns(...operation.FactSign) (operation.FactSignUpdater, error) {
 	return nil, nil
 }
 
-func (op FeeOperation) LastSignedAt() time.Time {
+func (FeeOperation) LastSignedAt() time.Time {
 	return time.Time{}
 }
 
-func (op FeeOperation) Process(
+func (FeeOperation) Process(
 	func(key string) (state.State, bool, error),
 	func(valuehash.Hash, ...state.State) error,
 ) error {
@@ -181,11 +181,11 @@ func (opp *FeeOperationProcessor) Process(
 	for i := range fact.amounts {
 		am := fact.amounts[i]
 		var feeer Feeer
-		if j, found := opp.cp.Feeer(am.Currency()); !found {
+		j, found := opp.cp.Feeer(am.Currency())
+		if !found {
 			return xerrors.Errorf("unknown currency id, %q found for FeeOperation", am.Currency())
-		} else {
-			feeer = j
 		}
+		feeer = j
 
 		if feeer.Receiver() == nil {
 			continue

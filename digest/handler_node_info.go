@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
 )
 
@@ -23,11 +22,7 @@ func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err != nil {
-		hd.Log().Verbose().Err(err).Msg("failed to load cache")
-	} else {
-		hd.Log().Verbose().Msg("loaded from cache")
-
+	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -60,22 +55,20 @@ func (hd *Handlers) buildNodeInfoHal(ni network.NodeInfo) (Hal, error) {
 	hal = hal.AddLink("currency", NewHalLink(HandlerPathCurrencies, nil)).
 		AddLink("currency:{currencyid}", NewHalLink(HandlerPathCurrency, nil).SetTemplated())
 
-	var blk block.Manifest
-	if i := ni.LastBlock(); i == nil {
+	blk := ni.LastBlock()
+	if blk == nil {
 		return hal, nil
-	} else {
-		blk = i
 	}
 
-	if bh, err := hd.buildBlockHalByHeight(blk.Height()); err != nil {
+	bh, err := hd.buildBlockHalByHeight(blk.Height())
+	if err != nil {
 		return nil, err
-	} else {
-		for k, v := range bh.Links() {
-			if !strings.HasPrefix(k, "block:") {
-				k = "block:" + k
-			}
-			hal = hal.AddLink(k, v)
+	}
+	for k, v := range bh.Links() {
+		if !strings.HasPrefix(k, "block:") {
+			k = "block:" + k
 		}
+		hal = hal.AddLink(k, v)
 	}
 
 	return hal, nil

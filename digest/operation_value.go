@@ -30,10 +30,17 @@ func NewOperationValue(
 	reason operation.ReasonError,
 	index uint64,
 ) OperationValue {
-	return OperationValue{op: op, height: height, confirmedAt: confirmedAt, inState: inState, reason: reason, index: index}
+	return OperationValue{
+		op:          op,
+		height:      height,
+		confirmedAt: confirmedAt,
+		inState:     inState,
+		reason:      reason,
+		index:       index,
+	}
 }
 
-func (va OperationValue) Hint() hint.Hint {
+func (OperationValue) Hint() hint.Hint {
 	return OperationValueHint
 }
 

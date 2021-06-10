@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
-	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -34,11 +33,9 @@ type KeyDesign struct {
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
-	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
+	je, err := encs.Encoder(jsonenc.JSONType, "")
+	if err != nil {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
-	} else {
-		je = e
 	}
 
 	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
@@ -71,17 +68,17 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 		ks[i] = kd.Key
 	}
 
-	if keys, err := currency.NewKeys(ks, akd.Threshold); err != nil {
+	keys, err := currency.NewKeys(ks, akd.Threshold)
+	if err != nil {
 		return err
-	} else {
-		akd.Keys = keys
 	}
+	akd.Keys = keys
 
-	if a, err := currency.NewAddressFromKeys(akd.Keys); err != nil {
+	a, err := currency.NewAddressFromKeys(akd.Keys)
+	if err != nil {
 		return err
-	} else {
-		akd.Address = a
 	}
+	akd.Address = a
 
 	return nil
 }
@@ -122,32 +119,31 @@ func (de *CurrencyDesign) IsValid([]byte) error {
 	var cid currency.CurrencyID
 	if de.CurrencyString == nil {
 		return xerrors.Errorf("empty currency")
-	} else {
-		cid = currency.CurrencyID(*de.CurrencyString)
-		if err := cid.IsValid(nil); err != nil {
-			return err
-		}
+	}
+	cid = currency.CurrencyID(*de.CurrencyString)
+	if err := cid.IsValid(nil); err != nil {
+		return err
 	}
 
 	if de.BalanceString != nil {
-		if b, err := currency.NewBigFromString(*de.BalanceString); err != nil {
+		b, err := currency.NewBigFromString(*de.BalanceString)
+		if err != nil {
 			return err
-		} else {
-			de.Balance = currency.NewAmount(b, cid)
-			if err := de.Balance.IsValid(nil); err != nil {
-				return err
-			}
+		}
+		de.Balance = currency.NewAmount(b, cid)
+		if err := de.Balance.IsValid(nil); err != nil {
+			return err
 		}
 	}
 
 	if de.NewAccountMinBalanceString == nil {
 		de.NewAccountMinBalance = currency.ZeroBig
 	} else {
-		if b, err := currency.NewBigFromString(*de.NewAccountMinBalanceString); err != nil {
+		b, err := currency.NewBigFromString(*de.NewAccountMinBalanceString)
+		if err != nil {
 			return err
-		} else {
-			de.NewAccountMinBalance = b
 		}
+		de.NewAccountMinBalance = b
 	}
 
 	if de.Feeer == nil {
@@ -184,17 +180,17 @@ func (no *FeeerDesign) IsValid([]byte) error {
 }
 
 func (no FeeerDesign) checkFixed(c map[string]interface{}) error {
-	if a, found := c["amount"]; !found {
+	a, found := c["amount"]
+	if !found {
 		return xerrors.Errorf("fixed needs `amount`")
-	} else {
-		if n, err := currency.NewBigFromInterface(a); err != nil {
-			return xerrors.Errorf("invalid amount value, %v of fixed: %w", a, err)
-		} else {
-			no.Extras["fixed_amount"] = n
-		}
-
-		return nil
 	}
+	n, err := currency.NewBigFromInterface(a)
+	if err != nil {
+		return xerrors.Errorf("invalid amount value, %v of fixed: %w", a, err)
+	}
+	no.Extras["fixed_amount"] = n
+
+	return nil
 }
 
 func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
@@ -215,11 +211,11 @@ func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
 	}
 
 	if a, found := c["max"]; found {
-		if n, err := currency.NewBigFromInterface(a); err != nil {
+		n, err := currency.NewBigFromInterface(a)
+		if err != nil {
 			return xerrors.Errorf("invalid max value, %v of ratio: %w", a, err)
-		} else {
-			no.Extras["ratio_max"] = n
 		}
+		no.Extras["ratio_max"] = n
 	}
 
 	return nil
@@ -258,11 +254,11 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 	if no.CacheYAML == nil {
 		no.cache = DefaultDigestAPICache
 	} else {
-		if u, err := config.ParseURLString(*no.CacheYAML, true); err != nil {
+		u, err := config.ParseURLString(*no.CacheYAML, true)
+		if err != nil {
 			return ctx, err
-		} else {
-			no.cache = u
 		}
+		no.cache = u
 	}
 
 	return ctx, nil

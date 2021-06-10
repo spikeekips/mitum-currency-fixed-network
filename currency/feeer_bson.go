@@ -11,7 +11,7 @@ func (fa NilFeeer) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.NewHintedDoc(fa.Hint()))
 }
 
-func (fa *NilFeeer) UnmarsahlBSON() error {
+func (*NilFeeer) UnmarsahlBSON() error {
 	return nil
 }
 

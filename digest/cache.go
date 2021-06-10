@@ -29,18 +29,18 @@ type Cache interface {
 }
 
 func NewCacheFromURI(uri string) (Cache, error) {
-	if u, err := url.Parse(uri); err != nil {
+	u, err := url.Parse(uri)
+	if err != nil {
 		return nil, xerrors.Errorf("invalid uri of cache, %q: %w", uri, err)
-	} else {
-		switch {
-		case u.Scheme == "memory":
-			// TODO set size, expire
-			return NewLocalMemCache(100*100, time.Second*10), nil
-		case u.Scheme == "memcached":
-			return NewMemcached(u.Host)
-		default:
-			return nil, xerrors.Errorf("unsupported uri of cache, %q", uri)
-		}
+	}
+	switch {
+	case u.Scheme == "memory":
+		// TODO set size, expire
+		return NewLocalMemCache(100*100, time.Second*10), nil
+	case u.Scheme == "memcached":
+		return NewMemcached(u.Host)
+	default:
+		return nil, xerrors.Errorf("unsupported uri of cache, %q", uri)
 	}
 }
 
@@ -57,11 +57,11 @@ func NewLocalMemCache(size int, expire time.Duration) *LocalMemCache {
 }
 
 func (ca *LocalMemCache) Get(key string) ([]byte, error) {
-	if i, err := ca.cl.Get(key); err != nil {
+	i, err := ca.cl.Get(key)
+	if err != nil {
 		return nil, err
-	} else {
-		return i.([]byte), nil
 	}
+	return i.([]byte), nil
 }
 
 func (ca *LocalMemCache) Set(key string, b []byte, expire time.Duration) error {
@@ -73,25 +73,25 @@ type Memcached struct {
 }
 
 func NewMemcached(servers ...string) (*Memcached, error) {
-	if cl, err := memcache.New(servers...); err != nil {
+	cl, err := memcache.New(servers...)
+	if err != nil {
 		return nil, err
-	} else {
-		if _, err := cl.Get("<any key>"); err != nil {
-			if !xerrors.Is(err, memcache.ErrCacheMiss) {
-				return nil, err
-			}
-		}
-
-		return &Memcached{cl: cl}, nil
 	}
+	if _, err := cl.Get("<any key>"); err != nil {
+		if !xerrors.Is(err, memcache.ErrCacheMiss) {
+			return nil, err
+		}
+	}
+
+	return &Memcached{cl: cl}, nil
 }
 
 func (mc *Memcached) Get(key string) ([]byte, error) {
-	if item, err := mc.cl.Get(key); err != nil {
+	item, err := mc.cl.Get(key)
+	if err != nil {
 		return nil, err
-	} else {
-		return item.Value, nil
 	}
+	return item.Value, nil
 }
 
 func (mc *Memcached) Set(key string, b []byte, expire time.Duration) error {
@@ -100,11 +100,11 @@ func (mc *Memcached) Set(key string, b []byte, expire time.Duration) error {
 
 type DummyCache struct{}
 
-func (ca DummyCache) Get(string) ([]byte, error) {
+func (DummyCache) Get(string) ([]byte, error) {
 	return nil, util.NotFoundError
 }
 
-func (ca DummyCache) Set(string, []byte, time.Duration) error {
+func (DummyCache) Set(string, []byte, time.Duration) error {
 	return nil
 }
 
@@ -234,12 +234,11 @@ func (cr *CacheResponseWriter) Cache() error {
 	buf := &bytes.Buffer{}
 	if err := cr.filterHeader().Write(buf); err != nil {
 		return err
-	} else {
-		_, _ = buf.Write([]byte{'\r', '\n'})
-		_, _ = buf.Write(cr.buf.Bytes())
-
-		return cr.cache.Set(cr.Key(), buf.Bytes(), cr.Expire())
 	}
+	_, _ = buf.Write([]byte{'\r', '\n'})
+	_, _ = buf.Write(cr.buf.Bytes())
+
+	return cr.cache.Set(cr.Key(), buf.Bytes(), cr.Expire())
 }
 
 func ScanCRLF(data []byte, atEOF bool) (int, []byte, error) {
@@ -280,19 +279,18 @@ func writeFromCache(b []byte, w http.ResponseWriter) error {
 		if !wroteHeader {
 			buf := bytes.NewReader(append(sb, '\r', '\n'))
 			tp := textproto.NewReader(bufio.NewReader(buf))
-			if hr, err := tp.ReadMIMEHeader(); err != nil {
+			hr, err := tp.ReadMIMEHeader()
+			if err != nil {
 				return err
-			} else {
-				for k := range hr {
-					w.Header().Set(k, hr.Get(k))
-				}
+			}
+			for k := range hr {
+				w.Header().Set(k, hr.Get(k))
 			}
 
 			wroteHeader = true
 			continue
-		} else {
-			_, _ = w.Write(sb)
 		}
+		_, _ = w.Write(sb)
 	}
 
 	if cw, ok := w.(*CacheResponseWriter); ok {

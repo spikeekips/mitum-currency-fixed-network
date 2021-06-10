@@ -15,19 +15,19 @@ func (it *BaseTransfersItem) unpack(
 ) error {
 	it.hint = ht
 
-	if a, err := bReceiver.Encode(enc); err != nil {
+	a, err := bReceiver.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		it.receiver = a
 	}
+	it.receiver = a
 
 	am := make([]Amount, len(bam))
 	for i := range bam {
-		if j, err := DecodeAmount(enc, bam[i]); err != nil {
+		j, err := DecodeAmount(enc, bam[i])
+		if err != nil {
 			return err
-		} else {
-			am[i] = j
 		}
+		am[i] = j
 	}
 
 	it.amounts = am
@@ -42,20 +42,18 @@ func (fact *TransfersFact) unpack(
 	bSender base.AddressDecoder,
 	bitems [][]byte,
 ) error {
-	var sender base.Address
-	if a, err := bSender.Encode(enc); err != nil {
+	sender, err := bSender.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		sender = a
 	}
 
 	items := make([]TransfersItem, len(bitems))
 	for i := range bitems {
-		if j, err := DecodeTransfersItem(enc, bitems[i]); err != nil {
+		j, err := DecodeTransfersItem(enc, bitems[i])
+		if err != nil {
 			return err
-		} else {
-			items[i] = j
 		}
+		items[i] = j
 	}
 
 	fact.h = h
