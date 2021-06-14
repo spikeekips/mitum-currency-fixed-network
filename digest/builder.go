@@ -207,7 +207,7 @@ func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal
 	}
 
 	nfact := currency.NewCreateAccountsFact(token, fact.Sender(), items)
-	nfact = nfact.Rebulild()
+	nfact = nfact.Rebuild()
 	if err = bl.isValidFactCreateAccounts(nfact); err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (bl Builder) buildFactTransfers(fact currency.TransfersFact) (Hal, error) {
 	}
 
 	nfact := currency.NewTransfersFact(token, fact.Sender(), fact.Items())
-	nfact = nfact.Rebulild()
+	nfact = nfact.Rebuild()
 	if err = bl.isValidFactTransfers(nfact); err != nil {
 		return nil, err
 	}

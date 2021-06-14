@@ -122,7 +122,7 @@ func (fact TransfersFact) Items() []TransfersItem {
 	return fact.items
 }
 
-func (fact TransfersFact) Rebulild() TransfersFact {
+func (fact TransfersFact) Rebuild() TransfersFact {
 	items := make([]TransfersItem, len(fact.items))
 	for i := range fact.items {
 		it := fact.items[i]

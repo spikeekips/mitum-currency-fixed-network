@@ -161,7 +161,7 @@ func (fact CreateAccountsFact) Addresses() ([]base.Address, error) {
 	return as, nil
 }
 
-func (fact CreateAccountsFact) Rebulild() CreateAccountsFact {
+func (fact CreateAccountsFact) Rebuild() CreateAccountsFact {
 	items := make([]CreateAccountsItem, len(fact.items))
 	for i := range fact.items {
 		it := fact.items[i]
