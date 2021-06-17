@@ -23,7 +23,7 @@ type testBuilder struct {
 }
 
 func (t *testBuilder) decodeHal(b []byte) Hal {
-	hinter, err := t.JSONEnc.DecodeByHint(b)
+	hinter, err := t.JSONEnc.Decode(b)
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +33,7 @@ func (t *testBuilder) decodeHal(b []byte) Hal {
 		panic("not Hal")
 	}
 
-	hinter, err = t.JSONEnc.DecodeByHint(hal.RawInterface())
+	hinter, err = t.JSONEnc.Decode(hal.RawInterface())
 	if err != nil {
 		panic(err)
 	}

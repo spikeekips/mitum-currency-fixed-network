@@ -118,12 +118,12 @@ type AddressFlag struct {
 }
 
 func (v *AddressFlag) UnmarshalText(b []byte) error {
-	ht, s, err := hint.ParseHintedString(string(b))
+	hs, err := hint.ParseHintedString(string(b))
 	if err != nil {
 		return err
 	}
 	v.s = string(b)
-	v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(ht, s)}
+	v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(hs.Hint(), hs.Body())}
 
 	return nil
 }

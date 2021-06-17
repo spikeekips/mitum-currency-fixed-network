@@ -130,7 +130,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var height base.Height = base.NilHeight
+	height := base.NilHeight
 	if len(offset) > 0 {
 		ht, err := base.NewHeightFromString(offset)
 		if err != nil {

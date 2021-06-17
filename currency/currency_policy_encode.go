@@ -5,7 +5,7 @@ import (
 )
 
 func (po *CurrencyPolicy) unpack(enc encoder.Encoder, mn Big, bfe []byte) error {
-	i, err := DecodeFeeer(enc, bfe)
+	i, err := DecodeFeeer(bfe, enc)
 	if err != nil {
 		return err
 	}

@@ -53,9 +53,9 @@ func (ks Keys) MarshalJSON() ([]byte, error) {
 }
 
 type KeysJSONUnpacker struct {
-	H  valuehash.Bytes   `json:"hash"`
-	KS []json.RawMessage `json:"keys"`
-	TH uint              `json:"threshold"`
+	H  valuehash.Bytes `json:"hash"`
+	KS json.RawMessage `json:"keys"`
+	TH uint            `json:"threshold"`
 }
 
 func (ks *Keys) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -64,10 +64,5 @@ func (ks *Keys) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bs := make([][]byte, len(uks.KS))
-	for i := range uks.KS {
-		bs[i] = uks.KS[i]
-	}
-
-	return ks.unpack(enc, uks.H, bs, uks.TH)
+	return ks.unpack(enc, uks.H, uks.KS, uks.TH)
 }

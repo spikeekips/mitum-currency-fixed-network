@@ -49,13 +49,13 @@ func (va *OperationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	op, err := operation.DecodeOperation(enc, uva.OP)
+	op, err := operation.DecodeOperation(uva.OP, enc)
 	if err != nil {
 		return err
 	}
 	va.op = op
 
-	i, err := operation.DecodeReasonError(enc, uva.RS)
+	i, err := operation.DecodeReasonError(uva.RS, enc)
 	if err != nil {
 		return err
 	}

@@ -162,7 +162,7 @@ func (Builder) templateCurrencyPolicyUpdaterFact() Hal {
 
 func (bl Builder) BuildFact(b []byte) (Hal, error) {
 	var fact base.Fact
-	if hinter, err := bl.enc.DecodeByHint(b); err != nil {
+	if hinter, err := bl.enc.Decode(b); err != nil {
 		return nil, err
 	} else if f, ok := hinter.(base.Fact); !ok {
 		return nil, xerrors.Errorf("not base.Fact, %T", hinter)
@@ -470,7 +470,7 @@ func (Builder) isValidFactCurrencyPolicyUpdater(fact currency.CurrencyPolicyUpda
 
 func (bl Builder) BuildOperation(b []byte) (Hal, error) {
 	var op operation.Operation
-	if hinter, err := bl.enc.DecodeByHint(b); err != nil {
+	if hinter, err := bl.enc.Decode(b); err != nil {
 		return nil, err
 	} else if f, ok := hinter.(operation.Operation); !ok {
 		return nil, xerrors.Errorf("not operation.Operation, %T", hinter)

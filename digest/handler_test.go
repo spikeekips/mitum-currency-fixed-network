@@ -78,7 +78,7 @@ func (t *baseTestHandlers) request500(handlers *Handlers, method, path string, d
 	b, err := io.ReadAll(w.Result().Body)
 	t.NoError(err)
 
-	hinter, err := t.JSONEnc.DecodeByHint(b)
+	hinter, err := t.JSONEnc.Decode(b)
 	t.NoError(err)
 
 	problem, ok := hinter.(Problem)

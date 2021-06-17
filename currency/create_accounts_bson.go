@@ -24,7 +24,7 @@ type CreateAccountsFactBSONUnpacker struct {
 	H  valuehash.Bytes     `bson:"hash"`
 	TK []byte              `bson:"token"`
 	SD base.AddressDecoder `bson:"sender"`
-	IT []bson.Raw          `bson:"items"`
+	IT bson.Raw            `bson:"items"`
 }
 
 func (fact *CreateAccountsFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -33,12 +33,7 @@ func (fact *CreateAccountsFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error
 		return err
 	}
 
-	bits := make([][]byte, len(uca.IT))
-	for i := range uca.IT {
-		bits[i] = uca.IT[i]
-	}
-
-	return fact.unpack(enc, uca.H, uca.TK, uca.SD, bits)
+	return fact.unpack(enc, uca.H, uca.TK, uca.SD, uca.IT)
 }
 
 func (op CreateAccounts) MarshalBSON() ([]byte, error) {

@@ -39,7 +39,7 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	if hinter, err := enc.DecodeByHint(uva.OP); err != nil {
+	if hinter, err := enc.Decode(uva.OP); err != nil {
 		return err
 	} else if op, ok := hinter.(operation.Operation); !ok {
 		return xerrors.Errorf("not operation.Operation: %T", hinter)
@@ -47,7 +47,7 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		va.op = op
 	}
 
-	i, err := operation.DecodeReasonError(enc, uva.RS)
+	i, err := operation.DecodeReasonError(uva.RS, enc)
 	if err != nil {
 		return err
 	}

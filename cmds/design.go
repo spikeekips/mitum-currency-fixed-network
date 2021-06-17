@@ -33,7 +33,7 @@ type KeyDesign struct {
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
-	je, err := encs.Encoder(jsonenc.JSONType, "")
+	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	}

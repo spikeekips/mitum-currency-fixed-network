@@ -23,7 +23,7 @@ func (it BaseTransfersItem) MarshalJSON() ([]byte, error) {
 
 type BaseTransfersItemJSONUnpacker struct {
 	RC base.AddressDecoder `json:"receiver"`
-	AM []json.RawMessage   `json:"amounts"`
+	AM json.RawMessage     `json:"amounts"`
 }
 
 func (it *BaseTransfersItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -37,10 +37,5 @@ func (it *BaseTransfersItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bam := make([][]byte, len(uit.AM))
-	for i := range uit.AM {
-		bam[i] = uit.AM[i]
-	}
-
-	return it.unpack(enc, ht.H, uit.RC, bam)
+	return it.unpack(enc, ht.H, uit.RC, uit.AM)
 }

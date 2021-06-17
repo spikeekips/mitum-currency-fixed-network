@@ -54,7 +54,7 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 		}
 
 		switch enc.Hint().Type() {
-		case jsonenc.JSONType:
+		case jsonenc.JSONEncoderType:
 			var D struct {
 				A json.RawMessage
 			}
@@ -63,7 +63,7 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 			} else {
 				return []byte(D.A), nil
 			}
-		case bsonenc.BSONType:
+		case bsonenc.BSONEncoderType:
 			var D struct {
 				A bson.Raw
 			}
@@ -78,7 +78,7 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 	}
 
 	t.decode = func(enc encoder.Encoder, b []byte) (interface{}, error) {
-		return DecodeAmount(enc, b)
+		return DecodeAmount(b, enc)
 	}
 
 	t.compare = func(a, b interface{}) {

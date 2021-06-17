@@ -65,8 +65,9 @@ func (t *testHandlerOperation) TestNew() {
 		// NOTE check self link
 		t.Equal(self.String(), hal.Links()["self"].Href())
 
-		var uva OperationValue
-		t.NoError(t.JSONEnc.Decode(hal.RawInterface(), &uva))
+		hinter, err := t.JSONEnc.Decode(hal.RawInterface())
+		t.NoError(err)
+		uva := hinter.(OperationValue)
 
 		t.Equal(va.Height(), uva.Height())
 		t.compareOperationValue(va, uva)
@@ -172,8 +173,10 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}
@@ -223,8 +226,10 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}
@@ -301,8 +306,10 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}
@@ -353,8 +360,10 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}

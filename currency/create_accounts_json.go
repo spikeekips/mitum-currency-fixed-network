@@ -31,7 +31,7 @@ type CreateAccountsFactJSONUnpacker struct {
 	H  valuehash.Bytes     `json:"hash"`
 	TK []byte              `json:"token"`
 	SD base.AddressDecoder `json:"sender"`
-	IT []json.RawMessage   `json:"items"`
+	IT json.RawMessage     `json:"items"`
 }
 
 func (fact *CreateAccountsFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -40,12 +40,7 @@ func (fact *CreateAccountsFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error
 		return err
 	}
 
-	bits := make([][]byte, len(uca.IT))
-	for i := range uca.IT {
-		bits[i] = uca.IT[i]
-	}
-
-	return fact.unpack(enc, uca.H, uca.TK, uca.SD, bits)
+	return fact.unpack(enc, uca.H, uca.TK, uca.SD, uca.IT)
 }
 
 func (op CreateAccounts) MarshalJSON() ([]byte, error) {

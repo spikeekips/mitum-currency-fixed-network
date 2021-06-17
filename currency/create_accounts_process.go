@@ -197,7 +197,7 @@ func CalculateItemsFee(cp *CurrencyPool, items []AmountsItem) (map[CurrencyID][2
 		for j := range it.Amounts() {
 			am := it.Amounts()[j]
 
-			var rq [2]Big = [2]Big{ZeroBig, ZeroBig}
+			rq := [2]Big{ZeroBig, ZeroBig}
 			if k, found := required[am.Currency()]; found {
 				rq = k
 			}

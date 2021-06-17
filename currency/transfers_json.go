@@ -32,18 +32,13 @@ func (fact *TransfersFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		H  valuehash.Bytes     `json:"hash"`
 		TK []byte              `json:"token"`
 		SD base.AddressDecoder `json:"sender"`
-		IT []json.RawMessage   `json:"items"`
+		IT json.RawMessage     `json:"items"`
 	}
 	if err := jsonenc.Unmarshal(b, &ufact); err != nil {
 		return err
 	}
 
-	its := make([][]byte, len(ufact.IT))
-	for i := range ufact.IT {
-		its[i] = ufact.IT[i]
-	}
-
-	return fact.unpack(enc, ufact.H, ufact.TK, ufact.SD, its)
+	return fact.unpack(enc, ufact.H, ufact.TK, ufact.SD, ufact.IT)
 }
 
 func (op Transfers) MarshalJSON() ([]byte, error) {

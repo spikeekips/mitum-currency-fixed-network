@@ -24,9 +24,9 @@ func (fact FeeOperationFact) MarshalJSON() ([]byte, error) {
 }
 
 type FeeOperationFactJSONUnpacker struct {
-	H  valuehash.Bytes   `json:"hash"`
-	TK []byte            `json:"token"`
-	AM []json.RawMessage `json:"amounts"`
+	H  valuehash.Bytes `json:"hash"`
+	TK []byte          `json:"token"`
+	AM json.RawMessage `json:"amounts"`
 }
 
 func (fact *FeeOperationFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -35,12 +35,7 @@ func (fact *FeeOperationFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bam := make([][]byte, len(uft.AM))
-	for i := range uft.AM {
-		bam[i] = uft.AM[i]
-	}
-
-	return fact.unpack(enc, uft.H, uft.TK, bam)
+	return fact.unpack(enc, uft.H, uft.TK, uft.AM)
 }
 
 type FeeOperationJSONPacker struct {

@@ -67,7 +67,7 @@ func (t *testHandlerNodeInfo) TestBasic() {
 
 	hal := t.loadHal(b)
 
-	uni, err := network.DecodeNodeInfo(t.JSONEnc, hal.RawInterface())
+	uni, err := network.DecodeNodeInfo(hal.RawInterface(), t.JSONEnc)
 	t.NoError(err)
 
 	t.compareNodeInfo(ni, uni)

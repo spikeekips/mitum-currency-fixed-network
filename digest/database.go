@@ -459,7 +459,7 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 }
 
 func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
-	var lastHeight, previousHeight base.Height = base.NilHeight, base.NilHeight
+	lastHeight, previousHeight := base.NilHeight, base.NilHeight
 	var cids []string
 
 	amm := map[currency.CurrencyID]currency.Amount{}

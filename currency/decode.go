@@ -6,8 +6,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func DecodeAmount(enc encoder.Encoder, b []byte) (Amount, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeAmount(b []byte, enc encoder.Encoder) (Amount, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return Amount{}, err
 	} else if i == nil {
 		return Amount{}, nil
@@ -18,8 +18,8 @@ func DecodeAmount(enc encoder.Encoder, b []byte) (Amount, error) {
 	}
 }
 
-func DecodeCreateAccountsItem(enc encoder.Encoder, b []byte) (CreateAccountsItem, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeCreateAccountsItem(b []byte, enc encoder.Encoder) (CreateAccountsItem, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -30,8 +30,8 @@ func DecodeCreateAccountsItem(enc encoder.Encoder, b []byte) (CreateAccountsItem
 	}
 }
 
-func DecodeTransfersItem(enc encoder.Encoder, b []byte) (TransfersItem, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeTransfersItem(b []byte, enc encoder.Encoder) (TransfersItem, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -42,8 +42,8 @@ func DecodeTransfersItem(enc encoder.Encoder, b []byte) (TransfersItem, error) {
 	}
 }
 
-func DecodeCurrencyPolicy(enc encoder.Encoder, b []byte) (CurrencyPolicy, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeCurrencyPolicy(b []byte, enc encoder.Encoder) (CurrencyPolicy, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return CurrencyPolicy{}, err
 	} else if i == nil {
 		return CurrencyPolicy{}, nil
@@ -54,8 +54,8 @@ func DecodeCurrencyPolicy(enc encoder.Encoder, b []byte) (CurrencyPolicy, error)
 	}
 }
 
-func DecodeFeeer(enc encoder.Encoder, b []byte) (Feeer, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeFeeer(b []byte, enc encoder.Encoder) (Feeer, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -66,8 +66,8 @@ func DecodeFeeer(enc encoder.Encoder, b []byte) (Feeer, error) {
 	}
 }
 
-func DecodeCurrencyDesign(enc encoder.Encoder, b []byte) (CurrencyDesign, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeCurrencyDesign(b []byte, enc encoder.Encoder) (CurrencyDesign, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return CurrencyDesign{}, err
 	} else if i == nil {
 		return CurrencyDesign{}, nil
@@ -78,8 +78,8 @@ func DecodeCurrencyDesign(enc encoder.Encoder, b []byte) (CurrencyDesign, error)
 	}
 }
 
-func DecodeAccount(enc encoder.Encoder, b []byte) (Account, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeAccount(b []byte, enc encoder.Encoder) (Account, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return Account{}, err
 	} else if ac, ok := i.(Account); !ok {
 		return Account{}, xerrors.Errorf("not Account: %T", i)

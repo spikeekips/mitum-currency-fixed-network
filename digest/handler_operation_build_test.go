@@ -141,7 +141,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	)
 
 	{ // NOTE at this time, fact has wrong hash
-		hinter, err := t.JSONEnc.DecodeByHint(b)
+		hinter, err := t.JSONEnc.Decode(b)
 		t.NoError(err)
 		fact, ok := hinter.(currency.TransfersFact)
 		t.True(ok)
@@ -164,7 +164,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	var op currency.Transfers
 	var uf currency.TransfersFact
 	{ // NOTE returned fact is valid
-		hinter, err := t.JSONEnc.DecodeByHint(opHal.RawInterface())
+		hinter, err := t.JSONEnc.Decode(opHal.RawInterface())
 		t.NoError(err)
 		i, ok := hinter.(currency.Transfers)
 		t.True(ok)
@@ -216,7 +216,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 
 	var nop currency.Transfers
 	{ // NOTE returned fact is valid
-		hinter, err := t.JSONEnc.DecodeByHint(nopHal.RawInterface())
+		hinter, err := t.JSONEnc.Decode(nopHal.RawInterface())
 		t.NoError(err)
 		i, ok := hinter.(currency.Transfers)
 		t.True(ok)

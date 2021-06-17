@@ -1,9 +1,8 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -20,18 +19,22 @@ func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) erro
 	return nil
 }
 
-func (ks *Keys) unpack(enc encoder.Encoder, h valuehash.Hash, bkeys [][]byte, th uint) error {
+func (ks *Keys) unpack(enc encoder.Encoder, h valuehash.Hash, bks []byte, th uint) error {
 	ks.h = h
 
-	keys := make([]Key, len(bkeys))
-	for i := range bkeys {
-		if hinter, err := enc.DecodeByHint(bkeys[i]); err != nil {
-			return err
-		} else if k, ok := hinter.(Key); !ok {
-			return xerrors.Errorf("not Key: %T", hinter)
-		} else {
-			keys[i] = k
+	hks, err := enc.DecodeSlice(bks)
+	if err != nil {
+		return err
+	}
+
+	keys := make([]Key, len(hks))
+	for i := range hks {
+		j, ok := hks[i].(Key)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected Key, not %T", hks[i])
 		}
+
+		keys[i] = j
 	}
 
 	ks.keys = keys

@@ -37,7 +37,7 @@ func (hd *Handlers) handleSend(w http.ResponseWriter, r *http.Request) {
 	var hal Hal
 	var v []json.RawMessage
 	if err := jsonenc.Unmarshal(body.Bytes(), &v); err != nil {
-		if hinter, err := hd.enc.DecodeByHint(body.Bytes()); err != nil {
+		if hinter, err := hd.enc.Decode(body.Bytes()); err != nil {
 			hd.problemWithError(w, err, http.StatusBadRequest)
 
 			return
@@ -91,7 +91,7 @@ func (hd *Handlers) sendItem(v interface{}) (Hal, error) {
 func (hd *Handlers) sendOperations(v []json.RawMessage) (Hal, error) {
 	ops := make([]operation.Operation, len(v))
 	for i := range v {
-		if hinter, err := hd.enc.DecodeByHint(v[i]); err != nil {
+		if hinter, err := hd.enc.Decode(v[i]); err != nil {
 			return nil, err
 		} else if op, ok := hinter.(operation.Operation); !ok {
 			return nil, xerrors.Errorf("unsupported message type, %T", hinter)

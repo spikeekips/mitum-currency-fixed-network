@@ -57,7 +57,7 @@ func (t *testHandlerManifest) TestByHeight() {
 	t.NoError(err)
 	t.Equal(next.Path, hal.Links()["next"].Href())
 
-	hinter, err := t.JSONEnc.DecodeByHint(hal.RawInterface())
+	hinter, err := t.JSONEnc.Decode(hal.RawInterface())
 	t.NoError(err)
 
 	t.compareManifest(blk, hinter)
@@ -108,7 +108,7 @@ func (t *testHandlerManifest) TestByHash() {
 	t.NoError(err)
 	t.Equal(next.Path, hal.Links()["next"].Href())
 
-	hinter, err := t.JSONEnc.DecodeByHint(hal.RawInterface())
+	hinter, err := t.JSONEnc.Decode(hal.RawInterface())
 	t.NoError(err)
 
 	t.compareManifest(blk, hinter)
@@ -179,7 +179,7 @@ func (t *testHandlerManifest) TestManifests() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				m, err := block.DecodeManifest(b.RawInterface(), t.JSONEnc)
 				t.NoError(err)
 				ublocks = append(ublocks, m)
 			}
@@ -231,7 +231,7 @@ func (t *testHandlerManifest) TestManifests() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				m, err := block.DecodeManifest(b.RawInterface(), t.JSONEnc)
 				t.NoError(err)
 				ublocks = append(ublocks, m)
 			}
@@ -283,7 +283,7 @@ func (t *testHandlerManifest) TestManifests() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				m, err := block.DecodeManifest(t.JSONEnc, b.RawInterface())
+				m, err := block.DecodeManifest(b.RawInterface(), t.JSONEnc)
 				t.NoError(err)
 				ublocks = append(ublocks, m)
 			}

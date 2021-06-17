@@ -2,6 +2,7 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -11,19 +12,25 @@ func (fact *CreateAccountsFact) unpack(
 	h valuehash.Hash,
 	tk []byte,
 	bSender base.AddressDecoder,
-	bits [][]byte,
+	bits []byte,
 ) error {
 	sender, err := bSender.Encode(enc)
 	if err != nil {
 		return err
 	}
 
-	its := make([]CreateAccountsItem, len(bits))
-	for i := range bits {
-		j, err := DecodeCreateAccountsItem(enc, bits[i])
-		if err != nil {
-			return err
+	hits, err := enc.DecodeSlice(bits)
+	if err != nil {
+		return err
+	}
+
+	its := make([]CreateAccountsItem, len(hits))
+	for i := range hits {
+		j, ok := hits[i].(CreateAccountsItem)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected CreateAccountsItem, not %T", hits[i])
 		}
+
 		its[i] = j
 	}
 

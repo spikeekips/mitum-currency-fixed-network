@@ -78,7 +78,7 @@ func (opr *OperationProcessor) setState(op valuehash.Hash, sts ...state.State) e
 	for i := range sts {
 		if t, ok := sts[i].(AmountState); ok {
 			if t.Fee().OverZero() {
-				var f Big = ZeroBig
+				f := ZeroBig
 				if i, found := opr.fee[t.Currency()]; found {
 					f = i
 				}

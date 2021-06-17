@@ -139,7 +139,7 @@ func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 		return nil, xerrors.Errorf("empty input")
 	}
 
-	if sl, err := seal.DecodeSeal(jenc, b); err != nil {
+	if sl, err := seal.DecodeSeal(b, jenc); err != nil {
 		return nil, err
 	} else if err := sl.IsValid(networkID); err != nil {
 		return nil, xerrors.Errorf("invalid seal: %w", err)

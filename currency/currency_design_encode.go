@@ -6,7 +6,7 @@ import (
 )
 
 func (de *CurrencyDesign) unpack(enc encoder.Encoder, bam []byte, ga base.AddressDecoder, bpo []byte) error {
-	i, err := DecodeAmount(enc, bam)
+	i, err := DecodeAmount(bam, enc)
 	if err != nil {
 		return err
 	}
@@ -18,7 +18,7 @@ func (de *CurrencyDesign) unpack(enc encoder.Encoder, bam []byte, ga base.Addres
 	}
 	de.genesisAccount = a
 
-	j, err := DecodeCurrencyPolicy(enc, bpo)
+	j, err := DecodeCurrencyPolicy(bpo, enc)
 	if err != nil {
 		return err
 	}

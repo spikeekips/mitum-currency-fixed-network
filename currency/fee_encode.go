@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -12,17 +13,23 @@ func (fact *FeeOperationFact) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	token []byte,
-	bam [][]byte,
+	bam []byte,
 ) error {
 	fact.h = h
 	fact.token = token
 
-	amounts := make([]Amount, len(bam))
-	for i := range bam {
-		j, err := DecodeAmount(enc, bam[i])
-		if err != nil {
-			return err
+	ham, err := enc.DecodeSlice(bam)
+	if err != nil {
+		return err
+	}
+
+	amounts := make([]Amount, len(ham))
+	for i := range ham {
+		j, ok := ham[i].(Amount)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected Amount, not %T", ham[i])
 		}
+
 		amounts[i] = j
 	}
 
@@ -32,7 +39,7 @@ func (fact *FeeOperationFact) unpack(
 }
 
 func (op *FeeOperation) unpack(enc encoder.Encoder, h valuehash.Hash, bfact []byte) error {
-	if hinter, err := base.DecodeFact(enc, bfact); err != nil {
+	if hinter, err := base.DecodeFact(bfact, enc); err != nil {
 		return err
 	} else if fact, ok := hinter.(FeeOperationFact); !ok {
 		return xerrors.Errorf("not FeeOperationFact, %T", hinter)

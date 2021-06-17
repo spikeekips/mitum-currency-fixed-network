@@ -22,7 +22,7 @@ func (fact *KeyUpdaterFact) unpack(
 	}
 
 	var keys Keys
-	if hinter, err := enc.DecodeByHint(bks); err != nil {
+	if hinter, err := enc.Decode(bks); err != nil {
 		return err
 	} else if k, ok := hinter.(Keys); !ok {
 		return xerrors.Errorf("not Keys: %T", hinter)

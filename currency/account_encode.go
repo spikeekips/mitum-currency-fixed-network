@@ -15,7 +15,7 @@ func (ac *Account) unpack(enc encoder.Encoder, h valuehash.Hash, bad base.Addres
 	}
 	ac.address = a
 
-	if hinter, err := enc.DecodeByHint(bks); err != nil {
+	if hinter, err := enc.Decode(bks); err != nil {
 		return err
 	} else if k, ok := hinter.(Keys); !ok {
 		return xerrors.Errorf("not Keys: %T", hinter)

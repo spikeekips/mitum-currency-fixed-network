@@ -38,7 +38,7 @@ func (ca Address) Raw() string {
 }
 
 func (ca Address) String() string {
-	return hint.HintedString(ca.Hint(), string(ca))
+	return hint.NewHintedString(ca.Hint(), string(ca)).String()
 }
 
 func (Address) Hint() hint.Hint {

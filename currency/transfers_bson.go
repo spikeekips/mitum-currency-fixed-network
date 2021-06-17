@@ -24,7 +24,7 @@ type TransfersFactBSONUnpacker struct {
 	H  valuehash.Bytes     `bson:"hash"`
 	TK []byte              `bson:"token"`
 	SD base.AddressDecoder `bson:"sender"`
-	IT []bson.Raw          `bson:"items"`
+	IT bson.Raw            `bson:"items"`
 }
 
 func (fact *TransfersFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -33,12 +33,7 @@ func (fact *TransfersFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	its := make([][]byte, len(ufact.IT))
-	for i := range ufact.IT {
-		its[i] = ufact.IT[i]
-	}
-
-	return fact.unpack(enc, ufact.H, ufact.TK, ufact.SD, its)
+	return fact.unpack(enc, ufact.H, ufact.TK, ufact.SD, ufact.IT)
 }
 
 func (op Transfers) MarshalBSON() ([]byte, error) {

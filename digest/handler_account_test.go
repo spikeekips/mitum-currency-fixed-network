@@ -51,7 +51,7 @@ func (t *testHandlerAccount) TestAccount() {
 	t.Equal(blockLink.Path, hal.Links()["block"].Href())
 	t.Equal(previousBlockLink.Path, hal.Links()["previous_block"].Href())
 
-	hinter, err := t.JSONEnc.DecodeByHint(hal.RawInterface())
+	hinter, err := t.JSONEnc.Decode(hal.RawInterface())
 	t.NoError(err)
 	uva, ok := hinter.(AccountValue)
 	t.True(ok)
@@ -197,8 +197,10 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}
@@ -244,8 +246,10 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 			t.True(int(limit) >= len(em))
 
 			for _, b := range em {
-				var va OperationValue
-				t.NoError(t.JSONEnc.Decode(b.RawInterface(), &va))
+				hinter, err := t.JSONEnc.Decode(b.RawInterface())
+				t.NoError(err)
+				va := hinter.(OperationValue)
+
 				fh := va.Operation().Fact().Hash().String()
 				uhashes = append(uhashes, fh)
 			}

@@ -111,7 +111,7 @@ func (t *testHandlerCurrency) TestCurrency() {
 
 	t.Equal(self.String(), hal.Links()["self"].Href())
 
-	hinter, err := t.JSONEnc.DecodeByHint(hal.RawInterface())
+	hinter, err := t.JSONEnc.Decode(hal.RawInterface())
 	t.NoError(err)
 	ude, ok := hinter.(currency.CurrencyDesign)
 	t.True(ok)

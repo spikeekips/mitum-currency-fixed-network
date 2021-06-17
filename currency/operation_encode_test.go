@@ -75,7 +75,7 @@ func (t *baseTestEncode) TestEncode() {
 		v, err = t.decode(t.enc, b)
 		t.NoError(err)
 	} else {
-		v, err = t.enc.DecodeByHint(b)
+		v, err = t.enc.Decode(b)
 		t.NoError(err)
 	}
 
@@ -100,7 +100,7 @@ func (t *baseTestOperationEncode) TestEncode() {
 	b, err := t.enc.Marshal(op)
 	t.NoError(err)
 
-	hinter, err := t.enc.DecodeByHint(b)
+	hinter, err := t.enc.Decode(b)
 	t.NoError(err)
 
 	uop, ok := hinter.(operation.Operation)

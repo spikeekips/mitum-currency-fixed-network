@@ -3,23 +3,29 @@ package digest
 import (
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func (va *AccountValue) unpack(enc encoder.Encoder, bac []byte, bb [][]byte, height, previousHeight base.Height) error {
+func (va *AccountValue) unpack(enc encoder.Encoder, bac []byte, bl []byte, height, previousHeight base.Height) error {
 	if bac != nil {
-		i, err := currency.DecodeAccount(enc, bac)
+		i, err := currency.DecodeAccount(bac, enc)
 		if err != nil {
 			return err
 		}
 		va.ac = i
 	}
 
-	balance := make([]currency.Amount, len(bb))
-	for i := range bb {
-		j, err := currency.DecodeAmount(enc, bb[i])
-		if err != nil {
-			return err
+	hbl, err := enc.DecodeSlice(bl)
+	if err != nil {
+		return err
+	}
+
+	balance := make([]currency.Amount, len(hbl))
+	for i := range hbl {
+		j, ok := hbl[i].(currency.Amount)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected currency.Amount, not %T", hbl[i])
 		}
 		balance[i] = j
 	}

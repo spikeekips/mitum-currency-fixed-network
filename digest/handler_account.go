@@ -19,7 +19,7 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var address base.Address
-	if a, err := base.DecodeAddressFromString(hd.enc, strings.TrimSpace(mux.Vars(r)["address"])); err != nil {
+	if a, err := base.DecodeAddressFromString(strings.TrimSpace(mux.Vars(r)["address"]), hd.enc); err != nil {
 		hd.problemWithError(w, err, http.StatusBadRequest)
 
 		return
@@ -108,7 +108,7 @@ func (hd *Handlers) buildAccountHal(va AccountValue) (Hal, error) {
 
 func (hd *Handlers) handleAccountOperations(w http.ResponseWriter, r *http.Request) {
 	var address base.Address
-	if a, err := base.DecodeAddressFromString(hd.enc, strings.TrimSpace(mux.Vars(r)["address"])); err != nil {
+	if a, err := base.DecodeAddressFromString(strings.TrimSpace(mux.Vars(r)["address"]), hd.enc); err != nil {
 		hd.problemWithError(w, err, http.StatusBadRequest)
 
 		return

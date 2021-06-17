@@ -16,12 +16,12 @@ func (it BaseCreateAccountsItem) MarshalBSON() ([]byte, error) {
 }
 
 type CreateAccountsItemBSONUnpacker struct {
-	KS bson.Raw   `bson:"keys"`
-	AM []bson.Raw `bson:"amounts"`
+	KS bson.Raw `bson:"keys"`
+	AM bson.Raw `bson:"amounts"`
 }
 
 func (it *BaseCreateAccountsItem) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var ht bsonenc.PackHintedHead
+	var ht bsonenc.HintedHead
 	if err := enc.Unmarshal(b, &ht); err != nil {
 		return err
 	}
@@ -31,10 +31,5 @@ func (it *BaseCreateAccountsItem) UnpackBSON(b []byte, enc *bsonenc.Encoder) err
 		return err
 	}
 
-	bam := make([][]byte, len(uca.AM))
-	for i := range uca.AM {
-		bam[i] = uca.AM[i]
-	}
-
-	return it.unpack(enc, ht.H, uca.KS, bam)
+	return it.unpack(enc, ht.H, uca.KS, uca.AM)
 }

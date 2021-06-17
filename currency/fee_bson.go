@@ -20,7 +20,7 @@ func (fact FeeOperationFact) MarshalBSON() ([]byte, error) {
 type FeeOperationFactBSONUnpacker struct {
 	H  valuehash.Bytes `bson:"hash"`
 	TK []byte          `bson:"token"`
-	AM []bson.Raw      `bson:"amounts"`
+	AM bson.Raw        `bson:"amounts"`
 }
 
 func (fact *FeeOperationFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -29,12 +29,7 @@ func (fact *FeeOperationFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	bam := make([][]byte, len(uft.AM))
-	for i := range uft.AM {
-		bam[i] = uft.AM[i]
-	}
-
-	return fact.unpack(enc, uft.H, uft.TK, bam)
+	return fact.unpack(enc, uft.H, uft.TK, uft.AM)
 }
 
 func (op FeeOperation) MarshalBSON() ([]byte, error) {

@@ -27,9 +27,9 @@ func (va AccountValue) MarshalJSON() ([]byte, error) {
 }
 
 type AccountValueJSONUnpacker struct {
-	BL []json.RawMessage `json:"balance"`
-	HT base.Height       `json:"height"`
-	PT base.Height       `json:"previous_height"`
+	BL json.RawMessage `json:"balance"`
+	HT base.Height     `json:"height"`
+	PT base.Height     `json:"previous_height"`
 }
 
 func (va *AccountValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -38,13 +38,8 @@ func (va *AccountValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bb := make([][]byte, len(uva.BL))
-	for i := range uva.BL {
-		bb[i] = uva.BL[i]
-	}
-
 	ac := new(currency.Account)
-	if err := va.unpack(enc, nil, bb, uva.HT, uva.PT); err != nil {
+	if err := va.unpack(enc, nil, uva.BL, uva.HT, uva.PT); err != nil {
 		return err
 	} else if err := ac.UnpackJSON(b, enc); err != nil {
 		return err

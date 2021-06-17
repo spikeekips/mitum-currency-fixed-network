@@ -21,8 +21,8 @@ func (it BaseCreateAccountsItem) MarshalJSON() ([]byte, error) {
 }
 
 type CreateAccountsItemJSONUnpacker struct {
-	KS json.RawMessage   `json:"keys"`
-	AM []json.RawMessage `json:"amounts"`
+	KS json.RawMessage `json:"keys"`
+	AM json.RawMessage `json:"amounts"`
 }
 
 func (it *BaseCreateAccountsItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -36,10 +36,5 @@ func (it *BaseCreateAccountsItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) err
 		return err
 	}
 
-	bam := make([][]byte, len(uca.AM))
-	for i := range uca.AM {
-		bam[i] = uca.AM[i]
-	}
-
-	return it.unpack(enc, ht.H, uca.KS, bam)
+	return it.unpack(enc, ht.H, uca.KS, uca.AM)
 }

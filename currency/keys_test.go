@@ -201,7 +201,7 @@ func (t *testKeysEncode) TestMarshal() {
 	b, err := t.enc.Marshal(ks)
 	t.NoError(err)
 
-	hinter, err := t.enc.DecodeByHint(b)
+	hinter, err := t.enc.Decode(b)
 	t.NoError(err)
 	uks, ok := hinter.(Keys)
 	t.True(ok)

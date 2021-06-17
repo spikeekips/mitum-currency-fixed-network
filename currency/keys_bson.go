@@ -45,7 +45,7 @@ func (ks Keys) MarshalBSON() ([]byte, error) {
 
 type KeysBSONUnpacker struct {
 	H  valuehash.Bytes `bson:"hash"`
-	KS []bson.Raw      `bson:"keys"`
+	KS bson.Raw        `bson:"keys"`
 	TH uint            `bson:"threshold"`
 }
 
@@ -55,10 +55,5 @@ func (ks *Keys) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	bs := make([][]byte, len(uks.KS))
-	for i := range uks.KS {
-		bs[i] = uks.KS[i]
-	}
-
-	return ks.unpack(enc, uks.H, bs, uks.TH)
+	return ks.unpack(enc, uks.H, uks.KS, uks.TH)
 }

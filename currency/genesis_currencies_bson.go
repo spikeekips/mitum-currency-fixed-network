@@ -26,7 +26,7 @@ type GenesisCurrenciesFactBSONUnpacker struct {
 	TK []byte               `bson:"token"`
 	GK key.PublickeyDecoder `bson:"genesis_node_key"`
 	KS bson.Raw             `bson:"keys"`
-	CS []bson.Raw           `bson:"currencies"`
+	CS bson.Raw             `bson:"currencies"`
 }
 
 func (fact *GenesisCurrenciesFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -35,12 +35,7 @@ func (fact *GenesisCurrenciesFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) er
 		return xerrors.Errorf("failed to unmarshal GenesisCurrenciesFact: %w", err)
 	}
 
-	bcs := make([][]byte, len(ufact.CS))
-	for i := range ufact.CS {
-		bcs[i] = []byte(ufact.CS[i])
-	}
-
-	return fact.unpack(enc, ufact.H, ufact.TK, ufact.GK, ufact.KS, bcs)
+	return fact.unpack(enc, ufact.H, ufact.TK, ufact.GK, ufact.KS, ufact.CS)
 }
 
 func (op GenesisCurrencies) MarshalBSON() ([]byte, error) {

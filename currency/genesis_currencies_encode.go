@@ -2,6 +2,7 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
@@ -13,7 +14,7 @@ func (fact *GenesisCurrenciesFact) unpack(
 	tk []byte,
 	genesisNodeKey key.PublickeyDecoder,
 	bks []byte,
-	bcs [][]byte,
+	bcs []byte,
 ) error {
 	gkey, err := genesisNodeKey.Encode(enc)
 	if err != nil {
@@ -21,7 +22,8 @@ func (fact *GenesisCurrenciesFact) unpack(
 	}
 
 	var keys Keys
-	if hinter, err := enc.DecodeByHint(bks); err != nil {
+	hinter, err := enc.Decode(bks)
+	if err != nil {
 		return err
 	} else if k, ok := hinter.(Keys); !ok {
 		return xerrors.Errorf("not Keys: %T", hinter)
@@ -34,12 +36,18 @@ func (fact *GenesisCurrenciesFact) unpack(
 	fact.genesisNodeKey = gkey
 	fact.keys = keys
 
-	fact.cs = make([]CurrencyDesign, len(bcs))
-	for i := range bcs {
-		j, err := DecodeCurrencyDesign(enc, bcs[i])
-		if err != nil {
-			return err
+	hcs, err := enc.DecodeSlice(bcs)
+	if err != nil {
+		return err
+	}
+
+	fact.cs = make([]CurrencyDesign, len(hcs))
+	for i := range hcs {
+		j, ok := hcs[i].(CurrencyDesign)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected CurrencyDesign, not %T", hcs[i])
 		}
+
 		fact.cs[i] = j
 	}
 

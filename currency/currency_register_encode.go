@@ -14,7 +14,7 @@ func (fact *CurrencyRegisterFact) unpack(
 	fact.h = h
 	fact.token = token
 
-	i, err := DecodeCurrencyDesign(enc, bcr)
+	i, err := DecodeCurrencyDesign(bcr, enc)
 	if err != nil {
 		return err
 	}
