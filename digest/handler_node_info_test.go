@@ -3,12 +3,15 @@
 package digest
 
 import (
+	"fmt"
 	"io"
+	"net/url"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -20,23 +23,33 @@ type testHandlerNodeInfo struct {
 	baseTestHandlers
 }
 
+func (t *testHandlerNodeInfo) newNode(name string) (base.Node, network.ConnInfo) {
+	addr, err := base.NewStringAddress(name)
+	t.NoError(err)
+
+	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
+	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
+	connInfo := network.NewHTTPConnInfo(u, true)
+
+	return no, connInfo
+}
+
 func (t *testHandlerNodeInfo) TestBasic() {
 	st, _ := t.Database()
 
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	local := base.RandomNode("n0").SetURL("quic://local")
+	local := node.RandomNode("n0")
 
-	na1, err := base.NewStringAddress("n1")
-	t.NoError(err)
-	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://n1")
+	n1, n1ConnInfo := t.newNode("n1")
+	n2, n2ConnInfo := t.newNode("n2")
 
-	na2, err := base.NewStringAddress("n2")
-	t.NoError(err)
-	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey(), "quic://n2")
+	nodes := []network.RemoteNode{
+		network.NewRemoteNode(n1, n1ConnInfo),
+		network.NewRemoteNode(n2, n2ConnInfo),
+	}
 
-	nodes := []base.Node{n1, n2}
 	policy := map[string]interface{}{"showme": 1}
 
 	ni := network.NewNodeInfoV0(
@@ -94,9 +107,10 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 		an := a.Nodes()[i]
 		bn := b.Nodes()[i]
 
-		t.True(an.Address().Equal(bn.Address()))
-		t.True(an.Publickey().Equal(bn.Publickey()))
-		t.Equal(an.URL(), bn.URL())
+		t.True(an.Address.Equal(bn.Address))
+		t.True(an.Publickey.Equal(bn.Publickey))
+		t.Equal(an.URL, bn.URL)
+		t.Equal(an.Insecure, bn.Insecure)
 	}
 }
 

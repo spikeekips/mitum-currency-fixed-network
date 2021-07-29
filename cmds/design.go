@@ -247,7 +247,7 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 	if no.network.Bind() == nil {
 		_ = no.network.SetBind(DefaultDigestAPIBind)
 	}
-	if no.network.URL() == nil {
+	if no.network.ConnInfo() == nil {
 		_ = no.network.SetURL(DefaultDigestAPIURL)
 	}
 

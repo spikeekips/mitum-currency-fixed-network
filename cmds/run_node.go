@@ -342,20 +342,20 @@ func (cmd *RunCommand) setDigestSendHandler(
 		return nil, err
 	}
 
-	suffrageNodes := suffrage.Nodes()
-	rns := make([]network.Node, len(suffrageNodes))
+	remotes := suffrage.Nodes()
+	rchans := make([]network.Channel, len(remotes))
 	var j int
-	for i := range suffrageNodes {
-		s := suffrageNodes[i]
-		n, found := nodepool.Node(s)
+	for i := range remotes {
+		s := remotes[i]
+		_, ch, found := nodepool.Node(s)
 		if !found {
 			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
 		}
-		rns[j] = n
+		rchans[j] = ch
 		j++
 	}
 
-	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rns))
+	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rchans))
 	cmd.Log().Debug().Msg("send handler attached")
 
 	return handlers, nil

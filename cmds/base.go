@@ -114,7 +114,7 @@ func HookInitializeProposalProcessor(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 
-	if !suffrage.IsInside(nodepool.Local().Address()) {
+	if !suffrage.IsInside(nodepool.LocalNode().Address()) {
 		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
 
 		return ctx, nil
@@ -160,7 +160,7 @@ func AttachProposalProcessor(
 	suffrageNodes := suffrage.Nodes()
 	pubs := make([]key.Publickey, len(suffrageNodes))
 	for i := range suffrageNodes {
-		n, found := nodepool.Node(suffrageNodes[i])
+		n, _, found := nodepool.Node(suffrageNodes[i])
 		if !found {
 			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
 		}
@@ -241,7 +241,7 @@ func (cmd *BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.C
 	design := *m.Digest
 
 	if design.Network() != nil {
-		if design.Network().URL() == nil {
+		if design.Network().ConnInfo() == nil {
 			if err := design.Network().SetURL(DefaultDigestURL); err != nil {
 				return ctx, err
 			}
@@ -291,7 +291,7 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 	conf config.LocalNode,
 	design DigestDesign,
 ) (context.Context, error) {
-	if design.Network().URL() == nil {
+	if design.Network().ConnInfo() == nil {
 		return ctx, xerrors.Errorf("digest network url is missing")
 	}
 

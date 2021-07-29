@@ -3,7 +3,6 @@ package cmds
 import (
 	"context"
 	"crypto/tls"
-	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/launch/config"
@@ -105,7 +105,7 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 
 	log.Info().
 		Str("bind", design.Network().Bind().String()).
-		Str("publish", design.Network().URL().String()).
+		Str("publish", design.Network().ConnInfo().String()).
 		Msg("trying to start http2 server for digest API")
 
 	var nt *digest.HTTP2Server
@@ -114,7 +114,11 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 		certs = design.Network().Certs()
 	}
 
-	if sv, err := digest.NewHTTP2Server(design.Network().Bind().Host, design.Network().URL().Host, certs); err != nil {
+	if sv, err := digest.NewHTTP2Server(
+		design.Network().Bind().Host,
+		design.Network().ConnInfo().URL().Host,
+		certs,
+	); err != nil {
 		return ctx, err
 	} else if err := sv.Initialize(); err != nil {
 		return ctx, err
@@ -130,7 +134,7 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 func newSendHandler(
 	priv key.Privatekey,
 	networkID base.NetworkID,
-	remotes []network.Node,
+	chans []network.Channel,
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
 		var sl seal.Seal
@@ -160,17 +164,17 @@ func newSendHandler(
 		}
 
 		var wg sync.WaitGroup
-		wg.Add(len(remotes))
+		wg.Add(len(chans))
 
-		errchan := make(chan error, len(remotes))
-		for i := range remotes {
+		errchan := make(chan error, len(chans))
+		for i := range chans {
 			go func(i int) {
 				defer wg.Done()
 
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 				defer cancel()
 
-				errchan <- remotes[i].Channel().SendSeal(ctx, sl)
+				errchan <- chans[i].SendSeal(ctx, sl)
 			}(i)
 		}
 
@@ -203,25 +207,29 @@ func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal
 }
 
 func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
-	var local *network.LocalNode
+	var ln config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &ln); err != nil {
+		return ctx, err
+	}
+	conf := ln.Network()
+
+	var local *node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}
 
-	u, err := url.Parse(local.URL())
-	if err != nil {
-		return ctx, xerrors.Errorf("invalid local node url, %q", local.URL())
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return nil, err
 	}
 
-	query := u.Query()
-	query.Set("insecure", "true")
-	u.RawQuery = query.Encode()
-
-	ch, err := process.LoadNodeChannel(u, encs, time.Second*30)
+	ch, err := process.LoadNodeChannel(conf.ConnInfo(), encs, time.Second*30)
 	if err != nil {
 		return ctx, err
 	}
-	_ = local.SetChannel(ch)
+	if err := nodepool.SetChannel(local.Address(), ch); err != nil {
+		return ctx, err
+	}
 
 	return ctx, nil
 }

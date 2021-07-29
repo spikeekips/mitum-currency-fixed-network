@@ -12,7 +12,7 @@ require (
 	github.com/json-iterator/go v1.1.11
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2
 	github.com/rs/zerolog v1.23.0
-	github.com/spikeekips/mitum v0.0.0-20210617114105-676c87af0a31
+	github.com/spikeekips/mitum v0.0.0-20210729021352-28f8c9802fca
 	github.com/stretchr/testify v1.7.0
 	github.com/ulule/limiter/v3 v3.8.0
 	go.mongodb.org/mongo-driver v1.5.3
