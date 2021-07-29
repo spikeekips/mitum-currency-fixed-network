@@ -4,6 +4,7 @@ package digest
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -27,11 +28,19 @@ func (t *testCurrency) newCurrencyDesign(i int) currency.CurrencyDesign {
 		}
 	}
 
+	var am currency.Big
+	for {
+		am = t.randomBig()
+		if am.Cmp(big.NewInt(0)) > 0 {
+			break
+		}
+	}
+
 	de := currency.NewCurrencyDesign(
 		currency.MustNewAmount(t.randomBig(), cid),
 		currency.NewTestAddress(),
 		currency.NewCurrencyPolicy(
-			t.randomBig(),
+			am,
 			currency.NewFixedFeeer(currency.NewTestAddress(), fee),
 		),
 	)
