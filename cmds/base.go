@@ -211,7 +211,7 @@ func InitializeProposalProcessor(ctx context.Context, opr *currency.OperationPro
 	return context.WithValue(ctx, process.ContextValueOperationProcessors, oprs), nil
 }
 
-func (cmd *BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.Context, error) {
+func (*BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.Context, error) {
 	var source []byte
 	if err := process.LoadConfigSourceContextValue(ctx, &source); err != nil {
 		return ctx, err
@@ -238,26 +238,7 @@ func (cmd *BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.C
 		ctx = i
 	}
 
-	design := *m.Digest
-
-	if design.Network() != nil {
-		if design.Network().ConnInfo() == nil {
-			if err := design.Network().SetURL(DefaultDigestURL); err != nil {
-				return ctx, err
-			}
-		}
-		if design.Network().Bind() == nil {
-			if err := design.Network().SetBind(DefaultDigestBind); err != nil {
-				return ctx, err
-			}
-		}
-	}
-
-	if design.Network() == nil {
-		cmd.Log().Debug().Msg("empty digest network config")
-	}
-
-	return context.WithValue(ctx, ContextValueDigestDesign, design), nil
+	return context.WithValue(ctx, ContextValueDigestDesign, *m.Digest), nil
 }
 
 func (cmd *BaseNodeCommand) hookValidateDigestConfig(ctx context.Context) (context.Context, error) {

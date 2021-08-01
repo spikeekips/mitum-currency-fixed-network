@@ -3,6 +3,7 @@ package digest
 import (
 	"net/url"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -116,7 +117,7 @@ func (hl HalLink) Href() string {
 }
 
 func (hl HalLink) URL() (*url.URL, error) {
-	return url.Parse(hl.href)
+	return network.ParseURL(hl.href, false)
 }
 
 func (hl HalLink) Properties() map[string]interface{} {

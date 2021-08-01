@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
+	"github.com/spikeekips/mitum/network"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -21,7 +22,7 @@ var (
 )
 
 func init() {
-	DefaultDigestAPICache, _ = url.Parse("memory://")
+	DefaultDigestAPICache, _ = network.ParseURL("memory://", false)
 	DefaultDigestAPIBind = "https://0.0.0.0:54320"
 	DefaultDigestAPIURL = "https://127.0.0.1:54320"
 }
@@ -244,17 +245,25 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 			no.network = conf.Network()
 		}
 	}
+
+	var lconf config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &lconf); err != nil {
+		return ctx, err
+	}
+
 	if no.network.Bind() == nil {
 		_ = no.network.SetBind(DefaultDigestAPIBind)
 	}
+
 	if no.network.ConnInfo() == nil {
-		_ = no.network.SetURL(DefaultDigestAPIURL)
+		connInfo, _ := network.NewHTTPConnInfoFromString(DefaultDigestURL, lconf.Network().ConnInfo().Insecure())
+		_ = no.network.SetConnInfo(connInfo)
 	}
 
 	if no.CacheYAML == nil {
 		no.cache = DefaultDigestAPICache
 	} else {
-		u, err := config.ParseURLString(*no.CacheYAML, true)
+		u, err := network.ParseURL(*no.CacheYAML, true)
 		if err != nil {
 			return ctx, err
 		}

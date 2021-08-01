@@ -6,11 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/textproto"
-	"net/url"
 	"time"
 
 	"github.com/bluele/gcache"
 	"github.com/rainycape/memcache"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
@@ -29,7 +29,7 @@ type Cache interface {
 }
 
 func NewCacheFromURI(uri string) (Cache, error) {
-	u, err := url.Parse(uri)
+	u, err := network.ParseURL(uri, false)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid uri of cache, %q: %w", uri, err)
 	}
