@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -36,7 +37,7 @@ func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, e
 
 	idleTimeout := time.Second * 10
 	sv := &HTTP2Server{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "http2-server")
 		}),
 		bind:             bind,
@@ -98,10 +99,10 @@ func (sv *HTTP2Server) Initialize() error {
 	return nil
 }
 
-func (sv *HTTP2Server) SetLogger(l logging.Logger) logging.Logger {
-	_ = sv.ContextDaemon.SetLogger(l)
+func (sv *HTTP2Server) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = sv.ContextDaemon.SetLogging(l)
 
-	return sv.Logging.SetLogger(l)
+	return sv.Logging.SetLogging(l)
 }
 
 func (sv *HTTP2Server) SetHandler(handler http.Handler) {

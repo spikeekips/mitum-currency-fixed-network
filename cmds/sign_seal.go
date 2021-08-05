@@ -31,7 +31,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 		return err
 	}
 
-	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
 	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
 		cmd.Log().Debug().Msg("already signed")

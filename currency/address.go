@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -77,10 +76,6 @@ func (ca *Address) UnmarshalText(b []byte) error {
 	*ca = a
 
 	return nil
-}
-
-func (ca Address) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, ca.String())
 }
 
 type Addresses interface {

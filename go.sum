@@ -596,6 +596,7 @@ github.com/rs/xhandler v0.0.0-20160618193221-ed27b6fd6521/go.mod h1:RvLn4FgxWubr
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=
 github.com/rs/xid v1.3.0 h1:6NjYksEUlhurdVehpc7S7dk6DAmcKv8V9gG0FsVN2U4=
 github.com/rs/xid v1.3.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
+github.com/rs/zerolog v0.0.0-20210801152418-c1533bd5f89a/go.mod h1:jiXk7Jvep6sXc4VokW7VGdl6u3TRfwDjJe7HXbMmqhc=
 github.com/rs/zerolog v1.23.0 h1:UskrK+saS9P9Y789yNNulYKdARjPZuS35B8gJF2x60g=
 github.com/rs/zerolog v1.23.0/go.mod h1:6c7hFfxPOy7TacJc4Fcdi24/J0NKYGzjG8FWRI916Qo=
 github.com/rubenv/sql-migrate v0.0.0-20190717103323-87ce952f7079/go.mod h1:WS0rl9eEliYI8DPnr3TOwz4439pay+qNgzJoVya/DmY=
@@ -654,8 +655,8 @@ github.com/spf13/jwalterweatherman v0.0.0-20141219030609-3d60171a6431/go.mod h1:
 github.com/spf13/pflag v0.0.0-20161005214240-4bd69631f475/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/viper v0.0.0-20150621231900-db7ff930a189/go.mod h1:A8kyI5cUJhb8N+3pkfONlcEcZbueH6nhAm0Fq7SrnBM=
-github.com/spikeekips/mitum v0.0.0-20210801044028-3a93338babe9 h1:VtkhAVE8d1XuA1YjHg/6Kj93gNbQlA2AE+q0b4Qy5io=
-github.com/spikeekips/mitum v0.0.0-20210801044028-3a93338babe9/go.mod h1:eu0ZQooJQs1CiaLhP7GzaWsT8lb59Ntnm2AWaMmcqEg=
+github.com/spikeekips/mitum v0.0.0-20210805041447-076d8cfa3e2f h1:I/h9pHNEBlMyH1nfwdR6rDXDaZg9CxB0SF/3YZtvug8=
+github.com/spikeekips/mitum v0.0.0-20210805041447-076d8cfa3e2f/go.mod h1:87RXSAHENBlZDDPt6n2+tPaH2f827k63qRkmfhiSjTU=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/stellar/go v0.0.0-20210727181749-61bc28bf313b h1:3nWSjHuQOJIGs1XyTT7rGPe754j1I+xzUqooIw8RynE=
 github.com/stellar/go v0.0.0-20210727181749-61bc28bf313b/go.mod h1:Q1bUL0SgR4IkPkCTr0FW9rj+fKROQfJh/6XHmLMI6ks=

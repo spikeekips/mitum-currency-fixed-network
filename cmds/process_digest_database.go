@@ -50,12 +50,12 @@ func ProcessDigestDatabase(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
-	_ = st.SetLogger(log)
+	_ = st.SetLogging(log)
 
 	return context.WithValue(ctx, ContextValueDigestDatabase, st), nil
 }

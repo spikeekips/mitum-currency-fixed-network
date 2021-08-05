@@ -194,7 +194,7 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 	if err != nil {
 		return ctx, err
 	}
-	_ = handlers.SetLogger(cmd.Log())
+	_ = handlers.SetLogging(cmd.Logging)
 
 	if err := handlers.Initialize(); err != nil {
 		return ctx, err
@@ -282,7 +282,7 @@ func (*RunCommand) attachDigestRateLimit(
 	handlers *digest.Handlers,
 	conf config.RateLimit,
 ) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -300,7 +300,7 @@ func (*RunCommand) attachDigestRateLimit(
 				return ctx, xerrors.Errorf("handler, %q for digest ratelimit not found", j)
 			}
 
-			log.Debug().
+			log.Log().Debug().
 				Str("handler", j).
 				Str("prefix", prefix).
 				Str("target", r.Target()).
@@ -317,7 +317,7 @@ func (*RunCommand) attachDigestRateLimit(
 		if err != nil {
 			return ctx, err
 		}
-		log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
+		log.Log().Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
 
 		store = i
 	}

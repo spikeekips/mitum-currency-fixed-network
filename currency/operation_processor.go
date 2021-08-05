@@ -3,6 +3,7 @@ package currency
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
@@ -38,7 +39,7 @@ type OperationProcessor struct {
 
 func NewOperationProcessor(cp *CurrencyPool) *OperationProcessor {
 	return &OperationProcessor{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
 		processorHintSet: hint.NewHintmap(),
@@ -48,7 +49,7 @@ func NewOperationProcessor(cp *CurrencyPool) *OperationProcessor {
 
 func (opr *OperationProcessor) New(pool *storage.Statepool) prprocessor.OperationProcessor {
 	return &OperationProcessor{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "mitum-currency-operations-processor")
 		}),
 		processorHintSet:     opr.processorHintSet,

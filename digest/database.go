@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -44,14 +45,14 @@ type Database struct {
 
 func NewDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Database) (*Database, error) {
 	nst := &Database{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "digest-mongodb-database")
 		}),
 		mitum:     mitum,
 		database:  st,
 		lastBlock: base.NilHeight,
 	}
-	_ = nst.SetLogger(mitum.Log())
+	_ = nst.SetLogging(mitum.Logging)
 
 	return nst, nil
 }
@@ -151,12 +152,12 @@ func (st *Database) SetLastBlock(height base.Height) error {
 
 func (st *Database) setLastBlock(height base.Height) error {
 	if err := st.database.SetInfo(DigestStorageLastBlockKey, height.Bytes()); err != nil {
-		st.Log().Debug().Hinted("height", height).Msg("failed to set last block")
+		st.Log().Debug().Int64("height", height.Int64()).Msg("failed to set last block")
 
 		return err
 	}
 	st.lastBlock = height
-	st.Log().Debug().Hinted("height", height).Msg("set last block")
+	st.Log().Debug().Int64("height", height.Int64()).Msg("set last block")
 
 	return nil
 }

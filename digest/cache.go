@@ -10,6 +10,7 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/rainycape/memcache"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
@@ -116,7 +117,7 @@ type CachedHTTPHandler struct {
 
 func NewCachedHTTPHandler(cache Cache, f func(http.ResponseWriter, *http.Request)) CachedHTTPHandler {
 	return CachedHTTPHandler{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "cached-http-handler")
 		}),
 		cache: cache,
@@ -131,7 +132,7 @@ func (ch CachedHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := cr.Cache(); err != nil {
 		if !xerrors.Is(err, SkipCacheError) {
-			ch.Log().Verbose().Err(err).Msg("failed to cache")
+			ch.Log().Debug().Err(err).Msg("failed to cache")
 		}
 	}
 }

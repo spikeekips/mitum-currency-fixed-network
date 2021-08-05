@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
@@ -113,7 +114,7 @@ func NewHandlers(
 	cp *currency.CurrencyPool,
 ) *Handlers {
 	return &Handlers{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "http2-handlers")
 		}),
 		networkID:    networkID,
@@ -199,7 +200,7 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 		handler = http.HandlerFunc(h)
 	} else {
 		ch := NewCachedHTTPHandler(hd.cache, h)
-		_ = ch.SetLogger(hd.Log())
+		_ = ch.SetLogging(hd.Logging)
 
 		handler = ch
 	}

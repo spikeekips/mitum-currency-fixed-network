@@ -70,12 +70,12 @@ func (cmd *BaseNodeCommand) BaseProcesses(ps *pm.Processes) (*pm.Processes, erro
 }
 
 func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
-	log.Debug().Msg("loading currencies from mitum database")
+	log.Log().Debug().Msg("loading currencies from mitum database")
 
 	var st *mongodbstorage.Database
 	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
@@ -88,7 +88,7 @@ func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
 		if err := cp.Set(sta); err != nil {
 			return false, err
 		}
-		log.Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
+		log.Log().Debug().Interface("currency", sta).Msg("currency loaded from mitum database")
 
 		return true, nil
 	}); err != nil {
@@ -99,7 +99,7 @@ func HookLoadCurrencies(ctx context.Context) (context.Context, error) {
 }
 
 func HookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -115,7 +115,7 @@ func HookInitializeProposalProcessor(ctx context.Context) (context.Context, erro
 	}
 
 	if !suffrage.IsInside(nodepool.LocalNode().Address()) {
-		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
+		log.Log().Debug().Msg("none-suffrage node; proposal processor will not be used")
 
 		return ctx, nil
 	}
@@ -383,7 +383,7 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -404,7 +404,7 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 
 	m["digest"] = dd
 
-	log.Debug().Interface("config", m).Msg("config loaded")
+	log.Log().Debug().Interface("config", m).Msg("config loaded")
 
 	return ctx, nil
 }

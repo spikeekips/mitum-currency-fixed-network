@@ -6,10 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
-	"os"
-	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -21,29 +18,11 @@ import (
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
-
-//lint:ignore U1000 debugging for test
-var log logging.Logger
-
-func init() {
-	zerolog.TimeFieldFormat = time.RFC3339Nano
-
-	l := zerolog.
-		New(os.Stderr).
-		With().
-		Timestamp().
-		Caller().
-		Stack().
-		Logger().Level(zerolog.DebugLevel)
-
-	log = logging.NewLogger(&l, true)
-}
 
 type baseTest struct { // nolint: unused
 	suite.Suite

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
@@ -52,7 +53,7 @@ type Digester struct {
 
 func NewDigester(st *Database, errChan chan error) *Digester {
 	di := &Digester{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "digester")
 		}),
 		database:  st,
@@ -88,9 +89,9 @@ end:
 				return nil
 			})
 			if err != nil {
-				di.Log().Error().Err(err).Hinted("block", blk.Height()).Msg("failed to digest block")
+				di.Log().Error().Err(err).Int64("block", blk.Height().Int64()).Msg("failed to digest block")
 			} else {
-				di.Log().Info().Hinted("block", blk.Height()).Msg("block digested")
+				di.Log().Info().Int64("block", blk.Height().Int64()).Msg("block digested")
 			}
 
 			if di.errChan != nil {
@@ -111,7 +112,7 @@ func (di *Digester) Digest(blocks []block.Block) {
 
 	for i := range blocks {
 		blk := blocks[i]
-		di.Log().Debug().Hinted("block", blk.Height()).Msg("start to digest block")
+		di.Log().Debug().Int64("block", blk.Height().Int64()).Msg("start to digest block")
 
 		di.blockChan <- blk
 	}

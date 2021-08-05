@@ -51,7 +51,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 		return err
 	}
 
-	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
 		s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())

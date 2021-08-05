@@ -38,7 +38,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 		sl = so
 	}
 
-	cmd.Log().Debug().Hinted("seal", sl.Hash()).Msg("seal loaded")
+	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
 	nops := make([]operation.Operation, len(sl.Operations()))
 	for i := range sl.Operations() {

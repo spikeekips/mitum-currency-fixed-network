@@ -76,34 +76,34 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
-	var networkLog logging.Logger
+	var networkLog *logging.Logging
 	if err := config.LoadNetworkLogContextValue(ctx, &networkLog); err != nil {
 		return ctx, err
 	}
 
 	if design.Network() == nil {
-		log.Debug().Msg("digest api disabled; empty network")
+		log.Log().Debug().Msg("digest api disabled; empty network")
 
 		return ctx, nil
 	}
 
 	var st *digest.Database
 	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
-		log.Debug().Err(err).Msg("digest api disabled; empty database")
+		log.Log().Debug().Err(err).Msg("digest api disabled; empty database")
 
 		return ctx, nil
 	} else if st == nil {
-		log.Debug().Msg("digest api disabled; empty database")
+		log.Log().Debug().Msg("digest api disabled; empty database")
 
 		return ctx, nil
 	}
 
-	log.Info().
+	log.Log().Info().
 		Str("bind", design.Network().Bind().String()).
 		Str("publish", design.Network().ConnInfo().String()).
 		Msg("trying to start http2 server for digest API")
@@ -123,7 +123,7 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 	} else if err := sv.Initialize(); err != nil {
 		return ctx, err
 	} else {
-		_ = sv.SetLogger(networkLog)
+		_ = sv.SetLogging(networkLog)
 
 		nt = sv
 	}
