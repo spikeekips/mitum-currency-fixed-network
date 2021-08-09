@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -301,7 +301,7 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithMinBalance() {
 	err = opr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "amount should be over minimum balance")
 }
 
@@ -331,7 +331,7 @@ func (t *testCreateAccountsOperation) TestInSufficientBalanceWithFee() {
 	err := opr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -361,7 +361,7 @@ func (t *testCreateAccountsOperation) TestUnknownCurrencyID() {
 	err := opr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "unknown currency id found")
 }
 
@@ -387,7 +387,7 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 	err = copr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -418,7 +418,7 @@ func (t *testCreateAccountsOperation) TestEmptyCurrency() {
 	err := opr.Process(ca)
 
 	var operr operation.ReasonError
-	t.True(xerrors.As(err, &operr))
+	t.True(errors.As(err, &operr))
 	t.Contains(fmt.Sprintf("%+v", err), "currency of holder does not exist")
 }
 
@@ -449,7 +449,7 @@ func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 	err = copr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "currency of holder does not exist")
 }
 
@@ -501,7 +501,7 @@ func (t *testCreateAccountsOperation) TestInsufficientBalance() {
 	err := opr.Process(ca)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -595,7 +595,7 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 		err := opr.Process(ca)
 
 		var oper operation.ReasonError
-		t.True(xerrors.As(err, &oper))
+		t.True(errors.As(err, &oper))
 	}
 
 	items := []CreateAccountsItem{NewCreateAccountsItemMultiAmounts(na0.Keys(), []Amount{NewAmount(NewBig(1), cid)})}

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -73,7 +73,7 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 				return []byte(D.A), nil
 			}
 		default:
-			return nil, xerrors.Errorf("unknown encoder, %v", enc)
+			return nil, errors.Errorf("unknown encoder, %v", enc)
 		}
 	}
 

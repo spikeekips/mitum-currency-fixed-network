@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testDigester struct {
@@ -52,7 +52,7 @@ end:
 	for {
 		select {
 		case <-time.After(time.Second * 10):
-			t.NoError(xerrors.Errorf("timeout to digest"))
+			t.NoError(errors.Errorf("timeout to digest"))
 
 			break end
 		case err := <-errChan:
@@ -104,7 +104,7 @@ end:
 	for {
 		select {
 		case <-time.After(time.Second * 10):
-			t.NoError(xerrors.Errorf("timeout to digest"))
+			t.NoError(errors.Errorf("timeout to digest"))
 
 			break end
 		case err := <-errChan:

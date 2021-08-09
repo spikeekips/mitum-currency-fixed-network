@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -79,11 +79,11 @@ func (fact CreateAccountsFact) Bytes() []byte {
 
 func (fact CreateAccountsFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return xerrors.Errorf("empty token for CreateAccountsFact")
+		return errors.Errorf("empty token for CreateAccountsFact")
 	} else if n := len(fact.items); n < 1 {
-		return xerrors.Errorf("empty items")
+		return errors.Errorf("empty items")
 	} else if n > int(MaxCreateAccountsItems) {
-		return xerrors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
+		return errors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
@@ -102,14 +102,14 @@ func (fact CreateAccountsFact) IsValid([]byte) error {
 		it := fact.items[i]
 		k := it.Keys().Hash().String()
 		if _, found := foundKeys[k]; found {
-			return xerrors.Errorf("duplicated acocunt Keys found, %s", k)
+			return errors.Errorf("duplicated acocunt Keys found, %s", k)
 		}
 
 		switch a, err := it.Address(); {
 		case err != nil:
 			return err
 		case fact.sender.Equal(a):
-			return xerrors.Errorf("target address is same with sender, %q", fact.sender)
+			return errors.Errorf("target address is same with sender, %q", fact.sender)
 		default:
 			foundKeys[k] = struct{}{}
 		}

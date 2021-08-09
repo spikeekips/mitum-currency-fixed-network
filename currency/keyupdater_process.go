@@ -1,10 +1,10 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (KeyUpdater) Process(
@@ -26,7 +26,7 @@ func NewKeyUpdaterProcessor(cp *CurrencyPool) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
 		i, ok := op.(KeyUpdater)
 		if !ok {
-			return nil, xerrors.Errorf("not KeyUpdater, %T", op)
+			return nil, errors.Errorf("not KeyUpdater, %T", op)
 		}
 		return &KeyUpdaterProcessor{
 			cp:         cp,

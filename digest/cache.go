@@ -9,19 +9,18 @@ import (
 	"time"
 
 	"github.com/bluele/gcache"
+	"github.com/pkg/errors"
 	"github.com/rainycape/memcache"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
 	DefaultCacheExpire = time.Hour
-	SkipCacheError     = errors.NewError("skip cache")
+	SkipCacheError     = util.NewError("skip cache")
 )
 
 type Cache interface {
@@ -32,7 +31,7 @@ type Cache interface {
 func NewCacheFromURI(uri string) (Cache, error) {
 	u, err := network.ParseURL(uri, false)
 	if err != nil {
-		return nil, xerrors.Errorf("invalid uri of cache, %q: %w", uri, err)
+		return nil, errors.Wrapf(err, "invalid uri of cache, %q", uri)
 	}
 	switch {
 	case u.Scheme == "memory":
@@ -41,7 +40,7 @@ func NewCacheFromURI(uri string) (Cache, error) {
 	case u.Scheme == "memcached":
 		return NewMemcached(u.Host)
 	default:
-		return nil, xerrors.Errorf("unsupported uri of cache, %q", uri)
+		return nil, errors.Errorf("unsupported uri of cache, %q", uri)
 	}
 }
 
@@ -79,7 +78,7 @@ func NewMemcached(servers ...string) (*Memcached, error) {
 		return nil, err
 	}
 	if _, err := cl.Get("<any key>"); err != nil {
-		if !xerrors.Is(err, memcache.ErrCacheMiss) {
+		if !errors.Is(err, memcache.ErrCacheMiss) {
 			return nil, err
 		}
 	}
@@ -131,7 +130,7 @@ func (ch CachedHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ch.f(cr, r)
 
 	if err := cr.Cache(); err != nil {
-		if !xerrors.Is(err, SkipCacheError) {
+		if !errors.Is(err, SkipCacheError) {
 			ch.Log().Debug().Err(err).Msg("failed to cache")
 		}
 	}

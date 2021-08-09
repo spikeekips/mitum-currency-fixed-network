@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,7 +71,7 @@ func NewInitCommand(dryrun bool) (InitCommand, error) {
 func (*InitCommand) hookInitializeProposalProcessor(ctx context.Context) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}
@@ -167,7 +167,7 @@ func loadGenesisCurrenciesFeeer(de FeeerDesign, ga base.Address) (currency.Feeer
 			max,
 		)
 	default:
-		return nil, xerrors.Errorf("unknown type of feeer, %q", de.Type)
+		return nil, errors.Errorf("unknown type of feeer, %q", de.Type)
 	}
 
 	if err := feeer.IsValid(nil); err != nil {

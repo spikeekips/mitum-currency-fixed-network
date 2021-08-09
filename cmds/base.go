@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base"
@@ -162,7 +162,7 @@ func AttachProposalProcessor(
 	for i := range suffrageNodes {
 		n, _, found := nodepool.Node(suffrageNodes[i])
 		if !found {
-			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
+			return nil, errors.Errorf("suffrage node, %q not found in nodepool", suffrageNodes[i])
 		}
 		pubs[i] = n.Publickey()
 	}
@@ -185,7 +185,7 @@ func AttachProposalProcessor(
 func InitializeProposalProcessor(ctx context.Context, opr *currency.OperationProcessor) (context.Context, error) {
 	var oprs *hint.Hintmap
 	if err := process.LoadOperationProcessorsContextValue(ctx, &oprs); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}
@@ -221,7 +221,7 @@ func (*BaseNodeCommand) hookLoadDigestConfig(ctx context.Context) (context.Conte
 	if err := process.LoadConfigSourceTypeContextValue(ctx, &sourceType); err != nil {
 		return ctx, err
 	} else if sourceType != "yaml" {
-		return ctx, xerrors.Errorf("unknown source type, %q", sourceType)
+		return ctx, errors.Errorf("unknown source type, %q", sourceType)
 	}
 
 	var m struct {
@@ -249,7 +249,7 @@ func (cmd *BaseNodeCommand) hookValidateDigestConfig(ctx context.Context) (conte
 
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -273,19 +273,19 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 	design DigestDesign,
 ) (context.Context, error) {
 	if design.Network().ConnInfo() == nil {
-		return ctx, xerrors.Errorf("digest network url is missing")
+		return ctx, errors.Errorf("digest network url is missing")
 	}
 
 	a := design.Network().Bind()
 	if a == nil {
-		return ctx, xerrors.Errorf("digest network bind is missing")
+		return ctx, errors.Errorf("digest network bind is missing")
 	} else if sameBind(a, conf.Network().Bind()) {
-		return ctx, xerrors.Errorf("digest bind same with mitum bind: %q", a.String())
+		return ctx, errors.Errorf("digest bind same with mitum bind: %q", a.String())
 	}
 
 	if len(design.Network().Certs()) < 1 && design.Network().Bind().Scheme == "https" {
 		if h := design.Network().Bind().Hostname(); !strings.HasPrefix(h, "127.") && h != "localhost" {
-			return ctx, xerrors.Errorf("missing certificates for https")
+			return ctx, errors.Errorf("missing certificates for https")
 		}
 
 		if priv, err := util.GenerateED25519Privatekey(); err != nil {
@@ -318,7 +318,7 @@ func (*BaseNodeCommand) validateDigestConfigNetworkRateLimit(
 		rcc.Initialize,
 		rcc.Check,
 	}).Check(); err != nil {
-		if !xerrors.Is(err, util.IgnoreError) {
+		if !errors.Is(err, util.IgnoreError) {
 			return ctx, err
 		}
 	}
@@ -390,7 +390,7 @@ func hookVerboseConfig(ctx context.Context) (context.Context, error) {
 
 	var dd DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &dd); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}

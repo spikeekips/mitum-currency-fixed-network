@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base/state"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleCurrencies(w http.ResponseWriter, r *http.Request) {
 	if hd.cp == nil {
-		hd.notSupported(w, xerrors.Errorf("empty CurrencyPool"))
+		hd.notSupported(w, errors.Errorf("empty CurrencyPool"))
 
 		return
 	}
@@ -63,14 +63,14 @@ func (hd *Handlers) handleCurrency(w http.ResponseWriter, r *http.Request) {
 	var cid string
 	s, found := mux.Vars(r)["currencyid"]
 	if !found {
-		hd.problemWithError(w, xerrors.Errorf("empty currency id"), http.StatusNotFound)
+		hd.problemWithError(w, errors.Errorf("empty currency id"), http.StatusNotFound)
 
 		return
 	}
 
 	s = strings.TrimSpace(s)
 	if len(s) < 1 {
-		hd.problemWithError(w, xerrors.Errorf("empty currency id"), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Errorf("empty currency id"), http.StatusBadRequest)
 
 		return
 	}

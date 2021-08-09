@@ -1,8 +1,8 @@
 package digest
 
 import (
+	"github.com/pkg/errors"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"golang.org/x/xerrors"
 )
 
 func (pr Problem) MarshalJSON() ([]byte, error) {
@@ -29,9 +29,9 @@ func (pr *Problem) UnmarshalJSON(b []byte) error {
 
 	c := func(key string) (string, error) {
 		if i, found := m[key]; !found {
-			return "", xerrors.Errorf("%s not found", key)
+			return "", errors.Errorf("%s not found", key)
 		} else if s, ok := i.(string); !ok {
-			return "", xerrors.Errorf("%s not string", key)
+			return "", errors.Errorf("%s not string", key)
 		} else {
 			return s, nil
 		}

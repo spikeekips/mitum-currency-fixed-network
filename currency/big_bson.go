@@ -1,9 +1,9 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
 )
 
 func (a Big) MarshalBSONValue() (bsontype.Type, []byte, error) {
@@ -12,12 +12,12 @@ func (a Big) MarshalBSONValue() (bsontype.Type, []byte, error) {
 
 func (a *Big) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 	if t != bsontype.String {
-		return xerrors.Errorf("invalid marshaled type for Big, %v", t)
+		return errors.Errorf("invalid marshaled type for Big, %v", t)
 	}
 
 	s, _, ok := bsoncore.ReadString(b)
 	if !ok {
-		return xerrors.Errorf("can not read string")
+		return errors.Errorf("can not read string")
 	}
 
 	ua, err := NewBigFromString(s)

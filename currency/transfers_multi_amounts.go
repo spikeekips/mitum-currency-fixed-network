@@ -1,9 +1,9 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -30,7 +30,7 @@ func (it TransfersItemMultiAmounts) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n > maxCurenciesCreateAccountsItemMultiAmounts {
-		return xerrors.Errorf("amounts over allowed; %d > %d", n, maxCurenciesTransfersItemMultiAmounts)
+		return errors.Errorf("amounts over allowed; %d > %d", n, maxCurenciesTransfersItemMultiAmounts)
 	}
 
 	return nil

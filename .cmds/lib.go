@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -157,7 +157,7 @@ func loadEncoders() (*encoder.Encoders, error) {
 		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
 		hinters...,
 	); err != nil {
-		return nil, xerrors.Errorf("failed to load encoders: %w", err)
+		return nil, errors.Wrap(err, "failed to load encoders")
 	} else {
 		return e, nil
 	}
@@ -173,7 +173,7 @@ func createLauncherFromDesign(b []byte, version util.Version, log logging.Logger
 
 	var nr *Launcher
 	if n, err := NewLauncherFromDesign(design, version); err != nil {
-		return nil, xerrors.Errorf("failed to create node runner: %w", err)
+		return nil, errors.Wrap(err, "failed to create node runner")
 	} else if err := n.AddHinters(hinters...); err != nil {
 		return nil, err
 	} else {
@@ -220,13 +220,13 @@ func loadFromStdInput() ([]byte, error) {
 
 func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 	if len(bytes.TrimSpace(b)) < 1 {
-		return nil, xerrors.Errorf("empty input")
+		return nil, errors.Errorf("empty input")
 	}
 
 	if sl, err := seal.DecodeSeal(defaultJSONEnc, b); err != nil {
 		return nil, err
 	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, xerrors.Errorf("invalid seal: %w", err)
+		return nil, errors.Wrap(err, "invalid seal")
 	} else {
 		return sl, nil
 	}
@@ -267,7 +267,7 @@ func loadSealAndAddOperation(
 			[]operation.Operation{op},
 			networkID,
 		); err != nil {
-			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+			return nil, errors.Wrap(err, "failed to create operation.Seal")
 		} else {
 			return bs, nil
 		}
@@ -277,9 +277,9 @@ func loadSealAndAddOperation(
 	if s, err := loadSeal(b, networkID); err != nil {
 		return nil, err
 	} else if so, ok := s.(operation.Seal); !ok {
-		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		return nil, errors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		return nil, errors.Errorf("seal is not operation.SealUpdater, %T", s)
 	} else {
 		sl = so
 	}
@@ -334,23 +334,23 @@ func saveGenesisAccountInfo(
 	}
 
 	if gac.IsEmpty() {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to find genesis account")
+		return currency.Account{}, currency.NilAmount, errors.Errorf("failed to find genesis account")
 	}
 
 	if gbalance.Compare(currency.ZeroAmount) <= 0 {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to find genesis balance")
+		return currency.Account{}, currency.NilAmount, errors.Errorf("failed to find genesis balance")
 	}
 
 	if b, err := defaultJSONEnc.Marshal(gac); err != nil {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis account: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to save genesis account")
 	} else if err := st.SetInfo(GenesisAccountKey, b); err != nil {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis account: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to save genesis account")
 	}
 
 	if b, err := defaultJSONEnc.Marshal(gbalance); err != nil {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis balance: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to save genesis balance")
 	} else if err := st.SetInfo(GenesisBalanceKey, b); err != nil {
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to save genesis balance: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to save genesis balance")
 	}
 
 	log.Debug().Msg("genesis info saved")
@@ -364,25 +364,25 @@ func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Ac
 
 	switch b, found, err := st.Info(GenesisAccountKey); {
 	case err != nil:
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis account: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to get genesis account")
 	case !found:
 		return currency.Account{}, currency.NilAmount, storage.NotFoundError.Errorf("genesis account not found")
 	default:
 		if err := defaultJSONEnc.Decode(b, &ac); err != nil {
 			return currency.Account{},
 				currency.NilAmount,
-				xerrors.Errorf("failed to load genesis account for getting fee receiver: %w", err)
+				errors.Wrap(err, "failed to load genesis account for getting fee receiver")
 		}
 	}
 
 	switch b, found, err := st.Info(GenesisBalanceKey); {
 	case err != nil:
-		return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to get genesis balance: %w", err)
+		return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to get genesis balance")
 	case !found:
 		return currency.Account{}, currency.NilAmount, storage.NotFoundError.Errorf("genesis balance not found")
 	default:
 		if err := defaultJSONEnc.Decode(b, &balance); err != nil {
-			return currency.Account{}, currency.NilAmount, xerrors.Errorf("failed to load genesis balance: %w", err)
+			return currency.Account{}, currency.NilAmount, errors.Wrap(err, "failed to load genesis balance")
 		}
 	}
 
@@ -393,7 +393,7 @@ func loadGenesisAccountInfo(st storage.Storage, log logging.Logger) (currency.Ac
 func loadDigestStorage(design *NodeDesign, st storage.Storage, readonly bool) (*digest.Storage, error) {
 	var mst, dst *mongodbstorage.Storage
 	if nst, ok := st.(*mongodbstorage.Storage); !ok {
-		return nil, xerrors.Errorf("digest needs *mongodbstorage.Storage, not %T", st)
+		return nil, errors.Errorf("digest needs *mongodbstorage.Storage, not %T", st)
 	} else if rst, err := nst.Readonly(); err != nil {
 		return nil, err
 	} else {
@@ -403,7 +403,7 @@ func loadDigestStorage(design *NodeDesign, st storage.Storage, readonly bool) (*
 	if s, err := launcher.LoadStorage(design.Digest.Storage, encs, mst.Cache()); err != nil {
 		return nil, err
 	} else if st, ok := s.(*mongodbstorage.Storage); !ok {
-		return nil, xerrors.Errorf("digest needs *mongodbstorage.Storage, not %T", s)
+		return nil, errors.Errorf("digest needs *mongodbstorage.Storage, not %T", s)
 	} else {
 		dst = st
 	}
@@ -437,7 +437,7 @@ func newSendHandler(
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
 		if len(remotes) < 1 {
-			return nil, xerrors.Errorf("not supported")
+			return nil, errors.Errorf("not supported")
 		}
 
 		var sl seal.Seal
@@ -456,14 +456,14 @@ func newSendHandler(
 				[]operation.Operation{t},
 				networkID,
 			); err != nil {
-				return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+				return nil, errors.Wrap(err, "failed to create operation.Seal")
 			} else if err := bs.IsValid(networkID); err != nil {
 				return nil, err
 			} else {
 				sl = bs
 			}
 		default:
-			return nil, xerrors.Errorf("unsupported message type, %T", t)
+			return nil, errors.Errorf("unsupported message type, %T", t)
 		}
 
 		var wg sync.WaitGroup

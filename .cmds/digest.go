@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/pkg/errors"
 	"go.uber.org/automaxprocs/maxprocs"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum-currency/digest"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
@@ -51,7 +51,7 @@ func (cmd *DigestCommand) Run(flags *MainFlags, version util.Version, l logging.
 	case err != nil:
 		return err
 	case d.Digest.Network == nil:
-		return xerrors.Errorf("network is missing")
+		return errors.Errorf("network is missing")
 	default:
 		cmd.design = d
 	}

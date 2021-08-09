@@ -1,10 +1,10 @@
 package digest
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -27,7 +27,7 @@ func NewAccountValue(st state.State) (AccountValue, error) {
 	case err != nil:
 		return AccountValue{}, err
 	case !ok:
-		return AccountValue{}, xerrors.Errorf("not state for currency.Account, %T", st.Value().Interface())
+		return AccountValue{}, errors.Errorf("not state for currency.Account, %T", st.Value().Interface())
 	default:
 		ac = a
 	}

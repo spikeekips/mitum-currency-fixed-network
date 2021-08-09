@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -76,7 +76,7 @@ func makeProblemNamespace(t string) string {
 
 func parseProblemNamespace(s string) (string, error) {
 	if !strings.HasPrefix(s, ProblemNamespace) {
-		return "", xerrors.Errorf("invalid problem namespace: %q", s)
+		return "", errors.Errorf("invalid problem namespace: %q", s)
 	}
 	return s[len(ProblemNamespace)+1:], nil
 }

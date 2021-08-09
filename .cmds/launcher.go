@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"sync"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum-currency/digest"
@@ -188,7 +188,7 @@ func (nr *Launcher) attachSuffrage() error {
 	l.Debug().Msg("trying to attach")
 
 	if sf, err := nr.design.Component.Suffrage().New(nr.Local(), nr.Encoders()); err != nil {
-		return xerrors.Errorf("failed to create new suffrage component: %w", err)
+		return errors.Wrap(err, "failed to create new suffrage component")
 	} else {
 		l.Debug().
 			Str("type", nr.design.Component.Suffrage().Type).
@@ -210,7 +210,7 @@ func (nr *Launcher) attachProposalProcessor() error {
 	l.Debug().Msg("trying to attach")
 
 	if pp, err := nr.design.Component.ProposalProcessor().New(nr.Local(), nr.Suffrage()); err != nil {
-		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
+		return errors.Wrap(err, "failed to create new proposal processor component")
 	} else {
 		l.Debug().
 			Str("type", nr.design.Component.ProposalProcessor().Type).
@@ -253,7 +253,7 @@ func (nr *Launcher) nodeInfoHandler() (network.NodeInfo, error) {
 	if i, err := nr.NodeInfo(); err != nil {
 		return nil, err
 	} else if ni, ok := i.(network.NodeInfoV0); !ok {
-		return nil, xerrors.Errorf("unsupported NodeInfo, %T", i)
+		return nil, errors.Errorf("unsupported NodeInfo, %T", i)
 	} else {
 		return digest.NewNodeInfo(ni, nr.Design().FeeAmount, ga, gb), nil
 	}

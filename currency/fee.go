@@ -3,7 +3,7 @@ package currency
 import (
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -66,7 +66,7 @@ func (fact FeeOperationFact) Bytes() []byte {
 
 func (fact FeeOperationFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return xerrors.Errorf("empty token for FeeOperationFact")
+		return errors.Errorf("empty token for FeeOperationFact")
 	}
 
 	if err := fact.h.IsValid(nil); err != nil {
@@ -183,7 +183,7 @@ func (opp *FeeOperationProcessor) Process(
 		var feeer Feeer
 		j, found := opp.cp.Feeer(am.Currency())
 		if !found {
-			return xerrors.Errorf("unknown currency id, %q found for FeeOperation", am.Currency())
+			return errors.Errorf("unknown currency id, %q found for FeeOperation", am.Currency())
 		}
 		feeer = j
 

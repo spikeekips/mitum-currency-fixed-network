@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base/operation"
@@ -27,7 +27,7 @@ func NewCurrencyPolicyUpdaterCommand() CurrencyPolicyUpdaterCommand {
 
 func (cmd *CurrencyPolicyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.parseFlags(); err != nil {
@@ -36,9 +36,9 @@ func (cmd *CurrencyPolicyUpdaterCommand) Run(version util.Version) error { // no
 
 	var op operation.Operation
 	if i, err := cmd.createOperation(); err != nil {
-		return xerrors.Errorf("failed to create currency-policy-updater operation: %w", err)
+		return errors.Wrap(err, "failed to create currency-policy-updater operation")
 	} else if err := i.IsValid([]byte(cmd.OperationFlags.NetworkID)); err != nil {
-		return xerrors.Errorf("invalid currency-policy-updater operation: %w", err)
+		return errors.Wrap(err, "invalid currency-policy-updater operation")
 	} else {
 		cmd.Log().Debug().Interface("operation", i).Msg("operation loaded")
 
@@ -51,7 +51,7 @@ func (cmd *CurrencyPolicyUpdaterCommand) Run(version util.Version) error { // no
 		[]byte(cmd.OperationFlags.NetworkID),
 	)
 	if err != nil {
-		return xerrors.Errorf("failed to create operation.Seal: %w", err)
+		return errors.Wrap(err, "failed to create operation.Seal")
 	}
 	cmd.Log().Debug().Interface("seal", i).Msg("seal loaded")
 
@@ -82,11 +82,11 @@ func (cmd *CurrencyPolicyUpdaterCommand) parseFlags() error {
 	case currency.FeeerRatio:
 		feeer = cmd.CurrencyRatioFeeerFlags.feeer
 	default:
-		return xerrors.Errorf("unknown feeer type, %q", t)
+		return errors.Errorf("unknown feeer type, %q", t)
 	}
 
 	if feeer == nil {
-		return xerrors.Errorf("empty feeer flags")
+		return errors.Errorf("empty feeer flags")
 	} else if err := feeer.IsValid(nil); err != nil {
 		return err
 	}

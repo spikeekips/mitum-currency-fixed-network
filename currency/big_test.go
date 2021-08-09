@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
 )
@@ -219,7 +219,7 @@ func (t *testBig) TestMul() {
 				case reflect.Float64:
 					result = a.MulFloat64(c.b.(float64))
 				default:
-					t.NoError(xerrors.Errorf("unsupported type"))
+					t.NoError(errors.Errorf("unsupported type"))
 				}
 
 				t.Equal(c.result, result.String(), "%d: %v; %v != %v", i, c.name, c.result, result.String())
@@ -478,7 +478,7 @@ func (t *testBig) testEncoding(
 				if o, err := ufunc(b); err != nil {
 					t.NoError(err, "%d: %v", i, c.name)
 				} else if am, ok := o.(Big); !ok {
-					t.NoError(xerrors.Errorf("the returned, %T is not Big type", o), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("the returned, %T is not Big type", o), "%d: %v", i, c.name)
 				} else {
 					t.True(big.Equal(am), "%d: %v; %v != %v", i, c.name, big.String(), am.String())
 				}

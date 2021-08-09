@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -18,7 +18,7 @@ func (ac *Account) unpack(enc encoder.Encoder, h valuehash.Hash, bad base.Addres
 	if hinter, err := enc.Decode(bks); err != nil {
 		return err
 	} else if k, ok := hinter.(Keys); !ok {
-		return xerrors.Errorf("not Keys: %T", hinter)
+		return errors.Errorf("not Keys: %T", hinter)
 	} else {
 		ac.keys = k
 	}

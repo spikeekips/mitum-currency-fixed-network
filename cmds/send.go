@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/seal"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/xerrors"
 )
 
 var SendVars = kong.Vars{
@@ -39,7 +39,7 @@ func NewSendCommand() SendCommand {
 
 func (cmd *SendCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if cmd.Timeout < 1 {
@@ -95,7 +95,7 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 	}
 
 	if len(urls) < 1 {
-		return xerrors.Errorf("empty node urls")
+		return errors.Errorf("empty node urls")
 	}
 
 	channels := make([]network.Channel, len(urls))

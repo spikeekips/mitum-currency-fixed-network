@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -24,7 +24,7 @@ func (cmd *GenerateKeyCommand) Run(flags *MainFlags, version util.Version, log l
 		switch cmd.Type {
 		case btc, ether, stellar:
 		default:
-			return xerrors.Errorf("unknown key type, %q", cmd.Type)
+			return errors.Errorf("unknown key type, %q", cmd.Type)
 		}
 	}
 

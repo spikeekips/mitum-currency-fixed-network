@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -28,7 +28,7 @@ func (it CreateAccountsItemSingleAmount) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n != 1 {
-		return xerrors.Errorf("only one amount allowed; %d", n)
+		return errors.Errorf("only one amount allowed; %d", n)
 	}
 
 	return nil

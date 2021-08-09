@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -61,7 +61,7 @@ func (fact KeyUpdaterFact) Bytes() []byte {
 
 func (fact KeyUpdaterFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return xerrors.Errorf("empty token for KeyUpdaterFact")
+		return errors.Errorf("empty token for KeyUpdaterFact")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{

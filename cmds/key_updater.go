@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -29,7 +29,7 @@ func NewKeyUpdaterCommand() KeyUpdaterCommand {
 
 func (cmd *KeyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.parseFlags(); err != nil {
@@ -47,7 +47,7 @@ func (cmd *KeyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 		cmd.NetworkID.NetworkID(),
 	)
 	if err != nil {
-		return xerrors.Errorf("failed to create operation.Seal: %w", err)
+		return errors.Wrap(err, "failed to create operation.Seal")
 	}
 	cmd.pretty(cmd.Pretty, bs)
 
@@ -60,12 +60,12 @@ func (cmd *KeyUpdaterCommand) parseFlags() error {
 	}
 
 	if len(cmd.Keys) < 1 {
-		return xerrors.Errorf("--key must be given at least one")
+		return errors.Errorf("--key must be given at least one")
 	}
 
 	a, err := cmd.Target.Encode(jenc)
 	if err != nil {
-		return xerrors.Errorf("invalid target format, %q: %w", cmd.Target.String(), err)
+		return errors.Wrapf(err, "invalid target format, %q", cmd.Target.String())
 	}
 	cmd.target = a
 
@@ -104,7 +104,7 @@ func (cmd *KeyUpdaterCommand) createOperation() (operation.Operation, error) {
 
 	op, err := currency.NewKeyUpdater(fact, fs, cmd.Memo)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to create key-updater operation: %w", err)
+		return nil, errors.Wrap(err, "failed to create key-updater operation")
 	}
 	return op, nil
 }

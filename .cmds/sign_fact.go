@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
@@ -23,9 +23,9 @@ func (cmd *SignFactCommand) Run(flags *MainFlags, version util.Version, log logg
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 		return err
 	} else if so, ok := s.(operation.Seal); !ok {
-		return xerrors.Errorf("seal is not operation.Seal, %T", s)
+		return errors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return xerrors.Errorf("seal is not operation.SealUpdater, %T", so)
+		return errors.Errorf("seal is not operation.SealUpdater, %T", so)
 	} else {
 		sl = so
 	}

@@ -3,7 +3,7 @@ package cmds
 import (
 	"bytes"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -33,7 +33,7 @@ func NewTransferCommand() TransferCommand {
 
 func (cmd *TransferCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.parseFlags(); err != nil {
@@ -65,9 +65,9 @@ func (cmd *TransferCommand) parseFlags() error {
 	}
 
 	if sender, err := cmd.Sender.Encode(jenc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else if receiver, err := cmd.Receiver.Encode(jenc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else {
 		cmd.sender = sender
 		cmd.receiver = receiver
@@ -111,7 +111,7 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // 
 
 	op, err := currency.NewTransfers(fact, fs, cmd.Memo)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to create transfers operation: %w", err)
+		return nil, errors.Wrap(err, "failed to create transfers operation")
 	}
 	return op, nil
 }
@@ -125,9 +125,9 @@ func loadOperations(b []byte, networkID base.NetworkID) ([]operation.Operation, 
 	if s, err := loadSeal(b, networkID); err != nil {
 		return nil, err
 	} else if so, ok := s.(operation.Seal); !ok {
-		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		return nil, errors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		return nil, errors.Errorf("seal is not operation.SealUpdater, %T", s)
 	} else {
 		sl = so
 	}

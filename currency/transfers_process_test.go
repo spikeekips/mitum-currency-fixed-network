@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -85,7 +85,7 @@ func (t *testTransfersOperations) TestSenderNotExist() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -107,7 +107,7 @@ func (t *testTransfersOperations) TestReceiverNotExist() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "receiver does not exist")
 }
 
@@ -129,7 +129,7 @@ func (t *testTransfersOperations) TestInsufficientBalance() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -279,7 +279,7 @@ func (t *testTransfersOperations) TestInsufficientMultipleItemsWithFee() {
 	err = opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -306,7 +306,7 @@ func (t *testTransfersOperations) TestInSufficientBalanceWithFee() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -372,7 +372,7 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "not passed threshold")
 }
 
@@ -395,7 +395,7 @@ func (t *testTransfersOperations) TestUnknownKey() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "unknown key found")
 }
 

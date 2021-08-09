@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/operation"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
@@ -24,16 +24,16 @@ func NewSignFactCommand() SignFactCommand {
 
 func (cmd *SignFactCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	var sl operation.Seal
 	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else if so, ok := s.(operation.Seal); !ok {
-		return xerrors.Errorf("seal is not operation.Seal, %T", s)
+		return errors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return xerrors.Errorf("seal is not operation.SealUpdater, %T", so)
+		return errors.Errorf("seal is not operation.SealUpdater, %T", so)
 	} else {
 		sl = so
 	}

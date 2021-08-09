@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
@@ -43,21 +43,21 @@ func (it BaseCreateAccountsItem) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n == 0 {
-		return xerrors.Errorf("empty amounts")
+		return errors.Errorf("empty amounts")
 	}
 
 	founds := map[CurrencyID]struct{}{}
 	for i := range it.amounts {
 		am := it.amounts[i]
 		if _, found := founds[am.Currency()]; found {
-			return xerrors.Errorf("duplicated currency found, %q", am.Currency())
+			return errors.Errorf("duplicated currency found, %q", am.Currency())
 		}
 		founds[am.Currency()] = struct{}{}
 
 		if err := am.IsValid(nil); err != nil {
 			return err
 		} else if !am.Big().OverZero() {
-			return xerrors.Errorf("amount should be over zero")
+			return errors.Errorf("amount should be over zero")
 		}
 	}
 

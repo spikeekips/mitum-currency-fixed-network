@@ -3,6 +3,7 @@ package currency
 import (
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -13,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type GetNewProcessor func(state.Processor) (state.Processor, error)
@@ -167,7 +167,7 @@ func (opr *OperationProcessor) checkDuplication(op state.Processor) error {
 		fact := t.Fact().(CreateAccountsFact)
 		as, err := fact.Targets()
 		if err != nil {
-			return xerrors.Errorf("failed to get Addresses")
+			return errors.Errorf("failed to get Addresses")
 		}
 		newAddresses = as
 
@@ -190,11 +190,11 @@ func (opr *OperationProcessor) checkDuplication(op state.Processor) error {
 		if _, found := opr.duplicated[did]; found {
 			switch didtype {
 			case DuplicationTypeSender:
-				return xerrors.Errorf("violates only one sender in proposal")
+				return errors.Errorf("violates only one sender in proposal")
 			case DuplicationTypeCurrency:
-				return xerrors.Errorf("duplicated currency id, %q found in proposal", did)
+				return errors.Errorf("duplicated currency id, %q found in proposal", did)
 			default:
-				return xerrors.Errorf("violates duplication in proposal")
+				return errors.Errorf("violates duplication in proposal")
 			}
 		}
 
@@ -213,7 +213,7 @@ func (opr *OperationProcessor) checkDuplication(op state.Processor) error {
 func (opr *OperationProcessor) checkNewAddressDuplication(as []base.Address) error {
 	for i := range as {
 		if _, found := opr.duplicatedNewAddress[as[i].String()]; found {
-			return xerrors.Errorf("new address already processed")
+			return errors.Errorf("new address already processed")
 		}
 	}
 
@@ -262,7 +262,7 @@ func (opr *OperationProcessor) getNewProcessor(op state.Processor) (state.Proces
 		KeyUpdater,
 		CurrencyRegister,
 		CurrencyPolicyUpdater:
-		return nil, false, xerrors.Errorf("%T needs SetProcessor", t)
+		return nil, false, errors.Errorf("%T needs SetProcessor", t)
 	default:
 		return op, false, nil
 	}
@@ -273,13 +273,13 @@ func (opr *OperationProcessor) getNewProcessorFromHintset(op state.Processor) (s
 	if hinter, ok := op.(hint.Hinter); !ok {
 		return nil, nil
 	} else if i, err := opr.processorHintSet.Compatible(hinter); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, nil
 		}
 
 		return nil, err
 	} else if j, ok := i.(GetNewProcessor); !ok {
-		return nil, xerrors.Errorf("invalid GetNewProcessor func, %%", i)
+		return nil, errors.Errorf("invalid GetNewProcessor func, %T", i)
 	} else {
 		f = j
 	}

@@ -1,10 +1,10 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (Transfers) Process(
@@ -38,7 +38,7 @@ func (opp *TransfersItemProcessor) PreProcess(
 
 		if opp.cp != nil {
 			if !opp.cp.Exists(am.Currency()) {
-				return xerrors.Errorf("currency not registered, %q", am.Currency())
+				return errors.Errorf("currency not registered, %q", am.Currency())
 			}
 		}
 
@@ -79,7 +79,7 @@ func NewTransfersProcessor(cp *CurrencyPool) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
 		i, ok := op.(Transfers)
 		if !ok {
-			return nil, xerrors.Errorf("not Transfers, %T", op)
+			return nil, errors.Errorf("not Transfers, %T", op)
 		}
 		return &TransfersProcessor{
 			cp:        cp,
@@ -118,7 +118,7 @@ func (opp *TransfersProcessor) PreProcess(
 	}
 
 	if err := checkFactSignsByState(fact.sender, opp.Signs(), getState); err != nil {
-		return nil, xerrors.Errorf("invalid signing: %w", err)
+		return nil, errors.Wrap(err, "invalid signing")
 	}
 
 	opp.rb = rb

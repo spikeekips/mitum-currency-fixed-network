@@ -1,12 +1,12 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 func (fact GenesisCurrenciesFact) MarshalBSON() ([]byte, error) {
@@ -32,7 +32,7 @@ type GenesisCurrenciesFactBSONUnpacker struct {
 func (fact *GenesisCurrenciesFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ufact GenesisCurrenciesFactBSONUnpacker
 	if err := bsonenc.Unmarshal(b, &ufact); err != nil {
-		return xerrors.Errorf("failed to unmarshal GenesisCurrenciesFact: %w", err)
+		return errors.Wrap(err, "failed to unmarshal GenesisCurrenciesFact")
 	}
 
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.GK, ufact.KS, ufact.CS)

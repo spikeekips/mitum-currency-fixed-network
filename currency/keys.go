@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"sort"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -42,7 +42,7 @@ func NewKey(k key.Publickey, w uint) (Key, error) {
 
 func (ky Key) IsValid([]byte) error {
 	if ky.w < 1 || ky.w > 100 {
-		return xerrors.Errorf("invalid key weight, 1 <= weight <= 100")
+		return errors.Errorf("invalid key weight, 1 <= weight <= 100")
 	}
 
 	return ky.k.IsValid(nil)
@@ -123,7 +123,7 @@ func (ks Keys) Bytes() []byte {
 
 func (ks Keys) IsValid([]byte) error {
 	if ks.threshold < 1 || ks.threshold > 100 {
-		return xerrors.Errorf("invalid threshold, %d, should be 1 <= threshold <= 100", ks.threshold)
+		return errors.Errorf("invalid threshold, %d, should be 1 <= threshold <= 100", ks.threshold)
 	}
 
 	if err := ks.h.IsValid(nil); err != nil {
@@ -131,9 +131,9 @@ func (ks Keys) IsValid([]byte) error {
 	}
 
 	if n := len(ks.keys); n < 1 {
-		return xerrors.Errorf("empty keys")
+		return errors.Errorf("empty keys")
 	} else if n > MaxKeyInKeys {
-		return xerrors.Errorf("keys over %d, %d", MaxKeyInKeys, n)
+		return errors.Errorf("keys over %d, %d", MaxKeyInKeys, n)
 	}
 
 	m := map[string]struct{}{}
@@ -142,7 +142,7 @@ func (ks Keys) IsValid([]byte) error {
 		if err := k.IsValid(nil); err != nil {
 			return err
 		} else if _, found := m[k.Key().String()]; found {
-			return xerrors.Errorf("duplicated keys found")
+			return errors.Errorf("duplicated keys found")
 		} else {
 			m[k.Key().String()] = struct{}{}
 		}
@@ -154,13 +154,13 @@ func (ks Keys) IsValid([]byte) error {
 	}
 
 	if totalWeight < ks.threshold {
-		return xerrors.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
+		return errors.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
 	}
 
 	if h, err := ks.GenerateHash(); err != nil {
 		return err
 	} else if !ks.h.Equal(h) {
-		return xerrors.Errorf("hash not matched")
+		return errors.Errorf("hash not matched")
 	}
 
 	return nil
@@ -215,13 +215,13 @@ func checkThreshold(fs []operation.FactSign, keys Keys) error {
 	for i := range fs {
 		ky, found := keys.Key(fs[i].Signer())
 		if !found {
-			return xerrors.Errorf("unknown key found, %s", fs[i].Signer())
+			return errors.Errorf("unknown key found, %s", fs[i].Signer())
 		}
 		sum += ky.Weight()
 	}
 
 	if sum < keys.Threshold() {
-		return xerrors.Errorf("not passed threshold, sum=%d < threshold=%d", sum, keys.Threshold())
+		return errors.Errorf("not passed threshold, sum=%d < threshold=%d", sum, keys.Threshold())
 	}
 
 	return nil

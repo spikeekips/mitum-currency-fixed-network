@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/launch/config"
@@ -36,7 +36,7 @@ type KeyDesign struct {
 func (kd *KeyDesign) IsValid([]byte) error {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
-		return xerrors.Errorf("json encoder needs for load design: %w", err)
+		return errors.Wrap(err, "json encoder needs for load design")
 	}
 
 	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
@@ -91,7 +91,7 @@ type GenesisCurrenciesDesign struct {
 
 func (de *GenesisCurrenciesDesign) IsValid([]byte) error {
 	if de.AccountKeys == nil {
-		return xerrors.Errorf("empty account-keys")
+		return errors.Errorf("empty account-keys")
 	}
 
 	if err := de.AccountKeys.IsValid(nil); err != nil {
@@ -119,7 +119,7 @@ type CurrencyDesign struct {
 func (de *CurrencyDesign) IsValid([]byte) error {
 	var cid currency.CurrencyID
 	if de.CurrencyString == nil {
-		return xerrors.Errorf("empty currency")
+		return errors.Errorf("empty currency")
 	}
 	cid = currency.CurrencyID(*de.CurrencyString)
 	if err := cid.IsValid(nil); err != nil {
@@ -174,7 +174,7 @@ func (no *FeeerDesign) IsValid([]byte) error {
 			return err
 		}
 	default:
-		return xerrors.Errorf("unknown type of feeer, %v", t)
+		return errors.Errorf("unknown type of feeer, %v", t)
 	}
 
 	return nil
@@ -183,11 +183,11 @@ func (no *FeeerDesign) IsValid([]byte) error {
 func (no FeeerDesign) checkFixed(c map[string]interface{}) error {
 	a, found := c["amount"]
 	if !found {
-		return xerrors.Errorf("fixed needs `amount`")
+		return errors.Errorf("fixed needs `amount`")
 	}
 	n, err := currency.NewBigFromInterface(a)
 	if err != nil {
-		return xerrors.Errorf("invalid amount value, %v of fixed: %w", a, err)
+		return errors.Wrapf(err, "invalid amount value, %v of fixed", a)
 	}
 	no.Extras["fixed_amount"] = n
 
@@ -196,17 +196,17 @@ func (no FeeerDesign) checkFixed(c map[string]interface{}) error {
 
 func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
 	if a, found := c["ratio"]; !found {
-		return xerrors.Errorf("ratio needs `ratio`")
+		return errors.Errorf("ratio needs `ratio`")
 	} else if f, ok := a.(float64); !ok {
-		return xerrors.Errorf("invalid ratio value type, %T of ratio; should be float64", a)
+		return errors.Errorf("invalid ratio value type, %T of ratio; should be float64", a)
 	} else {
 		no.Extras["ratio_ratio"] = f
 	}
 
 	if a, found := c["min"]; !found {
-		return xerrors.Errorf("ratio needs `min`")
+		return errors.Errorf("ratio needs `min`")
 	} else if n, err := currency.NewBigFromInterface(a); err != nil {
-		return xerrors.Errorf("invalid min value, %v of ratio: %w", a, err)
+		return errors.Wrapf(err, "invalid min value, %v of ratio", a)
 	} else {
 		no.Extras["ratio_min"] = n
 	}
@@ -214,7 +214,7 @@ func (no FeeerDesign) checkRatio(c map[string]interface{}) error {
 	if a, found := c["max"]; found {
 		n, err := currency.NewBigFromInterface(a)
 		if err != nil {
-			return xerrors.Errorf("invalid max value, %v of ratio: %w", a, err)
+			return errors.Wrapf(err, "invalid max value, %v of ratio", a)
 		}
 		no.Extras["ratio_max"] = n
 	}

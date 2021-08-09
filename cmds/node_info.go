@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/network"
@@ -45,7 +45,7 @@ func NodeInfoHandler(
 		if i, err := handler(); err != nil {
 			return nil, err
 		} else if j, ok := i.(network.NodeInfoV0); !ok {
-			return nil, xerrors.Errorf("unsupported NodeInfo, %T", i)
+			return nil, errors.Errorf("unsupported NodeInfo, %T", i)
 		} else {
 			ni = j
 		}

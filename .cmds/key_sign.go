@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type SignKeyCommand struct {
@@ -29,7 +29,7 @@ func (cmd *SignKeyCommand) Run(flags *MainFlags, version util.Version, log loggi
 
 		return err
 	} else if pk, ok := k.(key.Privatekey); !ok {
-		return xerrors.Errorf("not Privatekey, %T", k)
+		return errors.Errorf("not Privatekey, %T", k)
 	} else {
 		priv = pk
 	}
@@ -38,15 +38,15 @@ func (cmd *SignKeyCommand) Run(flags *MainFlags, version util.Version, log loggi
 
 	var base []byte
 	if s := strings.TrimSpace(cmd.Base); len(s) < 1 {
-		return xerrors.Errorf("empty signature base")
+		return errors.Errorf("empty signature base")
 	} else if b, err := base64.StdEncoding.DecodeString(s); err != nil {
-		return xerrors.Errorf("invalid signature base; failed to decode by base64: %w", err)
+		return errors.Wrap(err, "invalid signature base; failed to decode by base64")
 	} else {
 		base = b
 	}
 
 	if sig, err := priv.Sign(base); err != nil {
-		return xerrors.Errorf("failed to sign base: %w", err)
+		return errors.Wrap(err, "failed to sign base")
 	} else {
 		cmd.print(sig.String())
 	}

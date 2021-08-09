@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum-currency/digest"
@@ -113,7 +113,7 @@ func (cmd *RunCommand) hookSetStateHandler(ctx context.Context) (context.Context
 
 	var di *digest.Digester
 	if err := LoadDigesterContextValue(ctx, &di); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}
@@ -178,7 +178,7 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -265,7 +265,7 @@ func (*RunCommand) enteringBootingState(ctx context.Context) (context.Context, e
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
 		return ctx, err
 	} else if i, ok := cs.(*basicstates.States); !ok {
-		return ctx, xerrors.Errorf("States not *basicstates.States, %T", cs)
+		return ctx, errors.Errorf("States not *basicstates.States, %T", cs)
 	} else {
 		bcs = i
 	}
@@ -297,7 +297,7 @@ func (*RunCommand) attachDigestRateLimit(
 		for j := range rs {
 			prefix, found := digest.RateLimitHandlerMap[j]
 			if !found {
-				return ctx, xerrors.Errorf("handler, %q for digest ratelimit not found", j)
+				return ctx, errors.Errorf("handler, %q for digest ratelimit not found", j)
 			}
 
 			log.Log().Debug().
@@ -342,20 +342,26 @@ func (cmd *RunCommand) setDigestSendHandler(
 		return nil, err
 	}
 
-	remotes := suffrage.Nodes()
-	rchans := make([]network.Channel, len(remotes))
-	var j int
-	for i := range remotes {
-		s := remotes[i]
-		_, ch, found := nodepool.Node(s)
-		if !found {
-			return nil, xerrors.Errorf("suffrage node, %q not found in nodepool", s)
-		}
-		rchans[j] = ch
-		j++
-	}
+	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) {
+		remotes := suffrage.Nodes()
 
-	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), rchans))
+		var chs []network.Channel
+		for i := range remotes {
+			s := remotes[i]
+			_, ch, found := nodepool.Node(s)
+			switch {
+			case !found:
+				return nil, errors.Errorf("suffrage node, %q not found in nodepool", s)
+			case ch == nil:
+				continue
+			default:
+				chs = append(chs, ch)
+			}
+		}
+
+		return chs, nil
+	}))
+
 	cmd.Log().Debug().Msg("send handler attached")
 
 	return handlers, nil

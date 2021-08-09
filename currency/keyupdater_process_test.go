@@ -3,8 +3,8 @@ package currency
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -127,7 +127,7 @@ func (t *testKeyUpdaterOperation) TestUnknownCurrency() {
 	err = opr.Process(op)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "balance of target does not exist")
 }
 
@@ -154,7 +154,7 @@ func (t *testKeyUpdaterOperation) TestEmptyBalance() {
 	err = opr.Process(op)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "insufficient balance")
 }
 
@@ -178,7 +178,7 @@ func (t *testKeyUpdaterOperation) TestTargetNotExist() {
 	err = opr.Process(op)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "target keys does not exist")
 }
 
@@ -196,7 +196,7 @@ func (t *testKeyUpdaterOperation) TestSameKeys() {
 	err = opr.Process(op)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "same Keys")
 }
 

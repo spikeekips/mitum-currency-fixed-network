@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -30,7 +30,7 @@ func NewCurrencyRegisterProcessor(cp *CurrencyPool, pubs []key.Publickey, thresh
 	return func(op state.Processor) (state.Processor, error) {
 		i, ok := op.(CurrencyRegister)
 		if !ok {
-			return nil, xerrors.Errorf("not CurrencyRegister, %T", op)
+			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		}
 		return &CurrencyRegisterProcessor{
 			CurrencyRegister: i,
@@ -46,7 +46,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, xerrors.Errorf("empty publickeys for operation signs")
+		return nil, errors.Errorf("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -55,17 +55,17 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 
 	if opp.cp != nil {
 		if opp.cp.Exists(item.Currency()) {
-			return nil, xerrors.Errorf("currency already registered, %q", item.Currency())
+			return nil, errors.Errorf("currency already registered, %q", item.Currency())
 		}
 	}
 
 	if err := checkExistsState(StateKeyAccount(item.GenesisAccount()), getState); err != nil {
-		return nil, xerrors.Errorf("genesis account not found: %w", err)
+		return nil, errors.Wrap(err, "genesis account not found")
 	}
 
 	if receiver := item.Policy().Feeer().Receiver(); receiver != nil {
 		if err := checkExistsState(StateKeyAccount(receiver), getState); err != nil {
-			return nil, xerrors.Errorf("feeer receiver account not found: %w", err)
+			return nil, errors.Wrap(err, "feeer receiver account not found")
 		}
 	}
 
@@ -73,7 +73,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, xerrors.Errorf("currency already registered, %q", item.Currency())
+		return nil, errors.Errorf("currency already registered, %q", item.Currency())
 	default:
 		opp.de = st
 	}
@@ -82,7 +82,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, xerrors.Errorf("genesis account has already the currency, %q", item.Currency())
+		return nil, errors.Errorf("genesis account has already the currency, %q", item.Currency())
 	default:
 		opp.ga = NewAmountState(st, item.Currency())
 	}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
@@ -112,11 +112,11 @@ func (fa FixedFeeer) Fee(Big) (Big, error) {
 
 func (fa FixedFeeer) IsValid([]byte) error {
 	if err := fa.receiver.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid receiver for fixed feeer: %w", err)
+		return errors.Wrap(err, "invalid receiver for fixed feeer")
 	}
 
 	if !fa.amount.OverNil() {
-		return xerrors.Errorf("fixed feeer amount under zero")
+		return errors.Errorf("fixed feeer amount under zero")
 	}
 
 	return nil
@@ -186,20 +186,20 @@ func (fa RatioFeeer) Fee(a Big) (Big, error) {
 
 func (fa RatioFeeer) IsValid([]byte) error {
 	if err := fa.receiver.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid receiver for ratio feeer: %w", err)
+		return errors.Wrap(err, "invalid receiver for ratio feeer")
 	}
 
 	if fa.ratio < 0 || fa.ratio > 1 {
-		return xerrors.Errorf("invalid ratio, %v; it should be 0 >=, <= 1", fa.ratio)
+		return errors.Errorf("invalid ratio, %v; it should be 0 >=, <= 1", fa.ratio)
 	}
 
 	if !fa.min.OverNil() {
-		return xerrors.Errorf("ratio feeer min amount under zero")
+		return errors.Errorf("ratio feeer min amount under zero")
 	} else if !fa.max.Equal(UnlimitedMaxFeeAmount) {
 		if !fa.max.OverNil() {
-			return xerrors.Errorf("ratio feeer max amount under zero")
+			return errors.Errorf("ratio feeer max amount under zero")
 		} else if fa.min.Compare(fa.max) > 0 {
-			return xerrors.Errorf("ratio feeer min should over max")
+			return errors.Errorf("ratio feeer min should over max")
 		}
 	}
 

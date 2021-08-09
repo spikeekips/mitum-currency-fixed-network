@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -62,7 +62,7 @@ func (cmd *BenchCommand) Run(flags *MainFlags, version util.Version, l logging.L
 	}
 
 	if cmd.Operations < 4 {
-		return xerrors.Errorf("operations should be over 4")
+		return errors.Errorf("operations should be over 4")
 	}
 
 	cmd.Log().Info().Str("version", version.String()).Msg("mitum-currency")
@@ -94,7 +94,7 @@ func (cmd *BenchCommand) run() error {
 	cmd.Log().Debug().Msg("storage prepared")
 
 	if local, err := cmd.makeLocal(); err != nil {
-		return xerrors.Errorf("failed to preaper local: %w", err)
+		return errors.Wrap(err, "failed to preaper local")
 	} else {
 		cmd.local = local
 	}
@@ -102,24 +102,24 @@ func (cmd *BenchCommand) run() error {
 
 	cmd.suffrage = base.NewFixedSuffrage(cmd.local.Node().Address(), []base.Address{cmd.local.Node().Address()})
 	if err := cmd.suffrage.Initialize(); err != nil {
-		return xerrors.Errorf("failed to initialize suffrage: %w", err)
+		return errors.Wrap(err, "failed to initialize suffrage")
 	}
 	cmd.Log().Debug().Msg("fixed suffrage prepared")
 
 	if err := cmd.elapsed("prepare-accounts", cmd.prepareAccounts); err != nil {
-		return xerrors.Errorf("failed to prepare accounts: %w", err)
+		return errors.Wrap(err, "failed to prepare accounts")
 	}
 	cmd.Log().Debug().Int("accounts", len(cmd.accounts)).Msg("accounts prepared")
 
 	if err := cmd.elapsed("prepare-operations", cmd.prepareOperations); err != nil {
-		return xerrors.Errorf("failed to prepare operations: %w", err)
+		return errors.Wrap(err, "failed to prepare operations")
 	}
 	cmd.Log().Debug().
 		Int("operations", len(cmd.ops)).Int("excluded_operations", len(cmd.opsExclude)).
 		Msg("operations prepared")
 
 	if err := cmd.elapsed("prepare-processor", cmd.prepareProcessor); err != nil {
-		return xerrors.Errorf("failed to prepare processor: %w", err)
+		return errors.Wrap(err, "failed to prepare processor")
 	}
 	cmd.Log().Debug().Msg("processor prepared")
 
@@ -153,11 +153,11 @@ func (cmd *BenchCommand) clean() error {
 
 func (cmd *BenchCommand) try(i int) error {
 	if err := cmd.elapsed("process", cmd.process); err != nil {
-		return xerrors.Errorf("failed to process: %w", err)
+		return errors.Wrap(err, "failed to process")
 	}
 
 	if err := cmd.elapsed("check-result", cmd.checkProcess); err != nil {
-		return xerrors.Errorf("failed to check result: %w", err)
+		return errors.Wrap(err, "failed to check result")
 	}
 
 	if !cmd.previousBlock.Hash().Equal(cmd.block.Hash()) {
@@ -174,7 +174,7 @@ func (cmd *BenchCommand) try(i int) error {
 			).
 			Msg("block hash does not matched")
 
-		return xerrors.Errorf("block hash does not match; %v != %v", cmd.previousBlock.Hash(), cmd.block.Hash())
+		return errors.Errorf("block hash does not match; %v != %v", cmd.previousBlock.Hash(), cmd.block.Hash())
 	} else {
 		cmd.Log().Info().Int("try", i).
 			Hinted("previous_block", cmd.previousBlock.Hash()).
@@ -260,7 +260,7 @@ func (cmd *BenchCommand) makeLocal() (*isaac.Local, error) {
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, xerrors.Errorf("last block not found")
+		return nil, errors.Errorf("last block not found")
 	default:
 		cmd.lastHeight = m.Height()
 	}
@@ -343,7 +343,7 @@ func (cmd *BenchCommand) prepareAccounts() error {
 		}
 
 		var aerr acerr
-		if !xerrors.As(err, &aerr) {
+		if !errors.As(err, &aerr) {
 			return err
 		} else if aerr.err != nil {
 			return err
@@ -477,7 +477,7 @@ func (cmd *BenchCommand) prepareOperations() error { // nolint:funlen
 		}
 
 		var aerr acerr
-		if !xerrors.As(err, &aerr) {
+		if !errors.As(err, &aerr) {
 			return err
 		} else if aerr.err != nil {
 			return err
@@ -541,7 +541,7 @@ func (cmd *BenchCommand) generateSeal(ops []operation.Operation) error {
 	if sl, err := operation.NewBaseSeal(cmd.priv, ops, cmd.networkID); err != nil {
 		return err
 	} else if err := cmd.storage.NewSeals([]seal.Seal{sl}); err != nil {
-		return xerrors.Errorf("failed to store new seal: %w", err)
+		return errors.Wrap(err, "failed to store new seal")
 	} else {
 		return nil
 	}
@@ -577,15 +577,15 @@ func (cmd *BenchCommand) prepareProcessor() error {
 	initFact := ib.INITBallotFactV0
 
 	if vp, err := cmd.newVoteproof(base.StageINIT, initFact); err != nil {
-		return xerrors.Errorf("failed to make new voteproof: %w", err)
+		return errors.Wrap(err, "failed to make new voteproof")
 	} else {
 		cmd.ivp = vp
 	}
 
 	if b, err := pm.Proposal(cmd.ivp.Round()); err != nil {
-		return xerrors.Errorf("failed to make new proposal: %w", err)
+		return errors.Wrap(err, "failed to make new proposal")
 	} else if err := cmd.local.Storage().NewProposal(b); err != nil {
-		return xerrors.Errorf("failed to store new proposal: %w", err)
+		return errors.Wrap(err, "failed to store new proposal")
 	} else {
 		cmd.proposal = b
 	}
@@ -706,9 +706,9 @@ func (cmd *BenchCommand) process() error {
 	started = time.Now()
 	var bs storage.BlockStorage
 	if avp, err := cmd.newVoteproof(base.StageACCEPT, acceptFact); err != nil {
-		return xerrors.Errorf("failed to make new voteproof: %w", err)
+		return errors.Wrap(err, "failed to make new voteproof")
 	} else if s, err := dp.ProcessACCEPT(cmd.proposal.Hash(), avp); err != nil {
-		return xerrors.Errorf("failed to process accept voteproof: %w", err)
+		return errors.Wrap(err, "failed to process accept voteproof")
 	} else {
 		cmd.printElapsed("process-accept", started)
 
@@ -722,7 +722,7 @@ func (cmd *BenchCommand) process() error {
 
 	cmd.Log().Debug().Msg("trying to commit")
 	if err := cmd.commit(bs); err != nil {
-		return xerrors.Errorf("failed to commit: %w", err)
+		return errors.Wrap(err, "failed to commit")
 	}
 	cmd.Log().Debug().Msg("committed")
 
@@ -816,7 +816,7 @@ func (cmd *BenchCommand) checkProcess() error { // nolint:funlen
 
 	if founds != len(facts) {
 		if len(notFounds) > 0 || len(notInStates) > 0 || len(inStates) > 0 {
-			return xerrors.Errorf("failed to process")
+			return errors.Errorf("failed to process")
 		}
 	}
 

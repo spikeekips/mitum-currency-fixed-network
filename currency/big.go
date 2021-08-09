@@ -3,7 +3,7 @@ package currency
 import (
 	"math/big"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -27,7 +27,7 @@ func NewBig(i int64) Big {
 func NewBigFromString(s string) (Big, error) {
 	i, ok := new(big.Int).SetString(s, 10)
 	if !ok {
-		return Big{}, xerrors.Errorf("not proper Big string, %q", s)
+		return Big{}, errors.Errorf("not proper Big string, %q", s)
 	}
 	return NewBigFromBigInt(i), nil
 }
@@ -37,7 +37,7 @@ func MustBigFromString(s string) Big {
 	if ok {
 		return NewBigFromBigInt(i)
 	}
-	panic(xerrors.Errorf("not proper Big string, %q", s))
+	panic(errors.Errorf("not proper Big string, %q", s))
 }
 
 func NewBigFromInterface(a interface{}) (Big, error) {
@@ -61,11 +61,11 @@ func NewBigFromInterface(a interface{}) (Big, error) {
 	case string:
 		n, err := NewBigFromString(t)
 		if err != nil {
-			return NilBig, xerrors.Errorf("invalid Big value, %q", t)
+			return NilBig, errors.Errorf("invalid Big value, %q", t)
 		}
 		return n, nil
 	default:
-		return NilBig, xerrors.Errorf("unknown type of Big value, %T", a)
+		return NilBig, errors.Errorf("unknown type of Big value, %T", a)
 	}
 }
 

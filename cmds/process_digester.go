@@ -3,7 +3,7 @@ package cmds
 import (
 	"context"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/launch/config"
@@ -60,7 +60,7 @@ func ProcessDigester(ctx context.Context) (context.Context, error) {
 
 	var st *digest.Database
 	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -76,7 +76,7 @@ func ProcessDigester(ctx context.Context) (context.Context, error) {
 func ProcessStartDigester(ctx context.Context) (context.Context, error) {
 	var di *digest.Digester
 	if err := LoadDigesterContextValue(ctx, &di); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -101,7 +101,7 @@ func HookDigesterFollowUp(ctx context.Context) (context.Context, error) {
 
 	var st *digest.Database
 	if err := LoadDigestDatabaseContextValue(ctx, &st); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -144,7 +144,7 @@ func digestFollowup(ctx context.Context, height base.Height) error {
 		if err := process.LoadBlockDataContextValue(ctx, &bd); err != nil {
 			return err
 		} else if i, ok := bd.(*localfs.BlockData); !ok {
-			return xerrors.Errorf("other block data, %T not yet supported", bd)
+			return errors.Errorf("other block data, %T not yet supported", bd)
 		} else {
 			blockData = i
 		}

@@ -3,7 +3,7 @@ package cmds
 import (
 	"bytes"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -38,7 +38,7 @@ func (cmd *CreateAccountCommand) Run(flags *MainFlags, version util.Version, log
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	} else if a, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else {
 		cmd.sender = a
 	}
@@ -66,7 +66,7 @@ func (cmd *CreateAccountCommand) Run(flags *MainFlags, version util.Version, log
 
 func (cmd *CreateAccountCommand) parseFlags() error {
 	if len(cmd.Keys) < 1 {
-		return xerrors.Errorf("--key must be given at least one")
+		return errors.Errorf("--key must be given at least one")
 	}
 
 	if len(cmd.Token) < 1 {
@@ -98,9 +98,9 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 			return nil, err
 		} else if so, ok := s.(operation.Seal); !ok {
-			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+			return nil, errors.Errorf("seal is not operation.Seal, %T", s)
 		} else if _, ok := so.(operation.SealUpdater); !ok {
-			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+			return nil, errors.Errorf("seal is not operation.SealUpdater, %T", s)
 		} else {
 			sl = so
 		}
@@ -129,7 +129,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 	}
 
 	if op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo); err != nil {
-		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
+		return nil, errors.Wrap(err, "failed to create create-account operation")
 	} else {
 		return op, nil
 	}

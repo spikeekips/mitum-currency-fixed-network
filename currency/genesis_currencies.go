@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -68,9 +68,9 @@ func (fact GenesisCurrenciesFact) Bytes() []byte {
 
 func (fact GenesisCurrenciesFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return xerrors.Errorf("empty token for GenesisCurrenciesFact")
+		return errors.Errorf("empty token for GenesisCurrenciesFact")
 	} else if len(fact.cs) < 1 {
-		return xerrors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
+		return errors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
@@ -78,7 +78,7 @@ func (fact GenesisCurrenciesFact) IsValid([]byte) error {
 		fact.genesisNodeKey,
 		fact.keys,
 	}, nil, false); err != nil {
-		return xerrors.Errorf("invalid fact: %w", err)
+		return errors.Wrap(err, "invalid fact")
 	}
 
 	founds := map[CurrencyID]struct{}{}
@@ -87,7 +87,7 @@ func (fact GenesisCurrenciesFact) IsValid([]byte) error {
 		if err := c.IsValid(nil); err != nil {
 			return err
 		} else if _, found := founds[c.Currency()]; found {
-			return xerrors.Errorf("duplicated currency id found, %q", c.Currency())
+			return errors.Errorf("duplicated currency id found, %q", c.Currency())
 		} else {
 			founds[c.Currency()] = struct{}{}
 		}
@@ -159,12 +159,12 @@ func (op GenesisCurrencies) IsValid(networkID []byte) error {
 	}
 
 	if len(op.Signs()) != 1 {
-		return xerrors.Errorf("genesis currencies should be signed only by genesis node key")
+		return errors.Errorf("genesis currencies should be signed only by genesis node key")
 	}
 
 	fact := op.Fact().(GenesisCurrenciesFact)
 	if !fact.genesisNodeKey.Equal(op.Signs()[0].Signer()) {
-		return xerrors.Errorf("not signed by genesis node key")
+		return errors.Errorf("not signed by genesis node key")
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -78,11 +78,11 @@ func (fact TransfersFact) Bytes() []byte {
 
 func (fact TransfersFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return xerrors.Errorf("empty token for TransferFact")
+		return errors.Errorf("empty token for TransferFact")
 	} else if n := len(fact.items); n < 1 {
-		return xerrors.Errorf("empty items")
+		return errors.Errorf("empty items")
 	} else if n > int(MaxTransferItems) {
-		return xerrors.Errorf("items, %d over max, %d", n, MaxTransferItems)
+		return errors.Errorf("items, %d over max, %d", n, MaxTransferItems)
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{fact.h, fact.sender}, nil, false); err != nil {
@@ -93,15 +93,15 @@ func (fact TransfersFact) IsValid([]byte) error {
 	for i := range fact.items {
 		it := fact.items[i]
 		if err := it.IsValid(nil); err != nil {
-			return xerrors.Errorf("invalid item found: %w", err)
+			return errors.Wrap(err, "invalid item found")
 		}
 
 		k := StateAddressKeyPrefix(it.Receiver())
 		switch _, found := foundReceivers[k]; {
 		case found:
-			return xerrors.Errorf("duplicated receiver found, %s", it.Receiver())
+			return errors.Errorf("duplicated receiver found, %s", it.Receiver())
 		case fact.sender.Equal(it.Receiver()):
-			return xerrors.Errorf("receiver is same with sender, %q", fact.sender)
+			return errors.Errorf("receiver is same with sender, %q", fact.sender)
 		default:
 			foundReceivers[k] = struct{}{}
 		}

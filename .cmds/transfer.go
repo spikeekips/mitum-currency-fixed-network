@@ -3,7 +3,7 @@ package cmds
 import (
 	"bytes"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -37,9 +37,9 @@ func (cmd *TransferCommand) Run(flags *MainFlags, version util.Version, log logg
 	if err := cmd.parseFlags(); err != nil {
 		return err
 	} else if sender, err := cmd.Sender.Encode(defaultJSONEnc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else if receiver, err := cmd.Receiver.Encode(defaultJSONEnc); err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else {
 		cmd.sender = sender
 		cmd.receiver = receiver
@@ -81,9 +81,9 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 		if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.Bytes()); err != nil {
 			return nil, err
 		} else if so, ok := s.(operation.Seal); !ok {
-			return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+			return nil, errors.Errorf("seal is not operation.Seal, %T", s)
 		} else if _, ok := so.(operation.SealUpdater); !ok {
-			return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+			return nil, errors.Errorf("seal is not operation.SealUpdater, %T", s)
 		} else {
 			sl = so
 		}
@@ -112,7 +112,7 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) {
 	}
 
 	if op, err := currency.NewTransfers(fact, fs, cmd.Memo); err != nil {
-		return nil, xerrors.Errorf("failed to create transfers operation: %w", err)
+		return nil, errors.Wrap(err, "failed to create transfers operation")
 	} else {
 		return op, nil
 	}

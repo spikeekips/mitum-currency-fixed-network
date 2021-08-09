@@ -3,7 +3,7 @@ package currency
 import (
 	"strings"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
@@ -46,7 +46,7 @@ func (Address) Hint() hint.Hint {
 
 func (ca Address) IsValid([]byte) error {
 	if s := strings.TrimSpace(ca.String()); len(s) < 1 {
-		return xerrors.Errorf("empty address")
+		return errors.Errorf("empty address")
 	}
 
 	return nil

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var factTypesByHint = map[string]hint.Hinter{
@@ -58,7 +58,7 @@ func (hd *Handlers) handleOperationBuildFactTemplate(w http.ResponseWriter, r *h
 	factType := mux.Vars(r)["fact"]
 	hinter, found := factTypesByHint[factType]
 	if !found {
-		hd.problemWithError(w, xerrors.Errorf("unknown operation, %q", factType), http.StatusNotFound)
+		hd.problemWithError(w, errors.Errorf("unknown operation, %q", factType), http.StatusNotFound)
 
 		return
 	}

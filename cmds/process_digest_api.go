@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -56,7 +56,7 @@ func init() {
 func ProcessStartDigestAPI(ctx context.Context) (context.Context, error) {
 	var nt *digest.HTTP2Server
 	if err := LoadDigestNetworkContextValue(ctx, &nt); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -69,7 +69,7 @@ func ProcessStartDigestAPI(ctx context.Context) (context.Context, error) {
 func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 	var design DigestDesign
 	if err := LoadDigestDesignContextValue(ctx, &design); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, nil
 		}
 
@@ -134,7 +134,7 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 func newSendHandler(
 	priv key.Privatekey,
 	networkID base.NetworkID,
-	chans []network.Channel,
+	chans func() ([]network.Channel, error),
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
 		var sl seal.Seal
@@ -153,28 +153,40 @@ func newSendHandler(
 				[]operation.Operation{t},
 				networkID,
 			); err != nil {
-				return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+				return nil, errors.Wrap(err, "failed to create operation.Seal")
 			} else if err := bs.IsValid(networkID); err != nil {
 				return nil, err
 			} else {
 				sl = bs
 			}
 		default:
-			return nil, xerrors.Errorf("unsupported message type, %T", t)
+			return nil, errors.Errorf("unsupported message type, %T", t)
+		}
+
+		chs, err := chans()
+		switch {
+		case err != nil:
+			return nil, err
+		case len(chs) < 1:
+			return nil, errors.Errorf("no knowns nodes to send")
 		}
 
 		var wg sync.WaitGroup
-		wg.Add(len(chans))
+		wg.Add(len(chs))
 
-		errchan := make(chan error, len(chans))
-		for i := range chans {
+		errchan := make(chan error, len(chs))
+		for i := range chs {
 			go func(i int) {
 				defer wg.Done()
+
+				if chs[i] == nil {
+					return
+				}
 
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 				defer cancel()
 
-				errchan <- chans[i].SendSeal(ctx, sl)
+				errchan <- chs[i].SendSeal(ctx, sl)
 			}(i)
 		}
 

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base/block"
@@ -35,7 +35,7 @@ type BlockSession struct {
 
 func NewBlockSession(st *Database, blk block.Block) (*BlockSession, error) {
 	if st.Readonly() {
-		return nil, xerrors.Errorf("readonly mode")
+		return nil, errors.Errorf("readonly mode")
 	}
 
 	nst, err := st.New()
@@ -244,9 +244,9 @@ func (bs *BlockSession) writeModels(ctx context.Context, col string, models []mo
 func (bs *BlockSession) writeModelsChunk(ctx context.Context, col string, models []mongo.WriteModel) error {
 	opts := options.BulkWrite().SetOrdered(false)
 	if res, err := bs.st.database.Client().Collection(col).BulkWrite(ctx, models, opts); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("not inserted to %s", col)
+		return errors.Errorf("not inserted to %s", col)
 	}
 
 	return nil

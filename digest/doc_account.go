@@ -1,13 +1,13 @@
 package digest
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"golang.org/x/xerrors"
 )
 
 type AccountDoc struct {
@@ -51,7 +51,7 @@ type BalanceDoc struct {
 func NewBalanceDoc(st state.State, enc encoder.Encoder) (BalanceDoc, error) {
 	am, err := currency.StateBalanceValue(st)
 	if err != nil {
-		return BalanceDoc{}, xerrors.Errorf("BalanceDoc needs Amount state: %w", err)
+		return BalanceDoc{}, errors.Wrap(err, "BalanceDoc needs Amount state")
 	}
 
 	b, err := mongodbstorage.NewBaseDoc(nil, st, enc)

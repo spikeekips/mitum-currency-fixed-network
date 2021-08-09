@@ -1,9 +1,9 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -30,7 +30,7 @@ func (po CurrencyPolicy) Bytes() []byte {
 
 func (po CurrencyPolicy) IsValid([]byte) error {
 	if !po.newAccountMinBalance.OverNil() {
-		return xerrors.Errorf("NewAccountMinBalance under zero")
+		return errors.Errorf("NewAccountMinBalance under zero")
 	}
 
 	return po.feeer.IsValid(nil)

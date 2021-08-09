@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
@@ -49,9 +49,9 @@ func (cmd *InitCommand) run() error {
 	cmd.Log().Debug().Msg("trying to create genesis block")
 	var genesisBlock block.Block
 	if gg, err := isaac.NewGenesisBlockV0Generator(cmd.nr.Local(), ops); err != nil {
-		return xerrors.Errorf("failed to create genesis block generator: %w", err)
+		return errors.Wrap(err, "failed to create genesis block generator")
 	} else if blk, err := gg.Generate(); err != nil {
-		return xerrors.Errorf("failed to generate genesis block: %w", err)
+		return errors.Wrap(err, "failed to generate genesis block")
 	} else {
 		cmd.Log().Info().
 			Dict("block", logging.Dict().Hinted("height", blk.Height()).Hinted("hash", blk.Hash())).
@@ -78,19 +78,19 @@ func (cmd *InitCommand) initialize() error {
 	}
 
 	if err := cmd.nr.AttachStorage(); err != nil {
-		return xerrors.Errorf("failed to attach storage: %w", err)
+		return errors.Wrap(err, "failed to attach storage")
 	}
 
 	if cmd.Force {
 		if err := cmd.nr.Storage().Clean(); err != nil {
-			return xerrors.Errorf("failed to clean storage: %w", err)
+			return errors.Wrap(err, "failed to clean storage")
 		} else if err := cmd.nr.Local().BlockFS().Clean(false); err != nil {
-			return xerrors.Errorf("failed to clean blockfs: %w", err)
+			return errors.Wrap(err, "failed to clean blockfs")
 		}
 	}
 
 	if err := cmd.nr.Initialize(); err != nil {
-		return xerrors.Errorf("failed to generate node from design: %w", err)
+		return errors.Wrap(err, "failed to generate node from design")
 	} else if err := cmd.prepareProposalProcessor(); err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (cmd *InitCommand) checkExisting() error {
 	} else {
 		cmd.Log().Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
-		return xerrors.Errorf("already blocks exist, clean first")
+		return errors.Errorf("already blocks exist, clean first")
 	}
 
 	return nil
@@ -143,7 +143,7 @@ func (cmd *InitCommand) loadInitOperations() ([]operation.Operation, error) {
 	}
 
 	if !genesisOpFound {
-		return nil, xerrors.Errorf("GenesisAccount operation is missing")
+		return nil, errors.Errorf("GenesisAccount operation is missing")
 	}
 
 	return ops, nil

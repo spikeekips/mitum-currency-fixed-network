@@ -1,9 +1,9 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 func DecodeAmount(b []byte, enc encoder.Encoder) (Amount, error) {
@@ -82,7 +82,7 @@ func DecodeAccount(b []byte, enc encoder.Encoder) (Account, error) {
 	if i, err := enc.Decode(b); err != nil {
 		return Account{}, err
 	} else if ac, ok := i.(Account); !ok {
-		return Account{}, xerrors.Errorf("not Account: %T", i)
+		return Account{}, errors.Errorf("not Account: %T", i)
 	} else {
 		return ac, nil
 	}

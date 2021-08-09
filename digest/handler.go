@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -22,7 +23,6 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
 	"golang.org/x/sync/singleflight"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -257,18 +257,18 @@ func (hd *Handlers) stream(w http.ResponseWriter, bufsize int, status int) (*jso
 
 func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 	if n := len(pairs); n%2 != 0 {
-		return "", xerrors.Errorf("failed to combine url; uneven pairs to combine url")
+		return "", errors.Errorf("failed to combine url; uneven pairs to combine url")
 	} else if n < 1 {
 		u, err := hd.routes[path].URL()
 		if err != nil {
-			return "", xerrors.Errorf("failed to combine url: %w", err)
+			return "", errors.Wrap(err, "failed to combine url")
 		}
 		return u.String(), nil
 	}
 
 	u, err := hd.routes[path].URLPath(pairs...)
 	if err != nil {
-		return "", xerrors.Errorf("failed to combine url: %w", err)
+		return "", errors.Wrap(err, "failed to combine url")
 	}
 	return u.String(), nil
 }
@@ -341,11 +341,11 @@ func (hd *Handlers) SetRateLimit(rules map[string][]process.RateLimitRule, store
 func (hd *Handlers) handleError(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	switch {
-	case xerrors.Is(err, util.NotFoundError):
+	case errors.Is(err, util.NotFoundError):
 		status = http.StatusNotFound
-	case xerrors.Is(err, quicnetwork.BadRequestError):
+	case errors.Is(err, quicnetwork.BadRequestError):
 		status = http.StatusBadRequest
-	case xerrors.Is(err, quicnetwork.NotSupportedErorr):
+	case errors.Is(err, quicnetwork.NotSupportedErorr):
 		status = http.StatusInternalServerError
 	}
 

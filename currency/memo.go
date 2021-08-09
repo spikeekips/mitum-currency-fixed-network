@@ -1,12 +1,12 @@
 package currency
 
-import "golang.org/x/xerrors"
+import "github.com/pkg/errors"
 
 var MaxMemoSize = 100 // TODO should be managed by policy
 
 func IsValidMemo(s string) error {
 	if len(s) > MaxMemoSize {
-		return xerrors.Errorf("memo over max size, %d > %d", len(s), MaxMemoSize)
+		return errors.Errorf("memo over max size, %d > %d", len(s), MaxMemoSize)
 	}
 
 	return nil

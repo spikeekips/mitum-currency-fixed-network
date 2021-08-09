@@ -3,7 +3,7 @@ package currency
 import (
 	"fmt"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -68,7 +68,7 @@ func (am Amount) IsValid([]byte) error {
 		am.cid,
 		am.big,
 	}, nil, false); err != nil {
-		return xerrors.Errorf("invalid Balance: %w", err)
+		return errors.Wrap(err, "invalid Balance")
 	}
 
 	return nil

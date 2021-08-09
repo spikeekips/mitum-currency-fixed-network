@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"github.com/alecthomas/kong"
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/util"
 
@@ -27,7 +27,7 @@ func NewKeyAddressCommand() KeyAddressCommand {
 
 func (cmd *KeyAddressCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	ks := make([]currency.Key, len(cmd.Keys))

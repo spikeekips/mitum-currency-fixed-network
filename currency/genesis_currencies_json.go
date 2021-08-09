@@ -3,11 +3,11 @@ package currency
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type GenesisCurrenciesFactJSONPacker struct {
@@ -41,7 +41,7 @@ type GenesisCurrenciesFactJSONUnpacker struct {
 func (fact *GenesisCurrenciesFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ufact GenesisCurrenciesFactJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &ufact); err != nil {
-		return xerrors.Errorf("failed to unmarshal GenesisCurrenciesFact: %w", err)
+		return errors.Wrap(err, "failed to unmarshal GenesisCurrenciesFact")
 	}
 
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.GK, ufact.KS, ufact.CS)

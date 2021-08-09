@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
@@ -45,7 +45,7 @@ func (st AmountState) IsValid(b []byte) error {
 	}
 
 	if !st.fee.OverNil() {
-		return xerrors.Errorf("invalid fee; under zero, %v", st.fee)
+		return errors.Errorf("invalid fee; under zero, %v", st.fee)
 	}
 
 	return nil
@@ -65,7 +65,7 @@ func (st AmountState) GenerateHash() valuehash.Hash {
 func (st AmountState) Merge(b state.State) (state.State, error) {
 	var am Amount
 	if b, err := StateBalanceValue(b); err != nil {
-		if !xerrors.Is(err, util.NotFoundError) {
+		if !errors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
 		am = NewZeroAmount(st.cid)

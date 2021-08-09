@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -21,7 +22,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
 )
 
 var maxLimit int64 = 50
@@ -69,7 +69,7 @@ func NewReadonlyDatabase(mitum *mongodbstorage.Database, st *mongodbstorage.Data
 
 func (st *Database) New() (*Database, error) {
 	if st.readonly {
-		return nil, xerrors.Errorf("readonly mode")
+		return nil, errors.Errorf("readonly mode")
 	}
 
 	nst, err := st.database.New()
@@ -93,7 +93,7 @@ func (st *Database) Initialize() error {
 
 	switch h, found, err := loadLastBlock(st); {
 	case err != nil:
-		return xerrors.Errorf("failed to get last block for digest: %w", err)
+		return errors.Wrap(err, "failed to get last block for digest")
 	case !found:
 		st.lastBlock = base.NilHeight
 		st.Log().Debug().Msg("last block for digest not found")
@@ -116,7 +116,7 @@ func (st *Database) Initialize() error {
 
 func (st *Database) createIndex() error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	for col, models := range defaultIndexes {
@@ -137,7 +137,7 @@ func (st *Database) LastBlock() base.Height {
 
 func (st *Database) SetLastBlock(height base.Height) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	st.Lock()
@@ -164,7 +164,7 @@ func (st *Database) setLastBlock(height base.Height) error {
 
 func (st *Database) Clean() error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	st.Lock()
@@ -180,7 +180,7 @@ func (st *Database) clean() error {
 		defaultColNameOperation,
 	} {
 		if err := st.database.Client().Collection(col).Drop(context.Background()); err != nil {
-			return storage.WrapStorageError(err)
+			return storage.MergeStorageError(err)
 		}
 
 		st.Log().Debug().Str("collection", col).Msg("drop collection by height")
@@ -197,7 +197,7 @@ func (st *Database) clean() error {
 
 func (st *Database) CleanByHeight(height base.Height) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	st.Lock()
@@ -225,7 +225,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 			opts,
 		)
 		if err != nil {
-			return storage.WrapStorageError(err)
+			return storage.MergeStorageError(err)
 		}
 
 		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
@@ -361,7 +361,7 @@ func (st *Database) Operation(
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return OperationValue{}, false, nil
 		}
 
@@ -439,7 +439,7 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return rs, false, nil
 		}
 
@@ -489,7 +489,7 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 			},
 			options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 		); err != nil {
-			if xerrors.Is(err, util.NotFoundError) {
+			if errors.Is(err, util.NotFoundError) {
 				break
 			}
 
@@ -523,7 +523,7 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 func loadLastBlock(st *Database) (base.Height, bool, error) {
 	switch b, found, err := st.database.Info(DigestStorageLastBlockKey); {
 	case err != nil:
-		return base.NilHeight, false, xerrors.Errorf("failed to get last block for digest: %w", err)
+		return base.NilHeight, false, errors.Wrap(err, "failed to get last block for digest")
 	case !found:
 		return base.NilHeight, false, nil
 	default:
@@ -537,13 +537,13 @@ func loadLastBlock(st *Database) (base.Height, bool, error) {
 
 func parseOffset(s string) (base.Height, uint64, error) {
 	if n := strings.SplitN(s, ",", 2); n == nil {
-		return base.NilHeight, 0, xerrors.Errorf("invalid offset string: %q", s)
+		return base.NilHeight, 0, errors.Errorf("invalid offset string: %q", s)
 	} else if len(n) < 2 {
-		return base.NilHeight, 0, xerrors.Errorf("invalid offset, %q", s)
+		return base.NilHeight, 0, errors.Errorf("invalid offset, %q", s)
 	} else if h, err := base.NewHeightFromString(n[0]); err != nil {
-		return base.NilHeight, 0, xerrors.Errorf("invalid height of offset: %w", err)
+		return base.NilHeight, 0, errors.Wrap(err, "invalid height of offset")
 	} else if u, err := strconv.ParseUint(n[1], 10, 64); err != nil {
-		return base.NilHeight, 0, xerrors.Errorf("invalid index of offset: %w", err)
+		return base.NilHeight, 0, errors.Wrap(err, "invalid index of offset")
 	} else {
 		return h, u, nil
 	}

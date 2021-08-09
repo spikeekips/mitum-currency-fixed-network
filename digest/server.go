@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/net/http2"
-	"golang.org/x/xerrors"
 )
 
 type HTTP2Server struct {
@@ -32,7 +32,7 @@ type HTTP2Server struct {
 
 func NewHTTP2Server(bind, host string, certs []tls.Certificate) (*HTTP2Server, error) {
 	if err := network.CheckBindIsOpen("tcp", bind, time.Second*1); err != nil {
-		return nil, xerrors.Errorf("failed to open digest server: %w", err)
+		return nil, errors.Wrap(err, "failed to open digest server")
 	}
 
 	idleTimeout := time.Second * 10
@@ -133,7 +133,7 @@ func (sv *HTTP2Server) start(ctx context.Context) error {
 
 	select {
 	case err := <-errchan:
-		if err != nil && xerrors.Is(err, http.ErrServerClosed) {
+		if err != nil && errors.Is(err, http.ErrServerClosed) {
 			sv.Log().Debug().Msg("server closed")
 
 			return nil

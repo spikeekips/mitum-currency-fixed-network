@@ -1,12 +1,12 @@
 package digest
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/state"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 func loadOperationHash(decoder func(interface{}) error) (valuehash.Hash, error) {
@@ -29,7 +29,7 @@ func loadOperation(decoder func(interface{}) error, encs *encoder.Encoders) (Ope
 	if _, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs); err != nil {
 		return OperationValue{}, err
 	} else if va, ok := hinter.(OperationValue); !ok {
-		return OperationValue{}, xerrors.Errorf("not OperationValue: %T", hinter)
+		return OperationValue{}, errors.Errorf("not OperationValue: %T", hinter)
 	} else {
 		return va, nil
 	}
@@ -44,7 +44,7 @@ func loadAccountValue(decoder func(interface{}) error, encs *encoder.Encoders) (
 	if _, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs); err != nil {
 		return AccountValue{}, err
 	} else if rs, ok := hinter.(AccountValue); !ok {
-		return AccountValue{}, xerrors.Errorf("not AccountValue: %T", hinter)
+		return AccountValue{}, errors.Errorf("not AccountValue: %T", hinter)
 	} else {
 		return rs, nil
 	}
@@ -59,7 +59,7 @@ func loadBalance(decoder func(interface{}) error, encs *encoder.Encoders) (state
 	if _, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs); err != nil {
 		return nil, err
 	} else if st, ok := hinter.(state.State); !ok {
-		return nil, xerrors.Errorf("not currency.Big: %T", hinter)
+		return nil, errors.Errorf("not currency.Big: %T", hinter)
 	} else {
 		return st, nil
 	}

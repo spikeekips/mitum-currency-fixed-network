@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/automaxprocs/maxprocs"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -53,7 +53,7 @@ func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Log
 	}
 
 	if n, err := createLauncherFromDesign(cmd.Design, version, cmd.Log()); err != nil {
-		return xerrors.Errorf("failed to create node runner: %w", err)
+		return errors.Wrap(err, "failed to create node runner")
 	} else {
 		cmd.nr = n
 		cmd.design = n.Design()
@@ -67,7 +67,7 @@ func (cmd *RunCommand) Run(flags *MainFlags, version util.Version, l logging.Log
 	defer contestlib.ExitHooks.Run()
 
 	if err := cmd.nr.Start(); err != nil {
-		return xerrors.Errorf("failed to start: %w", err)
+		return errors.Wrap(err, "failed to start")
 	} else if err := cmd.startDigest(); err != nil {
 		return err
 	}
@@ -105,9 +105,9 @@ func (cmd *RunCommand) prepareProposalProcessor() error {
 
 			switch _, found, err := cmd.nr.Storage().State(currency.StateKeyAccount(to)); {
 			case err != nil:
-				return xerrors.Errorf("failed to find fee receiver, %v: %w", to, err)
+				return errors.Wrapf(err, "failed to find fee receiver, %v", to)
 			case !found:
-				return xerrors.Errorf("fee receiver, %v does not exist", to)
+				return errors.Errorf("fee receiver, %v does not exist", to)
 			}
 		} else if gac, _, exists := cmd.nr.genesisInfo(); exists {
 			to = gac.Address()
@@ -177,7 +177,7 @@ func (cmd *RunCommand) checkGenesisInfo(blocks []block.Block) {
 
 func (cmd *RunCommand) initialize() error {
 	if err := cmd.nr.Initialize(); err != nil {
-		return xerrors.Errorf("failed to generate node from design: %w", err)
+		return errors.Wrap(err, "failed to generate node from design")
 	} else if err := cmd.prepareProposalProcessor(); err != nil {
 		return err
 	}

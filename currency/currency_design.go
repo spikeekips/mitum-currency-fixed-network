@@ -1,9 +1,9 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -23,19 +23,19 @@ func NewCurrencyDesign(amount Amount, genesisAccount base.Address, po CurrencyPo
 
 func (de CurrencyDesign) IsValid([]byte) error {
 	if err := de.Amount.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid currency balance: %w", err)
+		return errors.Wrap(err, "invalid currency balance")
 	} else if !de.Big().OverZero() {
-		return xerrors.Errorf("currency balance should be over zero")
+		return errors.Errorf("currency balance should be over zero")
 	}
 
 	if de.genesisAccount != nil {
 		if err := de.genesisAccount.IsValid(nil); err != nil {
-			return xerrors.Errorf("invalid CurrencyDesign: %w", err)
+			return errors.Wrap(err, "invalid CurrencyDesign")
 		}
 	}
 
 	if err := de.policy.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid CurrencyPolicy: %w", err)
+		return errors.Wrap(err, "invalid CurrencyPolicy")
 	}
 
 	return nil

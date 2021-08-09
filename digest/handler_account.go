@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,7 @@ func (hd *Handlers) handleAccount(w http.ResponseWriter, r *http.Request) {
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleAccountInGroup(address)
 	}); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			err = util.NotFoundError.Errorf("account, %s not found", address)
 		} else {
 			hd.Log().Error().Err(err).Str("address", address.String()).Msg("failed to get account")

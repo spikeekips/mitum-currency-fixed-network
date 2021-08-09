@@ -1,7 +1,7 @@
 package currency
 
 import (
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
@@ -42,7 +42,7 @@ func (op *FeeOperation) unpack(enc encoder.Encoder, h valuehash.Hash, bfact []by
 	if hinter, err := base.DecodeFact(bfact, enc); err != nil {
 		return err
 	} else if fact, ok := hinter.(FeeOperationFact); !ok {
-		return xerrors.Errorf("not FeeOperationFact, %T", hinter)
+		return errors.Errorf("not FeeOperationFact, %T", hinter)
 	} else {
 		op.fact = fact
 	}

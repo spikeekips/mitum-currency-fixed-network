@@ -3,7 +3,7 @@ package cmds
 import (
 	"bytes"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -35,7 +35,7 @@ func NewCreateAccountCommand() CreateAccountCommand {
 
 func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dupl
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.parseFlags(); err != nil {
@@ -68,12 +68,12 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 
 	a, err := cmd.Sender.Encode(jenc)
 	if err != nil {
-		return xerrors.Errorf("invalid sender format, %q: %w", cmd.Sender.String(), err)
+		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	}
 	cmd.sender = a
 
 	if len(cmd.Keys) < 1 {
-		return xerrors.Errorf("--key must be given at least one")
+		return errors.Errorf("--key must be given at least one")
 	}
 
 	{
@@ -129,20 +129,20 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 
 	op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to create create-account operation: %w", err)
+		return nil, errors.Wrap(err, "failed to create create-account operation")
 	}
 	return op, nil
 }
 
 func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 	if len(bytes.TrimSpace(b)) < 1 {
-		return nil, xerrors.Errorf("empty input")
+		return nil, errors.Errorf("empty input")
 	}
 
 	if sl, err := seal.DecodeSeal(b, jenc); err != nil {
 		return nil, err
 	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, xerrors.Errorf("invalid seal: %w", err)
+		return nil, errors.Wrap(err, "invalid seal")
 	} else {
 		return sl, nil
 	}
@@ -161,7 +161,7 @@ func loadSealAndAddOperation(
 			networkID,
 		)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to create operation.Seal: %w", err)
+			return nil, errors.Wrap(err, "failed to create operation.Seal")
 		}
 		return bs, nil
 	}
@@ -170,9 +170,9 @@ func loadSealAndAddOperation(
 	if s, err := loadSeal(b, networkID); err != nil {
 		return nil, err
 	} else if so, ok := s.(operation.Seal); !ok {
-		return nil, xerrors.Errorf("seal is not operation.Seal, %T", s)
+		return nil, errors.Errorf("seal is not operation.Seal, %T", s)
 	} else if _, ok := so.(operation.SealUpdater); !ok {
-		return nil, xerrors.Errorf("seal is not operation.SealUpdater, %T", s)
+		return nil, errors.Errorf("seal is not operation.SealUpdater, %T", s)
 	} else {
 		sl = so
 	}

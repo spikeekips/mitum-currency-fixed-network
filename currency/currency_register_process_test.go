@@ -3,13 +3,13 @@ package currency
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testCurrencyRegisterOperations struct {
@@ -79,7 +79,7 @@ func (t *testCurrencyRegisterOperations) TestGenesisAddressNotExist() {
 	err := opr.Process(tf)
 
 	var oper operation.ReasonError
-	t.True(xerrors.As(err, &oper))
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "does not exist")
 }
 
@@ -131,7 +131,7 @@ func (t *testCurrencyRegisterOperations) TestEmptyPubs() {
 	copr := NewOperationProcessor(nil)
 	_, err := copr.SetProcessor(CurrencyRegister{}, func(op state.Processor) (state.Processor, error) {
 		if i, ok := op.(CurrencyRegister); !ok {
-			return nil, xerrors.Errorf("not CurrencyRegister, %T", op)
+			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		} else {
 			return &CurrencyRegisterProcessor{
 				CurrencyRegister: i,

@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) SetSend(f func(interface{}) (seal.Seal, error)) *Handlers {
@@ -69,7 +69,7 @@ func (hd *Handlers) sendItem(v interface{}) (Hal, error) {
 		}
 
 		if err := t.IsValid(hd.networkID); err != nil {
-			if !xerrors.Is(err, key.SignatureVerificationFailedError) {
+			if !errors.Is(err, key.SignatureVerificationFailedError) {
 				return nil, err
 			}
 		}
@@ -82,7 +82,7 @@ func (hd *Handlers) sendItem(v interface{}) (Hal, error) {
 			return nil, err
 		}
 	default:
-		return nil, xerrors.Errorf("unsupported message type, %T", v)
+		return nil, errors.Errorf("unsupported message type, %T", v)
 	}
 
 	return hd.sendSeal(v)
@@ -94,7 +94,7 @@ func (hd *Handlers) sendOperations(v []json.RawMessage) (Hal, error) {
 		if hinter, err := hd.enc.Decode(v[i]); err != nil {
 			return nil, err
 		} else if op, ok := hinter.(operation.Operation); !ok {
-			return nil, xerrors.Errorf("unsupported message type, %T", hinter)
+			return nil, errors.Errorf("unsupported message type, %T", hinter)
 		} else if err := op.IsValid(hd.networkID); err != nil {
 			return nil, err
 		} else {

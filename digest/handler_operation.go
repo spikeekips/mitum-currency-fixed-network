@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +23,7 @@ func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
 
 	h, err := parseHashFromPath(mux.Vars(r)["hash"])
 	if err != nil {
-		hd.problemWithError(w, xerrors.Errorf("invalid hash for operation by hash: %w", err), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Wrap(err, "invalid hash for operation by hash"), http.StatusBadRequest)
 
 		return
 	}
@@ -137,11 +137,11 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	var height base.Height
 	switch h, err := parseHeightFromPath(mux.Vars(r)["height"]); {
 	case err != nil:
-		hd.problemWithError(w, xerrors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
 
 		return
 	case h <= base.NilHeight:
-		hd.problemWithError(w, xerrors.Errorf("invalid height, %v", h), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
 		return
 	default:
 		height = h
@@ -311,7 +311,7 @@ func buildOperationsByHeightFilterByOffset(height base.Height, offset string, re
 
 	index, err := strconv.ParseUint(offset, 10, 64)
 	if err != nil {
-		return nil, xerrors.Errorf("invalid index of offset: %w", err)
+		return nil, errors.Wrap(err, "invalid index of offset")
 	}
 
 	if reverse {

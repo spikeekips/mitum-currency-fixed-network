@@ -3,7 +3,7 @@ package currency
 import (
 	"regexp"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -24,10 +24,10 @@ func (cid CurrencyID) String() string {
 
 func (cid CurrencyID) IsValid([]byte) error {
 	if l := len(cid); l < MinLengthCurrencyID || l > MaxLengthCurrencyID {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"invalid length of currency id, %d <= %d <= %d", MinLengthCurrencyID, l, MaxLengthCurrencyID)
 	} else if !ReValidCurrencyID.Match([]byte(cid)) {
-		return xerrors.Errorf("wrong currency id, %q", cid)
+		return errors.Errorf("wrong currency id, %q", cid)
 	}
 
 	return nil

@@ -1,11 +1,11 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (CreateAccounts) Process(
@@ -34,13 +34,13 @@ func (opp *CreateAccountsItemProcessor) PreProcess(
 		if opp.cp != nil {
 			i, found := opp.cp.Policy(am.Currency())
 			if !found {
-				return xerrors.Errorf("currency not registered, %q", am.Currency())
+				return errors.Errorf("currency not registered, %q", am.Currency())
 			}
 			policy = i
 		}
 
 		if am.Big().Compare(policy.NewAccountMinBalance()) < 0 {
-			return xerrors.Errorf(
+			return errors.Errorf(
 				"amount should be over minimum balance, %v < %v", am.Big(), policy.NewAccountMinBalance())
 		}
 	}
@@ -107,7 +107,7 @@ func NewCreateAccountsProcessor(cp *CurrencyPool) GetNewProcessor {
 	return func(op state.Processor) (state.Processor, error) {
 		i, ok := op.(CreateAccounts)
 		if !ok {
-			return nil, xerrors.Errorf("not CreateAccounts, %T", op)
+			return nil, errors.Errorf("not CreateAccounts, %T", op)
 		}
 		return &CreateAccountsProcessor{
 			cp:             cp,
@@ -210,7 +210,7 @@ func CalculateItemsFee(cp *CurrencyPool, items []AmountsItem) (map[CurrencyID][2
 
 			feeer, found := cp.Feeer(am.Currency())
 			if !found {
-				return nil, xerrors.Errorf("unknown currency id found, %q", am.Currency())
+				return nil, errors.Errorf("unknown currency id found, %q", am.Currency())
 			}
 			switch k, err := feeer.Fee(am.Big()); {
 			case err != nil:

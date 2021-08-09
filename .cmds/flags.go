@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -46,12 +46,12 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 
 	l := strings.SplitN(string(b), ",", 2)
 	if len(l) != 2 {
-		return xerrors.Errorf(`wrong formatted; "<string private key>,<uint weight>"`)
+		return errors.Errorf(`wrong formatted; "<string private key>,<uint weight>"`)
 	}
 
 	var pk key.Publickey
 	if k, err := key.DecodeKey(defaultJSONEnc, l[0]); err != nil {
-		return xerrors.Errorf("invalid public key, %q for --key: %w", l[0], err)
+		return errors.Wrapf(err, "invalid public key, %q for --key", l[0])
 	} else if priv, ok := k.(key.Privatekey); ok {
 		pk = priv.Publickey()
 	} else {
@@ -60,7 +60,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 
 	var weight uint
 	if i, err := strconv.ParseUint(l[1], 10, 64); err != nil {
-		return xerrors.Errorf("invalid weight, %q for --key: %w", l[1], err)
+		return errors.Wrapf(err, "invalid weight, %q for --key", l[1])
 	} else {
 		weight = uint(i)
 	}
@@ -68,7 +68,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	if k, err := currency.NewKey(pk, weight); err != nil {
 		return err
 	} else if err := k.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid key string: %w", err)
+		return errors.Wrap(err, "invalid key string")
 	} else {
 		v.Key = k
 	}
@@ -111,7 +111,7 @@ func (v PrivatekeyFlag) Empty() bool {
 
 func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
 	if k, err := key.DecodePrivatekey(defaultJSONEnc, string(b)); err != nil {
-		return xerrors.Errorf("invalid private key, %q: %w", string(b), err)
+		return errors.Wrapf(err, "invalid private key, %q", string(b))
 	} else if err := k.IsValid(nil); err != nil {
 		return err
 	} else {
@@ -129,7 +129,7 @@ type AmountFlag struct {
 
 func (v *AmountFlag) UnmarshalText(b []byte) error {
 	if a, err := currency.NewAmountFromString(string(b)); err != nil {
-		return xerrors.Errorf("invalid amount string, %q: %w", string(b), err)
+		return errors.Wrapf(err, "invalid amount string, %q", string(b))
 	} else if err := a.IsValid(nil); err != nil {
 		return err
 	} else {

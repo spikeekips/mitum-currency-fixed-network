@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -71,7 +71,7 @@ func (nd *NodeDesign) loadFeeAmount() error {
 			if v == nil {
 				continue
 			} else if m, ok := v.(map[string]interface{}); !ok {
-				return xerrors.Errorf("bad formatted fee-amount design")
+				return errors.Errorf("bad formatted fee-amount design")
 			} else {
 				c = m
 			}
@@ -84,7 +84,7 @@ func (nd *NodeDesign) loadFeeAmount() error {
 
 	if i, found := c["to"]; found {
 		if s, ok := i.(string); !ok {
-			return xerrors.Errorf("invalid type, %T of to of fee-amount", i)
+			return errors.Errorf("invalid type, %T of to of fee-amount", i)
 		} else if a, err := base.DecodeAddressFromString(nd.JSONEncoder(), strings.TrimSpace(s)); err != nil {
 			return err
 		} else if err := a.IsValid(nil); err != nil {
@@ -109,7 +109,7 @@ func (nd *NodeDesign) loadFeeAmount() error {
 			fa = f
 		}
 	default:
-		return xerrors.Errorf("unknown type of fee-amount, %v", t)
+		return errors.Errorf("unknown type of fee-amount, %v", t)
 	}
 
 	nd.FeeAmount = fa
@@ -119,10 +119,10 @@ func (nd *NodeDesign) loadFeeAmount() error {
 
 func (nd *NodeDesign) loadFixedFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
 	if a, found := c["amount"]; !found {
-		return nil, xerrors.Errorf("fixed fee-amount needs `amount`")
+		return nil, errors.Errorf("fixed fee-amount needs `amount`")
 	} else {
 		if n, err := currency.NewAmountFromInterface(a); err != nil {
-			return nil, xerrors.Errorf("invalid amount value, %v of fee-amount: %w", a, err)
+			return nil, errors.Wrapf(err, "invalid amount value, %v of fee-amount", a)
 		} else {
 			return currency.NewFixedFeeAmount(n), nil
 		}
@@ -132,18 +132,18 @@ func (nd *NodeDesign) loadFixedFeeAmount(c map[string]interface{}) (currency.Fee
 func (nd *NodeDesign) loadRatioFeeAmount(c map[string]interface{}) (currency.FeeAmount, error) {
 	var ratio float64
 	if a, found := c["ratio"]; !found {
-		return nil, xerrors.Errorf("ratio fee-amount needs `ratio`")
+		return nil, errors.Errorf("ratio fee-amount needs `ratio`")
 	} else if f, ok := a.(float64); !ok {
-		return nil, xerrors.Errorf("invalid ratio value type, %T of fee-amount; should be float64", a)
+		return nil, errors.Errorf("invalid ratio value type, %T of fee-amount; should be float64", a)
 	} else {
 		ratio = f
 	}
 
 	var min currency.Amount
 	if a, found := c["min"]; !found {
-		return nil, xerrors.Errorf("ratio fee-amount needs `min`")
+		return nil, errors.Errorf("ratio fee-amount needs `min`")
 	} else if n, err := currency.NewAmountFromInterface(a); err != nil {
-		return nil, xerrors.Errorf("invalid min value, %v of fee-amount: %w", a, err)
+		return nil, errors.Wrapf(err, "invalid min value, %v of fee-amount", a)
 	} else {
 		min = n
 	}
@@ -162,7 +162,7 @@ func (nd *NodeDesign) loadDigest() error {
 			if v == nil {
 				continue
 			} else if m, ok := v.(map[string]interface{}); !ok {
-				return xerrors.Errorf("bad formatted digest design")
+				return errors.Errorf("bad formatted digest design")
 			} else {
 				c = m
 			}
@@ -200,7 +200,7 @@ func (nd *NodeDesign) loadRateLimiter() error {
 			if v == nil {
 				continue
 			} else if m, ok := v.(map[string]interface{}); !ok {
-				return xerrors.Errorf("bad formatted rate-limit design")
+				return errors.Errorf("bad formatted rate-limit design")
 			} else {
 				c = m
 			}
@@ -247,7 +247,7 @@ func LoadPolicyOperation(design *NodeDesign) ([]operation.Operation, error) {
 		design.Privatekey(),
 		design.NetworkID(),
 	); err != nil {
-		return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)
+		return nil, errors.Wrap(err, "failed to create SetPolicyOperation")
 	} else {
 		return []operation.Operation{op}, nil
 	}
@@ -321,7 +321,7 @@ type KeyDesign struct {
 func (kd *KeyDesign) IsValid([]byte) error {
 	var je encoder.Encoder
 	if e, err := kd.encs.Encoder(jsonenc.JSONType, ""); err != nil {
-		return xerrors.Errorf("json encoder needs for load design: %w", err)
+		return errors.Wrap(err, "json encoder needs for load design")
 	} else {
 		je = e
 	}
@@ -369,7 +369,7 @@ func (de *DigestDesign) IsValid([]byte) error {
 				de.Network.SetCerts(ct)
 			}
 		} else {
-			return xerrors.Errorf("missing certificates for https")
+			return errors.Errorf("missing certificates for https")
 		}
 	}
 
@@ -385,7 +385,7 @@ func (de *DigestDesign) defaultPublish(publish *url.URL) (*url.URL, error) {
 	if h, i, err := net.SplitHostPort(pb.Host); err != nil {
 		return nil, err
 	} else if p, err := strconv.ParseUint(i, 10, 64); err != nil {
-		return nil, xerrors.Errorf("invalid port in host value, '%v': %w", pb.Host, err)
+		return nil, errors.Wrapf(err, "invalid port in host value, '%v'", pb.Host)
 	} else {
 		port := DefaultDigestPort
 		if uint(p) == port {
@@ -413,7 +413,7 @@ func (de *DigestDesign) Merge(nd *NodeDesign) error {
 		}
 
 		if nd.Network.BindString == de.Network.BindString {
-			return xerrors.Errorf("bind string is same with node")
+			return errors.Errorf("bind string is same with node")
 		}
 	}
 
@@ -458,9 +458,9 @@ func LoadOtherInitOperations(nr *Launcher) ([]operation.Operation, error) {
 		m := nr.Design().InitOperations[i]
 
 		if name, found := m["name"]; !found {
-			return nil, xerrors.Errorf("invalid format found")
+			return nil, errors.Errorf("invalid format found")
 		} else if len(strings.TrimSpace(name.(string))) < 1 {
-			return nil, xerrors.Errorf("invalid format found; empty name")
+			return nil, errors.Errorf("invalid format found; empty name")
 		} else if op, err := LoadOtherInitOperation(nr, name.(string), m); err != nil {
 			return nil, err
 		} else {
@@ -476,7 +476,7 @@ func LoadOtherInitOperation(nr *Launcher, name string, m map[string]interface{})
 	case "genesis-account":
 		return LoadGenesisAccountOperation(nr, m)
 	default:
-		return nil, xerrors.Errorf("unknown operation name found, %q", name)
+		return nil, errors.Errorf("unknown operation name found, %q", name)
 	}
 }
 
@@ -509,9 +509,9 @@ type RateLimiterDesign struct {
 func (rd *RateLimiterDesign) IsValid([]byte) error {
 	switch d, err := time.ParseDuration(rd.PeriodString); {
 	case err != nil:
-		return xerrors.Errorf("invalid period string, %q: %w", rd.PeriodString, err)
+		return errors.Wrapf(err, "invalid period string, %q", rd.PeriodString)
 	case d < 0:
-		return xerrors.Errorf("negative period string, %q", rd.PeriodString)
+		return errors.Errorf("negative period string, %q", rd.PeriodString)
 	case rd.Limit > 0:
 		rd.limiter = limiter.New(
 			memory.NewStore(),

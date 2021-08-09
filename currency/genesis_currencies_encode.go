@@ -1,11 +1,11 @@
 package currency
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (fact *GenesisCurrenciesFact) unpack(
@@ -26,7 +26,7 @@ func (fact *GenesisCurrenciesFact) unpack(
 	if err != nil {
 		return err
 	} else if k, ok := hinter.(Keys); !ok {
-		return xerrors.Errorf("not Keys: %T", hinter)
+		return errors.Errorf("not Keys: %T", hinter)
 	} else {
 		keys = k
 	}

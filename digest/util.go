@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func IsAccountState(st state.State) (currency.Account, bool, error) {
@@ -39,9 +39,9 @@ func parseHeightFromPath(s string) (base.Height, error) {
 	s = strings.TrimSpace(s)
 
 	if len(s) < 1 {
-		return base.NilHeight, xerrors.Errorf("empty height")
+		return base.NilHeight, errors.Errorf("empty height")
 	} else if len(s) > 1 && strings.HasPrefix(s, "0") {
-		return base.NilHeight, xerrors.Errorf("invalid height, %q", s)
+		return base.NilHeight, errors.Errorf("invalid height, %q", s)
 	}
 
 	return base.NewHeightFromString(s)
@@ -50,7 +50,7 @@ func parseHeightFromPath(s string) (base.Height, error) {
 func parseHashFromPath(s string) (valuehash.Hash, error) {
 	s = strings.TrimSpace(s)
 	if len(s) < 1 {
-		return nil, xerrors.Errorf("empty hash")
+		return nil, errors.Errorf("empty hash")
 	}
 
 	h := valuehash.NewBytesFromString(s)

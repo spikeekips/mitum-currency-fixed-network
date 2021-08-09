@@ -3,13 +3,13 @@ package currency
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testCurrencyPolicyUpdaterOperations struct {
@@ -129,7 +129,7 @@ func (t *testCurrencyPolicyUpdaterOperations) TestEmptyPubs() {
 	copr := NewOperationProcessor(nil)
 	_, err := copr.SetProcessor(CurrencyPolicyUpdater{}, func(op state.Processor) (state.Processor, error) {
 		if i, ok := op.(CurrencyPolicyUpdater); !ok {
-			return nil, xerrors.Errorf("not CurrencyPolicyUpdater, %T", op)
+			return nil, errors.Errorf("not CurrencyPolicyUpdater, %T", op)
 		} else {
 			return &CurrencyPolicyUpdaterProcessor{
 				CurrencyPolicyUpdater: i,

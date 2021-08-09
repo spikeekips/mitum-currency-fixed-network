@@ -3,11 +3,11 @@ package digest
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 func (va OperationValue) MarshalBSON() ([]byte, error) {
@@ -42,7 +42,7 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	if hinter, err := enc.Decode(uva.OP); err != nil {
 		return err
 	} else if op, ok := hinter.(operation.Operation); !ok {
-		return xerrors.Errorf("not operation.Operation: %T", hinter)
+		return errors.Errorf("not operation.Operation: %T", hinter)
 	} else {
 		va.op = op
 	}

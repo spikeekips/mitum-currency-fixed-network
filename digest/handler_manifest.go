@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Request) {
@@ -20,11 +20,11 @@ func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Reques
 	var height base.Height
 	switch h, err := parseHeightFromPath(mux.Vars(r)["height"]); {
 	case err != nil:
-		hd.problemWithError(w, xerrors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
 
 		return
 	case h <= base.NilHeight:
-		hd.problemWithError(w, xerrors.Errorf("invalid height, %v", h), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
 		return
 	default:
 		height = h
@@ -43,7 +43,7 @@ func (hd *Handlers) handleManifestByHash(w http.ResponseWriter, r *http.Request)
 	var h valuehash.Hash
 	h, err := parseHashFromPath(mux.Vars(r)["hash"])
 	if err != nil {
-		hd.problemWithError(w, xerrors.Errorf("invalid hash for manifest by hash: %w", err), http.StatusBadRequest)
+		hd.problemWithError(w, errors.Wrap(err, "invalid hash for manifest by hash"), http.StatusBadRequest)
 
 		return
 	}

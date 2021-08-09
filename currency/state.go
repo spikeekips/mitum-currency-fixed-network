@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
@@ -42,7 +42,7 @@ func LoadStateAccountValue(st state.State) (Account, error) {
 
 	s, ok := v.Interface().(Account)
 	if !ok {
-		return Account{}, xerrors.Errorf("invalid account value found, %T", v.Interface())
+		return Account{}, errors.Errorf("invalid account value found, %T", v.Interface())
 	}
 	return s, nil
 }
@@ -66,7 +66,7 @@ func StateKeysValue(st state.State) (Keys, error) {
 func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
 	var ac Account
 	if a, err := LoadStateAccountValue(st); err != nil {
-		if !xerrors.Is(err, util.NotFoundError) {
+		if !errors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
 
@@ -104,7 +104,7 @@ func StateBalanceValue(st state.State) (Amount, error) {
 
 	s, ok := v.Interface().(Amount)
 	if !ok {
-		return Amount{}, xerrors.Errorf("invalid balance value found, %T", v.Interface())
+		return Amount{}, errors.Errorf("invalid balance value found, %T", v.Interface())
 	}
 	return s, nil
 }
@@ -133,7 +133,7 @@ func StateCurrencyDesignValue(st state.State) (CurrencyDesign, error) {
 
 	s, ok := v.Interface().(CurrencyDesign)
 	if !ok {
-		return CurrencyDesign{}, xerrors.Errorf("invalid currency design value found, %T", v.Interface())
+		return CurrencyDesign{}, errors.Errorf("invalid currency design value found, %T", v.Interface())
 	}
 	return s, nil
 }
