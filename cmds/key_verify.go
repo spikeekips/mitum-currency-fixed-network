@@ -68,7 +68,7 @@ func (cmd *VerifyKeyCommand) Run(version util.Version) error {
 			}
 		}
 
-		cmd.pretty(cmd.Pretty, m)
+		PrettyPrint(cmd.out, cmd.Pretty, m)
 
 		return nil
 	}

@@ -22,14 +22,14 @@ func (hd *Handlers) SetSend(f func(interface{}) (seal.Seal, error)) *Handlers {
 
 func (hd *Handlers) handleSend(w http.ResponseWriter, r *http.Request) {
 	if hd.send == nil {
-		hd.notSupported(w, nil)
+		HTTP2NotSupported(w, nil)
 
 		return
 	}
 
 	body := &bytes.Buffer{}
 	if _, err := io.Copy(body, r.Body); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -38,25 +38,25 @@ func (hd *Handlers) handleSend(w http.ResponseWriter, r *http.Request) {
 	var v []json.RawMessage
 	if err := jsonenc.Unmarshal(body.Bytes(), &v); err != nil {
 		if hinter, err := hd.enc.Decode(body.Bytes()); err != nil {
-			hd.problemWithError(w, err, http.StatusBadRequest)
+			HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 			return
 		} else if h, err := hd.sendItem(hinter); err != nil {
-			hd.problemWithError(w, err, http.StatusBadRequest)
+			HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 			return
 		} else {
 			hal = h
 		}
 	} else if h, err := hd.sendOperations(v); err != nil {
-		hd.problemWithError(w, err, http.StatusBadRequest)
+		HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 		return
 	} else {
 		hal = h
 	}
 
-	hd.writeHal(w, hal, http.StatusOK)
+	HTTP2WriteHal(hd.enc, w, hal, http.StatusOK)
 }
 
 func (hd *Handlers) sendItem(v interface{}) (Hal, error) {

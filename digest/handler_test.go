@@ -56,7 +56,6 @@ func (t *baseTestHandlers) request404(handlers *Handlers, method, path string, d
 
 	t.Equal(http.StatusNotFound, w.Result().StatusCode)
 	t.Equal(ProblemMimetype, w.Result().Header.Get("content-type"))
-	t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
 
 	return w
 }

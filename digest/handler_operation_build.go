@@ -21,13 +21,13 @@ var factTypesByHint = map[string]hint.Hinter{
 }
 
 func (hd *Handlers) handleOperationBuild(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
+	if err := LoadFromCache(hd.cache, CacheKeyPath(r), w); err == nil {
 		return
 	}
 
 	h, err := hd.combineURL(HandlerPathOperationBuild)
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -37,7 +37,7 @@ func (hd *Handlers) handleOperationBuild(w http.ResponseWriter, r *http.Request)
 
 	for factType := range factTypesByHint {
 		if h, err := hd.combineURL(HandlerPathOperationBuildFactTemplate, "fact", factType); err != nil {
-			hd.problemWithError(w, err, http.StatusInternalServerError)
+			HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 		} else {
 			hal = hal.AddLink(
 				fmt.Sprintf("operation-fact:{%s}", factType),
@@ -46,19 +46,19 @@ func (hd *Handlers) handleOperationBuild(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	hd.writeHal(w, hal, http.StatusOK)
-	hd.writeCache(w, cacheKeyPath(r), time.Hour*100*100*100)
+	HTTP2WriteHal(hd.enc, w, hal, http.StatusOK)
+	HTTP2WriteCache(w, CacheKeyPath(r), time.Hour*100*100*100)
 }
 
 func (hd *Handlers) handleOperationBuildFactTemplate(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
+	if err := LoadFromCache(hd.cache, CacheKeyPath(r), w); err == nil {
 		return
 	}
 
 	factType := mux.Vars(r)["fact"]
 	hinter, found := factTypesByHint[factType]
 	if !found {
-		hd.problemWithError(w, errors.Errorf("unknown operation, %q", factType), http.StatusNotFound)
+		HTTP2ProblemWithError(w, errors.Errorf("unknown operation, %q", factType), http.StatusNotFound)
 
 		return
 	}
@@ -66,27 +66,27 @@ func (hd *Handlers) handleOperationBuildFactTemplate(w http.ResponseWriter, r *h
 	builder := NewBuilder(hd.enc, hd.networkID)
 	hal, err := builder.FactTemplate(hinter.Hint())
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusBadRequest)
+		HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
 
 	h, err := hd.combineURL(HandlerPathOperationBuildFactTemplate, "fact", factType)
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
 	hal = hal.SetSelf(NewHalLink(h, nil))
 
-	hd.writeHal(w, hal, http.StatusOK)
-	hd.writeCache(w, cacheKeyPath(r), time.Hour*100*100*100)
+	HTTP2WriteHal(hd.enc, w, hal, http.StatusOK)
+	HTTP2WriteCache(w, CacheKeyPath(r), time.Hour*100*100*100)
 }
 
 func (hd *Handlers) handleOperationBuildFact(w http.ResponseWriter, r *http.Request) {
 	body := &bytes.Buffer{}
 	if _, err := io.Copy(body, r.Body); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -94,26 +94,26 @@ func (hd *Handlers) handleOperationBuildFact(w http.ResponseWriter, r *http.Requ
 	builder := NewBuilder(hd.enc, hd.networkID)
 	hal, err := builder.BuildFact(body.Bytes())
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusBadRequest)
+		HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
 
 	h, err := hd.combineURL(HandlerPathOperationBuildFact)
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
 	hal = hal.SetSelf(NewHalLink(h, nil))
 
-	hd.writeHal(w, hal, http.StatusOK)
+	HTTP2WriteHal(hd.enc, w, hal, http.StatusOK)
 }
 
 func (hd *Handlers) handleOperationBuildSign(w http.ResponseWriter, r *http.Request) {
 	body := &bytes.Buffer{}
 	if _, err := io.Copy(body, r.Body); err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -121,7 +121,7 @@ func (hd *Handlers) handleOperationBuildSign(w http.ResponseWriter, r *http.Requ
 	builder := NewBuilder(hd.enc, hd.networkID)
 	hal, err := builder.BuildOperation(body.Bytes())
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusBadRequest)
+		HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
@@ -129,7 +129,7 @@ func (hd *Handlers) handleOperationBuildSign(w http.ResponseWriter, r *http.Requ
 	if parseBoolQuery(r.URL.Query().Get("send")) {
 		sl, e := hd.sendSeal(hal.Interface())
 		if e != nil {
-			hd.problemWithError(w, e, http.StatusInternalServerError)
+			HTTP2ProblemWithError(w, e, http.StatusInternalServerError)
 
 			return
 		}
@@ -138,11 +138,11 @@ func (hd *Handlers) handleOperationBuildSign(w http.ResponseWriter, r *http.Requ
 
 	h, err := hd.combineURL(HandlerPathOperationBuildSign)
 	if err != nil {
-		hd.problemWithError(w, err, http.StatusInternalServerError)
+		HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
 	hal = hal.SetSelf(NewHalLink(h, nil))
 
-	hd.writeHal(w, hal, http.StatusOK)
+	HTTP2WriteHal(hd.enc, w, hal, http.StatusOK)
 }

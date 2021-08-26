@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum-currency/currency"
@@ -16,8 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
-	quicnetwork "github.com/spikeekips/mitum/network/quic"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
@@ -125,7 +121,7 @@ func NewHandlers(
 		cp:           cp,
 		router:       mux.NewRouter(),
 		routes:       map[string]*mux.Route{},
-		itemsLimiter: defaultItemsLimiter,
+		itemsLimiter: DefaultItemsLimiter,
 		rateLimit:    map[string][]process.RateLimitRule{},
 		rg:           &singleflight.Group{},
 	}
@@ -149,6 +145,14 @@ func (hd *Handlers) SetLimiter(f func(string) int64) *Handlers {
 	hd.itemsLimiter = f
 
 	return hd
+}
+
+func (hd *Handlers) Cache() Cache {
+	return hd.cache
+}
+
+func (hd *Handlers) Router() *mux.Router {
+	return hd.router
 }
 
 func (hd *Handlers) Handler() http.Handler {
@@ -237,24 +241,6 @@ func (hd *Handlers) setHandler(prefix string, h network.HTTPHandlerFunc, useCach
 	return route
 }
 
-func (hd *Handlers) stream(w http.ResponseWriter, bufsize int, status int) (*jsoniter.Stream, func()) {
-	w.Header().Set(HTTP2EncoderHintHeader, hd.enc.Hint().String())
-	w.Header().Set("Content-Type", HALMimetype)
-
-	if status != http.StatusOK {
-		w.WriteHeader(status)
-	}
-
-	stream := jsoniter.NewStream(HALJSONConfigDefault, w, bufsize)
-	return stream, func() {
-		if err := stream.Flush(); err != nil {
-			hd.Log().Error().Err(err).Msg("failed to straem thru jsoniterator")
-
-			hd.problemWithError(w, err, http.StatusInternalServerError)
-		}
-	}
-}
-
 func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 	if n := len(pairs); n%2 != 0 {
 		return "", errors.Errorf("failed to combine url; uneven pairs to combine url")
@@ -273,64 +259,6 @@ func (hd *Handlers) combineURL(path string, pairs ...string) (string, error) {
 	return u.String(), nil
 }
 
-func (hd *Handlers) notSupported(w http.ResponseWriter, err error) {
-	if err == nil {
-		err = quicnetwork.NotSupportedErorr
-	}
-
-	hd.problemWithError(w, err, http.StatusInternalServerError)
-}
-
-func (hd *Handlers) problemWithError(w http.ResponseWriter, err error, status int) {
-	hd.writePoblem(w, NewProblemFromError(err), status)
-}
-
-func (hd *Handlers) writePoblem(w http.ResponseWriter, pr Problem, status int) {
-	if status == 0 {
-		status = http.StatusInternalServerError
-	}
-
-	w.Header().Set(HTTP2EncoderHintHeader, hd.enc.Hint().String())
-	w.Header().Set("Content-Type", ProblemMimetype)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-
-	var output []byte
-	if b, err := jsonenc.Marshal(pr); err != nil {
-		hd.Log().Error().Err(err).Interface("problem", pr).Msg("failed to marshal problem, UnknownProblem will be used")
-
-		output = unknownProblemJSON
-	} else {
-		output = b
-	}
-
-	w.WriteHeader(status)
-	_, _ = w.Write(output)
-}
-
-func (hd *Handlers) writeHal(w http.ResponseWriter, hal Hal, status int) { // nolint:unparam
-	stream, flush := hd.stream(w, 1, status)
-	defer flush()
-
-	stream.WriteVal(hal)
-}
-
-func (hd *Handlers) writeHalBytes(w http.ResponseWriter, b []byte, status int) { // nolint:unparam
-	w.Header().Set(HTTP2EncoderHintHeader, hd.enc.Hint().String())
-	w.Header().Set("Content-Type", HALMimetype)
-
-	if status != http.StatusOK {
-		w.WriteHeader(status)
-	}
-
-	_, _ = w.Write(b)
-}
-
-func (*Handlers) writeCache(w http.ResponseWriter, key string, expire time.Duration) {
-	if cw, ok := w.(*CacheResponseWriter); ok {
-		_ = cw.SetKey(key).SetExpire(expire)
-	}
-}
-
 func (hd *Handlers) SetRateLimit(rules map[string][]process.RateLimitRule, store limiter.Store) *Handlers {
 	hd.rateLimit = rules
 	hd.rateLimitStore = store
@@ -338,28 +266,14 @@ func (hd *Handlers) SetRateLimit(rules map[string][]process.RateLimitRule, store
 	return hd
 }
 
-func (hd *Handlers) handleError(w http.ResponseWriter, err error) {
-	status := http.StatusInternalServerError
-	switch {
-	case errors.Is(err, util.NotFoundError):
-		status = http.StatusNotFound
-	case errors.Is(err, quicnetwork.BadRequestError):
-		status = http.StatusBadRequest
-	case errors.Is(err, quicnetwork.NotSupportedErorr):
-		status = http.StatusInternalServerError
-	}
-
-	hd.problemWithError(w, err, status)
-}
-
-func cacheKeyPath(r *http.Request) string {
+func CacheKeyPath(r *http.Request) string {
 	return r.URL.Path
 }
 
-func cacheKey(key string, s ...string) string {
+func CacheKey(key string, s ...string) string {
 	return fmt.Sprintf("%s-%s", key, strings.Join(s, ","))
 }
 
-func defaultItemsLimiter(string) int64 {
+func DefaultItemsLimiter(string) int64 {
 	return GlobalItemsLimit
 }

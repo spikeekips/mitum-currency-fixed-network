@@ -169,7 +169,7 @@ func (cmd *CurrencyRegisterCommand) Run(version util.Version) error { // nolint:
 	}
 	cmd.Log().Debug().Interface("seal", i).Msg("seal loaded")
 
-	cmd.pretty(cmd.Pretty, i)
+	PrettyPrint(cmd.out, cmd.Pretty, i)
 
 	return nil
 }

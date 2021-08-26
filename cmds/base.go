@@ -361,17 +361,6 @@ func NewBaseCommand(name string) *BaseCommand {
 	}
 }
 
-func (co *BaseCommand) pretty(pretty bool, i interface{}) {
-	var b []byte
-	if pretty {
-		b = jsonenc.MustMarshalIndent(i)
-	} else {
-		b = jsonenc.MustMarshal(i)
-	}
-
-	_, _ = fmt.Fprintln(co.out, string(b))
-}
-
 func (co *BaseCommand) print(f string, a ...interface{}) {
 	_, _ = fmt.Fprintf(co.out, f, a...)
 	_, _ = fmt.Fprintln(co.out)

@@ -56,7 +56,7 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 	if err != nil {
 		return err
 	}
-	cmd.pretty(cmd.Pretty, sl)
+	PrettyPrint(cmd.out, cmd.Pretty, sl)
 
 	return nil
 }

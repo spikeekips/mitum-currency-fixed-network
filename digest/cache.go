@@ -190,10 +190,10 @@ func (cr *CacheResponseWriter) filterHeader() http.Header {
 
 func (cr *CacheResponseWriter) Key() string {
 	if len(cr.key) > 0 {
-		return makeCacheKey(cr.key)
+		return MakeCacheKey(cr.key)
 	}
 
-	return cacheKeyFromRequest(cr.r)
+	return CacheKeyFromRequest(cr.r)
 }
 
 func (cr *CacheResponseWriter) SetKey(key string) *CacheResponseWriter {
@@ -256,17 +256,17 @@ func ScanCRLF(data []byte, atEOF bool) (int, []byte, error) {
 	return 0, nil, nil
 }
 
-func loadFromCache(cache Cache, key string, w http.ResponseWriter) error {
-	if b, err := cache.Get(makeCacheKey(key)); err != nil {
+func LoadFromCache(cache Cache, key string, w http.ResponseWriter) error {
+	if b, err := cache.Get(MakeCacheKey(key)); err != nil {
 		return err
-	} else if err = writeFromCache(b, w); err != nil {
+	} else if err = WriteFromCache(b, w); err != nil {
 		return err
 	} else {
 		return nil
 	}
 }
 
-func writeFromCache(b []byte, w http.ResponseWriter) error {
+func WriteFromCache(b []byte, w http.ResponseWriter) error {
 	reader := bufio.NewReader(bytes.NewReader(b))
 	sc := bufio.NewScanner(reader)
 	sc.Split(ScanCRLF)
@@ -300,10 +300,10 @@ func writeFromCache(b []byte, w http.ResponseWriter) error {
 	return nil
 }
 
-func makeCacheKey(key string) string {
+func MakeCacheKey(key string) string {
 	return valuehash.NewSHA256([]byte(key)).String()
 }
 
-func cacheKeyFromRequest(r *http.Request) string {
-	return makeCacheKey(r.URL.Path + "?" + r.URL.Query().Encode())
+func CacheKeyFromRequest(r *http.Request) string {
+	return MakeCacheKey(r.URL.Path + "?" + r.URL.Query().Encode())
 }

@@ -13,18 +13,18 @@ import (
 )
 
 func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
+	if err := LoadFromCache(hd.cache, CacheKeyPath(r), w); err == nil {
 		return
 	}
 
 	var height base.Height
 	switch h, err := parseHeightFromPath(mux.Vars(r)["height"]); {
 	case err != nil:
-		hd.problemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
 
 		return
 	case h <= base.NilHeight:
-		hd.problemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
 		return
 	default:
 		height = h
@@ -36,14 +36,14 @@ func (hd *Handlers) handleManifestByHeight(w http.ResponseWriter, r *http.Reques
 }
 
 func (hd *Handlers) handleManifestByHash(w http.ResponseWriter, r *http.Request) {
-	if err := loadFromCache(hd.cache, cacheKeyPath(r), w); err == nil {
+	if err := LoadFromCache(hd.cache, CacheKeyPath(r), w); err == nil {
 		return
 	}
 
 	var h valuehash.Hash
 	h, err := parseHashFromPath(mux.Vars(r)["hash"])
 	if err != nil {
-		hd.problemWithError(w, errors.Wrap(err, "invalid hash for manifest by hash"), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Wrap(err, "invalid hash for manifest by hash"), http.StatusBadRequest)
 
 		return
 	}
@@ -54,16 +54,16 @@ func (hd *Handlers) handleManifestByHash(w http.ResponseWriter, r *http.Request)
 }
 
 func (hd *Handlers) handleManifest(w http.ResponseWriter, r *http.Request, get func() (block.Manifest, bool, error)) {
-	cachekey := cacheKeyPath(r)
+	cachekey := CacheKeyPath(r)
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleManifestInGroup(get)
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 
 		if !shared {
-			hd.writeCache(w, cachekey, time.Hour*30)
+			HTTP2WriteCache(w, cachekey, time.Hour*30)
 		}
 	}
 }
@@ -125,8 +125,8 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -134,7 +134,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 	if len(offset) > 0 {
 		ht, err := base.NewHeightFromString(offset)
 		if err != nil {
-			hd.problemWithError(w, err, http.StatusBadRequest)
+			HTTP2ProblemWithError(w, err, http.StatusBadRequest)
 
 			return
 		}
@@ -146,7 +146,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 
 		return []interface{}{i, filled}, err
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
 		var b []byte
 		var filled bool
@@ -156,7 +156,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 			filled = l[1].(bool)
 		}
 
-		hd.writeHalBytes(w, b, http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, b, http.StatusOK)
 
 		if !shared {
 			expire := time.Second * 3
@@ -164,7 +164,7 @@ func (hd *Handlers) handleManifests(w http.ResponseWriter, r *http.Request) {
 				expire = time.Hour * 30
 			}
 
-			hd.writeCache(w, cachekey, expire)
+			HTTP2WriteCache(w, cachekey, expire)
 		}
 	}
 }

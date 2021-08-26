@@ -16,14 +16,14 @@ import (
 )
 
 func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
-	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKeyPath(r)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	h, err := parseHashFromPath(mux.Vars(r)["hash"])
 	if err != nil {
-		hd.problemWithError(w, errors.Wrap(err, "invalid hash for operation by hash"), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Wrap(err, "invalid hash for operation by hash"), http.StatusBadRequest)
 
 		return
 	}
@@ -31,12 +31,12 @@ func (hd *Handlers) handleOperation(w http.ResponseWriter, r *http.Request) {
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleOperationInGroup(h)
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 
 		if !shared {
-			hd.writeCache(w, cachekey, time.Hour*30)
+			HTTP2WriteCache(w, cachekey, time.Hour*30)
 		}
 	}
 }
@@ -63,8 +63,8 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
@@ -73,7 +73,7 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 
 		return []interface{}{i, filled}, err
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
 		var b []byte
 		var filled bool
@@ -83,7 +83,7 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 			filled = l[1].(bool)
 		}
 
-		hd.writeHalBytes(w, b, http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, b, http.StatusOK)
 
 		if !shared {
 			expire := time.Second * 3
@@ -91,7 +91,7 @@ func (hd *Handlers) handleOperations(w http.ResponseWriter, r *http.Request) {
 				expire = time.Hour * 30
 			}
 
-			hd.writeCache(w, cachekey, expire)
+			HTTP2WriteCache(w, cachekey, expire)
 		}
 	}
 }
@@ -129,19 +129,19 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 	reverse := parseBoolQuery(r.URL.Query().Get("reverse"))
 
-	cachekey := cacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKey(r.URL.Path, stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	var height base.Height
 	switch h, err := parseHeightFromPath(mux.Vars(r)["height"]); {
 	case err != nil:
-		hd.problemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Errorf("invalid height found for manifest by height"), http.StatusBadRequest)
 
 		return
 	case h <= base.NilHeight:
-		hd.problemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Errorf("invalid height, %v", h), http.StatusBadRequest)
 		return
 	default:
 		height = h
@@ -151,7 +151,7 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 		i, filled, err := hd.handleOperationsByHeightInGroup(height, offset, reverse)
 		return []interface{}{i, filled}, err
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
 		var b []byte
 		var filled bool
@@ -161,7 +161,7 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 			filled = l[1].(bool)
 		}
 
-		hd.writeHalBytes(w, b, http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, b, http.StatusOK)
 
 		if !shared {
 			expire := time.Second * 3
@@ -169,7 +169,7 @@ func (hd *Handlers) handleOperationsByHeight(w http.ResponseWriter, r *http.Requ
 				expire = time.Hour * 30
 			}
 
-			hd.writeCache(w, cachekey, expire)
+			HTTP2WriteCache(w, cachekey, expire)
 		}
 	}
 }

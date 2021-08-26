@@ -37,7 +37,7 @@ func (cmd *GenerateKeyCommand) Run(version util.Version) error {
 	}
 
 	if cmd.JSON {
-		cmd.pretty(cmd.Pretty, map[string]interface{}{
+		PrettyPrint(cmd.out, cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
 				"hint": priv.Hint(),
 				"key":  priv.String(),

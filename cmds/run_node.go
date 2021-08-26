@@ -204,7 +204,7 @@ func (cmd *RunCommand) hookDigestAPIHandlers(ctx context.Context) (context.Conte
 	if err := LoadDigestNetworkContextValue(ctx, &dnt); err != nil {
 		return ctx, err
 	}
-	dnt.SetHandler(handlers.Handler())
+	dnt.SetRouter(handlers.Router())
 
 	return ctx, nil
 }

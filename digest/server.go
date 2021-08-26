@@ -105,8 +105,20 @@ func (sv *HTTP2Server) SetLogging(l *logging.Logging) *logging.Logging {
 	return sv.Logging.SetLogging(l)
 }
 
-func (sv *HTTP2Server) SetHandler(handler http.Handler) {
-	sv.srv.Handler = handler
+func (sv *HTTP2Server) Router() *mux.Router {
+	sv.RLock()
+	defer sv.RUnlock()
+
+	return sv.router
+}
+
+func (sv *HTTP2Server) SetRouter(router *mux.Router) {
+	sv.Lock()
+	defer sv.Unlock()
+
+	sv.router = router
+
+	sv.srv.Handler = router
 }
 
 func (sv *HTTP2Server) start(ctx context.Context) error {

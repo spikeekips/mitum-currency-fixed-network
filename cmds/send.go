@@ -63,7 +63,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 		cmd.Log().Debug().Msg("seal signed")
 	}
 
-	cmd.pretty(cmd.Pretty, sl)
+	PrettyPrint(cmd.out, cmd.Pretty, sl)
 
 	if cmd.DryRun {
 		return nil

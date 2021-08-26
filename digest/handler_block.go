@@ -18,19 +18,19 @@ var halBlockTemplate = map[string]HalLink{
 }
 
 func (hd *Handlers) handleBlock(w http.ResponseWriter, r *http.Request) {
-	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKeyPath(r)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleBlockInGroup(mux.Vars(r))
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 		if !shared {
-			hd.writeCache(w, cachekey, time.Hour*3000)
+			HTTP2WriteCache(w, cachekey, time.Hour*3000)
 		}
 	}
 }

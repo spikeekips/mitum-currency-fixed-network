@@ -45,7 +45,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 		sl = s
 	}
 
-	cmd.pretty(cmd.Pretty, sl)
+	PrettyPrint(cmd.out, cmd.Pretty, sl)
 
 	return nil
 }

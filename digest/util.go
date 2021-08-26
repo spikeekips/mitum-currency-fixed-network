@@ -2,12 +2,19 @@ package digest
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
+	quicnetwork "github.com/spikeekips/mitum/network/quic"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -91,4 +98,87 @@ func addQueryValue(b, s string) string {
 	}
 
 	return b + "&" + s
+}
+
+func HTTP2Stream(enc encoder.Encoder, w http.ResponseWriter, bufsize int, status int) (*jsoniter.Stream, func()) {
+	w.Header().Set(HTTP2EncoderHintHeader, enc.Hint().String())
+	w.Header().Set("Content-Type", HALMimetype)
+
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+
+	stream := jsoniter.NewStream(HALJSONConfigDefault, w, bufsize)
+	return stream, func() {
+		_ = stream.Flush()
+	}
+}
+
+func HTTP2NotSupported(w http.ResponseWriter, err error) {
+	if err == nil {
+		err = quicnetwork.NotSupportedErorr
+	}
+
+	HTTP2ProblemWithError(w, err, http.StatusInternalServerError)
+}
+
+func HTTP2ProblemWithError(w http.ResponseWriter, err error, status int) {
+	HTTP2WritePoblem(w, NewProblemFromError(err), status)
+}
+
+func HTTP2WritePoblem(w http.ResponseWriter, pr Problem, status int) {
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+
+	w.Header().Set("Content-Type", ProblemMimetype)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	var output []byte
+	if b, err := jsonenc.Marshal(pr); err != nil {
+		output = unknownProblemJSON
+	} else {
+		output = b
+	}
+
+	w.WriteHeader(status)
+	_, _ = w.Write(output)
+}
+
+func HTTP2WriteHal(enc encoder.Encoder, w http.ResponseWriter, hal Hal, status int) { // nolint:unparam
+	stream, flush := HTTP2Stream(enc, w, 1, status)
+	defer flush()
+
+	stream.WriteVal(hal)
+}
+
+func HTTP2WriteHalBytes(enc encoder.Encoder, w http.ResponseWriter, b []byte, status int) { // nolint:unparam
+	w.Header().Set(HTTP2EncoderHintHeader, enc.Hint().String())
+	w.Header().Set("Content-Type", HALMimetype)
+
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+
+	_, _ = w.Write(b)
+}
+
+func HTTP2WriteCache(w http.ResponseWriter, key string, expire time.Duration) {
+	if cw, ok := w.(*CacheResponseWriter); ok {
+		_ = cw.SetKey(key).SetExpire(expire)
+	}
+}
+
+func HTTP2HandleError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	switch {
+	case errors.Is(err, util.NotFoundError):
+		status = http.StatusNotFound
+	case errors.Is(err, quicnetwork.BadRequestError):
+		status = http.StatusBadRequest
+	case errors.Is(err, quicnetwork.NotSupportedErorr):
+		status = http.StatusInternalServerError
+	}
+
+	HTTP2ProblemWithError(w, err, status)
 }

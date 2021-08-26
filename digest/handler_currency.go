@@ -16,25 +16,25 @@ import (
 
 func (hd *Handlers) handleCurrencies(w http.ResponseWriter, r *http.Request) {
 	if hd.cp == nil {
-		hd.notSupported(w, errors.Errorf("empty CurrencyPool"))
+		HTTP2NotSupported(w, errors.Errorf("empty CurrencyPool"))
 
 		return
 	}
 
-	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKeyPath(r)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleCurrenciesInGroup()
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 
 		if !shared {
-			hd.writeCache(w, cachekey, time.Second*3)
+			HTTP2WriteCache(w, cachekey, time.Second*3)
 		}
 	}
 }
@@ -55,22 +55,22 @@ func (hd *Handlers) handleCurrenciesInGroup() ([]byte, error) {
 }
 
 func (hd *Handlers) handleCurrency(w http.ResponseWriter, r *http.Request) {
-	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKeyPath(r)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	var cid string
 	s, found := mux.Vars(r)["currencyid"]
 	if !found {
-		hd.problemWithError(w, errors.Errorf("empty currency id"), http.StatusNotFound)
+		HTTP2ProblemWithError(w, errors.Errorf("empty currency id"), http.StatusNotFound)
 
 		return
 	}
 
 	s = strings.TrimSpace(s)
 	if len(s) < 1 {
-		hd.problemWithError(w, errors.Errorf("empty currency id"), http.StatusBadRequest)
+		HTTP2ProblemWithError(w, errors.Errorf("empty currency id"), http.StatusBadRequest)
 
 		return
 	}
@@ -79,12 +79,12 @@ func (hd *Handlers) handleCurrency(w http.ResponseWriter, r *http.Request) {
 	if v, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
 		return hd.handleCurrencyInGroup(cid)
 	}); err != nil {
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 
 		if !shared {
-			hd.writeCache(w, cachekey, time.Second*3)
+			HTTP2WriteCache(w, cachekey, time.Second*3)
 		}
 	}
 }

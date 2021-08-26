@@ -16,25 +16,25 @@ func (hd *Handlers) SetNodeInfoHandler(handler network.NodeInfoHandler) *Handler
 
 func (hd *Handlers) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 	if hd.nodeInfoHandler == nil {
-		hd.notSupported(w, nil)
+		HTTP2NotSupported(w, nil)
 
 		return
 	}
 
-	cachekey := cacheKeyPath(r)
-	if err := loadFromCache(hd.cache, cachekey, w); err == nil {
+	cachekey := CacheKeyPath(r)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
 
 	if v, err, shared := hd.rg.Do(cachekey, hd.handleNodeInfoInGroup); err != nil {
 		hd.Log().Error().Err(err).Msg("failed to get node info")
 
-		hd.handleError(w, err)
+		HTTP2HandleError(w, err)
 	} else {
-		hd.writeHalBytes(w, v.([]byte), http.StatusOK)
+		HTTP2WriteHalBytes(hd.enc, w, v.([]byte), http.StatusOK)
 
 		if !shared {
-			hd.writeCache(w, cachekey, time.Second*3)
+			HTTP2WriteCache(w, cachekey, time.Second*3)
 		}
 	}
 }
