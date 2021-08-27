@@ -55,7 +55,7 @@ func (cmd *CurrencyPolicyUpdaterCommand) Run(version util.Version) error { // no
 	}
 	cmd.Log().Debug().Interface("seal", i).Msg("seal loaded")
 
-	PrettyPrint(cmd.out, cmd.Pretty, i)
+	PrettyPrint(cmd.Out, cmd.Pretty, i)
 
 	return nil
 }

@@ -79,7 +79,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 
 	cmd.Log().Debug().Msg("seal signed")
 
-	PrettyPrint(cmd.out, cmd.Pretty, sl)
+	PrettyPrint(cmd.Out, cmd.Pretty, sl)
 
 	return nil
 }

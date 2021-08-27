@@ -351,19 +351,19 @@ func sameBind(a, b *url.URL) bool {
 
 type BaseCommand struct {
 	*mitumcmds.BaseCommand
-	out io.Writer
+	Out io.Writer `kong:"-"`
 }
 
 func NewBaseCommand(name string) *BaseCommand {
 	return &BaseCommand{
 		BaseCommand: mitumcmds.NewBaseCommand(name),
-		out:         os.Stdout,
+		Out:         os.Stdout,
 	}
 }
 
 func (co *BaseCommand) print(f string, a ...interface{}) {
-	_, _ = fmt.Fprintf(co.out, f, a...)
-	_, _ = fmt.Fprintln(co.out)
+	_, _ = fmt.Fprintf(co.Out, f, a...)
+	_, _ = fmt.Fprintln(co.Out)
 }
 
 func hookVerboseConfig(ctx context.Context) (context.Context, error) {

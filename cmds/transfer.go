@@ -54,7 +54,7 @@ func (cmd *TransferCommand) Run(version util.Version) error {
 	if err != nil {
 		return err
 	}
-	PrettyPrint(cmd.out, cmd.Pretty, sl)
+	PrettyPrint(cmd.Out, cmd.Pretty, sl)
 
 	return nil
 }

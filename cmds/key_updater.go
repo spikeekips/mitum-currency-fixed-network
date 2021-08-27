@@ -49,7 +49,7 @@ func (cmd *KeyUpdaterCommand) Run(version util.Version) error { // nolint:dupl
 	if err != nil {
 		return errors.Wrap(err, "failed to create operation.Seal")
 	}
-	PrettyPrint(cmd.out, cmd.Pretty, bs)
+	PrettyPrint(cmd.Out, cmd.Pretty, bs)
 
 	return nil
 }

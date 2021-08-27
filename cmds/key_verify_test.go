@@ -24,7 +24,7 @@ func (t *testVerifyKeyCommand) TestSingleKey() {
 	t.NoError(err)
 
 	var buf bytes.Buffer
-	cli.out = &buf
+	cli.Out = &buf
 
 	t.NoError(cli.Run(util.Version("0.1.1")))
 
