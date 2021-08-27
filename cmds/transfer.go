@@ -45,7 +45,7 @@ func (cmd *TransferCommand) Run(version util.Version) error {
 		return err
 	}
 
-	sl, err := loadSealAndAddOperation(
+	sl, err := LoadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
 		cmd.NetworkID.NetworkID(),
@@ -122,7 +122,7 @@ func loadOperations(b []byte, networkID base.NetworkID) ([]operation.Operation, 
 	}
 
 	var sl seal.Seal
-	if s, err := loadSeal(b, networkID); err != nil {
+	if s, err := LoadSeal(b, networkID); err != nil {
 		return nil, err
 	} else if so, ok := s.(operation.Seal); !ok {
 		return nil, errors.Errorf("seal is not operation.Seal, %T", s)

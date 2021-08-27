@@ -315,14 +315,14 @@ func (st *Database) OperationsByAddress(
 		filter,
 		func(cursor *mongo.Cursor) (bool, error) {
 			if !load {
-				h, err := loadOperationHash(cursor.Decode)
+				h, err := LoadOperationHash(cursor.Decode)
 				if err != nil {
 					return false, err
 				}
 				return callback(h, OperationValue{})
 			}
 
-			va, err := loadOperation(cursor.Decode, st.database.Encoders())
+			va, err := LoadOperation(cursor.Decode, st.database.Encoders())
 			if err != nil {
 				return false, err
 			}
@@ -352,7 +352,7 @@ func (st *Database) Operation(
 				return nil
 			}
 
-			i, err := loadOperation(res.Decode, st.database.Encoders())
+			i, err := LoadOperation(res.Decode, st.database.Encoders())
 			if err != nil {
 				return err
 			}
@@ -405,14 +405,14 @@ func (st *Database) Operations(
 		filter,
 		func(cursor *mongo.Cursor) (bool, error) {
 			if !load {
-				h, err := loadOperationHash(cursor.Decode)
+				h, err := LoadOperationHash(cursor.Decode)
 				if err != nil {
 					return false, err
 				}
 				return callback(h, OperationValue{})
 			}
 
-			va, err := loadOperation(cursor.Decode, st.database.Encoders())
+			va, err := LoadOperation(cursor.Decode, st.database.Encoders())
 			if err != nil {
 				return false, err
 			}
@@ -429,7 +429,7 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 		defaultColNameAccount,
 		util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a)).D(),
 		func(res *mongo.SingleResult) error {
-			i, err := loadAccountValue(res.Decode, st.database.Encoders())
+			i, err := LoadAccountValue(res.Decode, st.database.Encoders())
 			if err != nil {
 				return err
 			}
@@ -479,7 +479,7 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 			defaultColNameBalance,
 			q,
 			func(res *mongo.SingleResult) error {
-				i, err := loadBalance(res.Decode, st.database.Encoders())
+				i, err := LoadBalance(res.Decode, st.database.Encoders())
 				if err != nil {
 					return err
 				}

@@ -46,7 +46,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 		cmd.Timeout = time.Second * 5
 	}
 
-	sl, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
+	sl, err := LoadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (cmd *SendCommand) Run(version util.Version) error {
 	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
 	if !cmd.Privatekey.Empty() {
-		s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+		s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
 		if err != nil {
 			return err
 		}

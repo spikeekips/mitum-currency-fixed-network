@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func loadOperationHash(decoder func(interface{}) error) (valuehash.Hash, error) {
+func LoadOperationHash(decoder func(interface{}) error) (valuehash.Hash, error) {
 	var doc struct {
 		FH valuehash.Bytes `bson:"fact"`
 	}
@@ -20,7 +20,7 @@ func loadOperationHash(decoder func(interface{}) error) (valuehash.Hash, error) 
 	return doc.FH, nil
 }
 
-func loadOperation(decoder func(interface{}) error, encs *encoder.Encoders) (OperationValue, error) {
+func LoadOperation(decoder func(interface{}) error, encs *encoder.Encoders) (OperationValue, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
 		return OperationValue{}, err
@@ -35,7 +35,7 @@ func loadOperation(decoder func(interface{}) error, encs *encoder.Encoders) (Ope
 	}
 }
 
-func loadAccountValue(decoder func(interface{}) error, encs *encoder.Encoders) (AccountValue, error) {
+func LoadAccountValue(decoder func(interface{}) error, encs *encoder.Encoders) (AccountValue, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
 		return AccountValue{}, err
@@ -50,7 +50,7 @@ func loadAccountValue(decoder func(interface{}) error, encs *encoder.Encoders) (
 	}
 }
 
-func loadBalance(decoder func(interface{}) error, encs *encoder.Encoders) (state.State, error) {
+func LoadBalance(decoder func(interface{}) error, encs *encoder.Encoders) (state.State, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
 		return nil, err

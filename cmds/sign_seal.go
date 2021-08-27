@@ -26,7 +26,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 		return errors.Wrap(err, "failed to initialize command")
 	}
 
-	sl, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
+	sl, err := LoadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID())
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
 		cmd.Log().Debug().Msg("already signed")
 	} else {
-		s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+		s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
 		if err != nil {
 			return err
 		}

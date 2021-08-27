@@ -28,7 +28,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 	}
 
 	var sl operation.Seal
-	if s, err := loadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
+	if s, err := LoadSeal(cmd.Seal.Bytes(), cmd.NetworkID.NetworkID()); err != nil {
 		return err
 	} else if so, ok := s.(operation.Seal); !ok {
 		return errors.Errorf("seal is not operation.Seal, %T", s)
@@ -71,7 +71,7 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 
 	sl = sl.(operation.SealUpdater).SetOperations(nops).(operation.Seal)
 
-	s, err := signSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+	s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return err
 	}

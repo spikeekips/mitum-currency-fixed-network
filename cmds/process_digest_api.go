@@ -131,7 +131,7 @@ func ProcessDigestAPI(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, ContextValueDigestNetwork, nt), nil
 }
 
-func newSendHandler(
+func NewSendHandler(
 	priv key.Privatekey,
 	networkID base.NetworkID,
 	chans func() ([]network.Channel, error),
@@ -140,7 +140,7 @@ func newSendHandler(
 		var sl seal.Seal
 		switch t := v.(type) {
 		case operation.Seal, seal.Seal:
-			if s, err := signSeal(v.(seal.Seal), priv, networkID); err != nil {
+			if s, err := SignSeal(v.(seal.Seal), priv, networkID); err != nil {
 				return nil, err
 			} else if err := s.IsValid(networkID); err != nil {
 				return nil, err
@@ -205,7 +205,7 @@ func newSendHandler(
 	}
 }
 
-func signSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal.Seal, error) {
+func SignSeal(sl seal.Seal, priv key.Privatekey, networkID base.NetworkID) (seal.Seal, error) {
 	p := reflect.New(reflect.TypeOf(sl))
 	p.Elem().Set(reflect.ValueOf(sl))
 

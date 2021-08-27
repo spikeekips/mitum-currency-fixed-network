@@ -342,7 +342,7 @@ func (cmd *RunCommand) setDigestSendHandler(
 		return nil, err
 	}
 
-	handlers = handlers.SetSend(newSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) {
+	handlers = handlers.SetSend(NewSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) {
 		remotes := suffrage.Nodes()
 
 		var chs []network.Channel

@@ -47,7 +47,7 @@ func (cmd *CreateAccountCommand) Run(version util.Version) error { // nolint:dup
 		return err
 	}
 
-	sl, err := loadSealAndAddOperation(
+	sl, err := LoadSealAndAddOperation(
 		cmd.Seal.Bytes(),
 		cmd.Privatekey,
 		cmd.NetworkID.NetworkID(),
@@ -134,7 +134,7 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 	return op, nil
 }
 
-func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
+func LoadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 	if len(bytes.TrimSpace(b)) < 1 {
 		return nil, errors.Errorf("empty input")
 	}
@@ -148,7 +148,7 @@ func loadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 	}
 }
 
-func loadSealAndAddOperation(
+func LoadSealAndAddOperation(
 	b []byte,
 	privatekey key.Privatekey,
 	networkID base.NetworkID,
@@ -167,7 +167,7 @@ func loadSealAndAddOperation(
 	}
 
 	var sl operation.Seal
-	if s, err := loadSeal(b, networkID); err != nil {
+	if s, err := LoadSeal(b, networkID); err != nil {
 		return nil, err
 	} else if so, ok := s.(operation.Seal); !ok {
 		return nil, errors.Errorf("seal is not operation.Seal, %T", s)
@@ -180,7 +180,7 @@ func loadSealAndAddOperation(
 	// NOTE add operation to existing seal
 	sl = sl.(operation.SealUpdater).SetOperations([]operation.Operation{op}).(operation.Seal)
 
-	s, err := signSeal(sl, privatekey, networkID)
+	s, err := SignSeal(sl, privatekey, networkID)
 	if err != nil {
 		return nil, err
 	}
