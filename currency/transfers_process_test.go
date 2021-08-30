@@ -421,49 +421,48 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	started = time.Now()
 
 	errchan := make(chan error)
-	wk := util.NewDistributeWorker(100, errchan)
+	wk := util.NewDistributeWorker(context.Background(), 100, errchan)
 
 	go func() {
-		wk.Run(
-			func(i uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
+		defer wk.Done()
+
+		for i := 0; i < size; i++ {
+			t.NoError(wk.NewJob(func(context.Context, uint64) error {
 				ac, st := t.newAccount(true, []Amount{NewAmount(NewBig(int64(size)), t.cid)})
 
 				return acerr{err: nil, ac: ac, st: st}
-			},
-		)
-
-		close(errchan)
-	}()
-
-	go func() {
-		for i := 0; i < size; i++ {
-			wk.NewJob(i)
+			}))
 		}
-		wk.Done(true)
 	}()
 
 	acs := make([]*account, size)
 	sts := make([][]state.State, size)
-	var i int
-	for err := range errchan {
-		if err == nil {
-			continue
+
+	donech := make(chan struct{})
+	go func() {
+		var i int
+		for err := range errchan {
+			if err == nil {
+				continue
+			}
+
+			acs[i] = err.(acerr).ac.(*account)
+			sts[i] = err.(acerr).st
+			i++
 		}
 
-		acs[i] = err.(acerr).ac.(*account)
-		sts[i] = err.(acerr).st
-		i++
-	}
+		donech <- struct{}{}
+	}()
+
+	t.NoError(wk.Wait())
+	close(errchan)
+
+	<-donech
+
 	t.T().Log("accounts created: ", len(acs), "elapsed:", time.Since(started))
 
 	t.T().Log("trying to create operations")
 	started = time.Now()
-
-	errchan = make(chan error)
-	wk = util.NewDistributeWorker(500, errchan)
 
 	var items, ignored int64
 
@@ -471,14 +470,14 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	feeer := NewFixedFeeer(acs[0].Address, fee)
 
 	half := size / 2
-	go func() {
-		wk.Run(
-			func(_ uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
 
-				i := j.(int)
+	errch := make(chan error)
+	wk = util.NewDistributeWorker(context.Background(), 100, errch)
+	go func() {
+		defer wk.Done()
+		for i := 0; i < size; i++ {
+			i := i
+			wk.NewJob(func(context.Context, uint64) error {
 				var receiver *account
 				if i == 0 || i == half {
 					return acerr{err: nil}
@@ -506,28 +505,31 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 				}
 
 				return acerr{err: nil, ac: ops}
-			},
-		)
-
-		close(errchan)
-	}()
-
-	go func() {
-		for i := 0; i < size; i++ {
-			wk.NewJob(i)
+			})
 		}
-		wk.Done(true)
 	}()
 
 	var ops []operation.Operation
-	for err := range errchan {
-		if err == nil || err.(acerr).ac == nil {
-			continue
+
+	donech = make(chan struct{})
+	go func() {
+		for err := range errch {
+			if err == nil || err.(acerr).ac == nil {
+				continue
+			}
+
+			op := err.(acerr).ac.([]operation.Operation)
+			ops = append(ops, op...)
 		}
 
-		op := err.(acerr).ac.([]operation.Operation)
-		ops = append(ops, op...)
-	}
+		donech <- struct{}{}
+	}()
+
+	t.NoError(wk.Wait())
+	close(errch)
+
+	<-donech
+
 	t.T().Log("operations created:", len(ops), "elapsed:", time.Since(started))
 
 	cp := NewCurrencyPool()

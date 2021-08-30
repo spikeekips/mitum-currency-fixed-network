@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/sync/errgroup"
 )
 
 var SendVars = kong.Vars{
@@ -109,17 +108,30 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 		channels[i] = ch
 	}
 
-	eg, ctx := errgroup.WithContext(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
+	defer cancel()
 
-	for i := range channels {
-		ch := channels[i]
-		eg.Go(func() error {
-			ictx, cancel := context.WithTimeout(ctx, cmd.Timeout)
-			defer cancel()
+	wk := util.NewDistributeWorker(ctx, 100, nil)
+	defer wk.Close()
 
-			return ch.SendSeal(ictx, sl)
-		})
-	}
+	go func() {
+		defer wk.Done()
 
-	return eg.Wait()
+		for i := range channels {
+			ch := channels[i]
+			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
+				if err := ch.SendSeal(ctx, sl); err != nil {
+					cmd.Log().Error().Err(err).Stringer("conninfo", ch.ConnInfo()).Msg("failed to send to node")
+
+					return err
+				}
+
+				return nil
+			}); err != nil {
+				return
+			}
+		}
+	}()
+
+	return wk.Wait()
 }
