@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -5,8 +6,9 @@ package digest
 import (
 	"fmt"
 	"io"
-	"net/http"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -118,6 +120,26 @@ type testHandlerOperations struct {
 	baseTestHandlers
 }
 
+func (t *testHandlerOperations) getHashes(handlers *Handlers, limit int, self *url.URL) []string {
+	l := t.getItems(handlers, limit, self, func(b []byte) (interface{}, error) {
+		hinter, err := t.JSONEnc.Decode(b)
+		if err != nil {
+			return "", err
+		}
+
+		va := hinter.(OperationValue)
+
+		return va.Operation().Fact().Hash().String(), nil
+	})
+
+	uhashes := make([]string, len(l))
+	for i := range l {
+		uhashes[i] = l[i].(string)
+	}
+
+	return uhashes
+}
+
 func (t *testHandlerOperations) TestOperationsPaging() {
 	st, _ := t.Database()
 
@@ -139,10 +161,11 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 	}
 
 	var limit int64 = 3
-	handlers := t.handlers(st, DummyCache{})
+	handlers := t.handlers(st, NewLocalMemCache(1000, time.Minute))
 	_ = handlers.SetLimiter(func(string) int64 {
 		return limit
 	})
+	handlers.expireNotFilled = time.Second
 
 	{ // no reverse
 		reverse := false
@@ -152,44 +175,7 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.request(handlers, "GET", self.String(), nil)
-
-			if r := w.Result().StatusCode; r == http.StatusOK {
-				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
-				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
-			} else if r == http.StatusNotFound {
-				break
-			}
-
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
-
-			hal := t.loadHal(b)
-
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
-
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
-
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
-		}
-
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(hashes, uhashes)
 	}
 
@@ -206,43 +192,39 @@ func (t *testHandlerOperations) TestOperationsPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.request(handlers, "GET", self.String(), nil)
-			if r := w.Result().StatusCode; r == http.StatusOK {
-				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
-				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
-			} else if r == http.StatusNotFound {
-				break
-			}
+		uhashes := t.getHashes(handlers, int(limit), self)
+		t.Equal(rhashes, uhashes)
+	}
 
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
+	t.T().Log("insert more")
 
-			hal := t.loadHal(b)
+	height := base.Height(4)
+	for i := uint64(0); i < 3; i++ {
+		tf := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
+		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, i)
+		t.NoError(err)
+		_ = t.insertDoc(st, defaultColNameOperation, doc)
 
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
+		fh := tf.Fact().Hash().String()
 
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
+		hashes = append(hashes, fh)
+	}
 
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
+	<-time.After(handlers.expireNotFilled + time.Millisecond) // wait empty offset expire
+	{                                                         // reverse again
+		var rhashes []string
+		for i := len(hashes) - 1; i >= 0; i-- {
+			rhashes = append(rhashes, hashes[i])
 		}
 
+		reverse := true
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathOperations).URL()
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(rhashes, uhashes)
 	}
 }
@@ -285,44 +267,7 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.request(handlers, "GET", self.String(), nil)
-
-			if r := w.Result().StatusCode; r == http.StatusOK {
-				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
-				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
-			} else if r == http.StatusNotFound {
-				break
-			}
-
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
-
-			hal := t.loadHal(b)
-
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
-
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
-
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
-		}
-
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(hashesByHeight[height], uhashes)
 	}
 
@@ -340,43 +285,7 @@ func (t *testHandlerOperations) TestOperationsByHeightPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.request(handlers, "GET", self.String(), nil)
-			if r := w.Result().StatusCode; r == http.StatusOK {
-				t.Equal(HALMimetype, w.Result().Header.Get("content-type"))
-				t.Equal(handlers.enc.Hint().String(), w.Result().Header.Get(HTTP2EncoderHintHeader))
-			} else if r == http.StatusNotFound {
-				break
-			}
-
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
-
-			hal := t.loadHal(b)
-
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
-
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
-
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
-		}
-
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(rhashes, uhashes)
 	}
 }

@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -5,8 +6,10 @@ package digest
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
@@ -141,6 +144,26 @@ func (t *testHandlerAccount) TestAccountOperations() {
 	t.Equal(int(limit), len(em))
 }
 
+func (t *testHandlerAccount) getHashes(handlers *Handlers, limit int, self *url.URL) []string {
+	l := t.getItems(handlers, limit, self, func(b []byte) (interface{}, error) {
+		hinter, err := t.JSONEnc.Decode(b)
+		if err != nil {
+			return "", err
+		}
+
+		va := hinter.(OperationValue)
+
+		return va.Operation().Fact().Hash().String(), nil
+	})
+
+	uhashes := make([]string, len(l))
+	for i := range l {
+		uhashes[i] = l[i].(string)
+	}
+
+	return uhashes
+}
+
 func (t *testHandlerAccount) TestAccountOperationsPaging() {
 	st, _ := t.Database()
 
@@ -183,37 +206,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.requestOK(handlers, "GET", self.String(), nil)
-
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
-
-			hal := t.loadHal(b)
-
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
-
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
-
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
-		}
-
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(hashes, uhashes)
 	}
 
@@ -232,37 +225,7 @@ func (t *testHandlerAccount) TestAccountOperationsPaging() {
 		t.NoError(err)
 		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
 
-		var uhashes []string
-		for {
-			w := t.requestOK(handlers, "GET", self.String(), nil)
-
-			b, err := io.ReadAll(w.Result().Body)
-			t.NoError(err)
-
-			hal := t.loadHal(b)
-
-			var em []BaseHal
-			t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
-			t.True(int(limit) >= len(em))
-
-			for _, b := range em {
-				hinter, err := t.JSONEnc.Decode(b.RawInterface())
-				t.NoError(err)
-				va := hinter.(OperationValue)
-
-				fh := va.Operation().Fact().Hash().String()
-				uhashes = append(uhashes, fh)
-			}
-
-			next, err := hal.Links()["next"].URL()
-			t.NoError(err)
-			self = next
-
-			if int64(len(em)) < limit {
-				break
-			}
-		}
-
+		uhashes := t.getHashes(handlers, int(limit), self)
 		t.Equal(hashes, uhashes)
 	}
 }
@@ -305,6 +268,94 @@ func (t *testHandlerAccount) TestAccountOperationsPagingOverOffset() {
 	var problem Problem
 	t.NoError(jsonenc.Unmarshal(b, &problem))
 	t.Contains(problem.Error(), "operations not found")
+}
+
+func (t *testHandlerAccount) TestAccountOperationsReverseCache() {
+	st, _ := t.Database()
+
+	insert := func(height base.Height, sender base.Address, l int) ([]string, map[string]string) {
+		var offsets []string
+		hashesByOffset := map[string]string{}
+
+		for i := uint64(0); i < uint64(l); i++ {
+			tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
+			doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, i)
+			t.NoError(err)
+			_ = t.insertDoc(st, defaultColNameOperation, doc)
+
+			fh := tf.Fact().Hash().String()
+
+			offset := buildOffset(height, i)
+			offsets = append(offsets, offset)
+			hashesByOffset[offset] = fh
+		}
+
+		return offsets, hashesByOffset
+	}
+
+	var limit int64 = 3
+	handlers := t.handlers(st, NewLocalMemCache(1000, time.Minute))
+	_ = handlers.SetLimiter(func(string) int64 {
+		return limit
+	})
+	handlers.expireNotFilled = time.Second * 2
+
+	sender := currency.MustAddress(util.UUID().String())
+	offsets, hashesByOffset := insert(base.Height(3), sender, 10)
+
+	{ // reverse
+		var hashes []string
+		sort.Sort(sort.Reverse(sort.StringSlice(offsets)))
+
+		for _, o := range offsets {
+			hashes = append(hashes, hashesByOffset[o])
+		}
+
+		reverse := true
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		uhashes := t.getHashes(handlers, int(limit), self)
+
+		t.Equal(hashes, uhashes)
+	}
+
+	t.T().Log("insert more")
+	{
+		o, h := insert(base.Height(4), sender, 1)
+		for i := range o {
+			offsets = append(offsets, o[i])
+
+			for i := range h {
+				hashesByOffset[i] = h[i]
+			}
+		}
+	}
+
+	<-time.After(handlers.expireNotFilled + time.Millisecond) // wait empty offset expire
+
+	{ // reverse again
+		sort.Sort(sort.Reverse(sort.StringSlice(offsets)))
+
+		var hashes []string
+		for _, o := range offsets {
+			hashes = append(hashes, hashesByOffset[o])
+		}
+
+		reverse := true
+		offset := ""
+
+		self, err := handlers.router.Get(HandlerPathAccountOperations).URLPath("address", sender.String())
+		t.NoError(err)
+		self.RawQuery = fmt.Sprintf("%s&%s", stringOffsetQuery(offset), stringBoolQuery("reverse", reverse))
+
+		uhashes := t.getHashes(handlers, int(limit), self)
+
+		t.Equal(hashes, uhashes)
+	}
 }
 
 func TestHandlerAccount(t *testing.T) {
