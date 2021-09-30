@@ -360,7 +360,9 @@ func (cmd *RunCommand) setDigestSendHandler(
 		}
 
 		return chs, nil
-	}))
+	},
+		conf.Network().ConnInfo(),
+	))
 
 	cmd.Log().Debug().Msg("send handler attached")
 

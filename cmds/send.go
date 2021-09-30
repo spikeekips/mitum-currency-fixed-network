@@ -28,6 +28,7 @@ type SendCommand struct {
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey for sign"`
 	Timeout    time.Duration           `name:"timeout" help:"timeout; default: 5s"`
 	TLSInscure bool                    `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
+	From       string                  `name:"from" help:"from conninfo; default is empty"`
 }
 
 func NewSendCommand() SendCommand {
@@ -120,7 +121,7 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 		for i := range channels {
 			ch := channels[i]
 			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
-				if err := ch.SendSeal(ctx, sl); err != nil {
+				if err := ch.SendSeal(ctx, network.NewNilConnInfo(cmd.From), sl); err != nil {
 					cmd.Log().Error().Err(err).Stringer("conninfo", ch.ConnInfo()).Msg("failed to send to node")
 
 					return err

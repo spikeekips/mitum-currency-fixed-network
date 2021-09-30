@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -51,6 +52,8 @@ func (t *testHandlerNodeInfo) TestBasic() {
 	}
 
 	policy := map[string]interface{}{"showme": 1}
+	ci, err := network.NewHTTPConnInfoFromString("https://local", true)
+	t.NoError(err)
 
 	ni := network.NewNodeInfoV0(
 		local,
@@ -58,10 +61,10 @@ func (t *testHandlerNodeInfo) TestBasic() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"quic://local",
 		policy,
 		nodes,
 		nil,
+		ci,
 	)
 
 	handlers := t.handlers(st, DummyCache{})
@@ -91,7 +94,7 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 	t.True(a.Publickey().Equal(b.Publickey()))
 	t.Equal(a.NetworkID(), b.NetworkID())
 	t.Equal(a.Version(), b.Version())
-	t.Equal(a.URL(), b.URL())
+	t.True(a.ConnInfo().Equal(b.ConnInfo()))
 
 	t.Equal(len(a.Policy()), len(b.Policy()))
 	{
@@ -109,8 +112,7 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 
 		t.True(an.Address.Equal(bn.Address))
 		t.True(an.Publickey.Equal(bn.Publickey))
-		t.Equal(an.URL, bn.URL)
-		t.Equal(an.Insecure, bn.Insecure)
+		t.True(an.ConnInfo().Equal(bn.ConnInfo()))
 	}
 }
 

@@ -135,6 +135,7 @@ func NewSendHandler(
 	priv key.Privatekey,
 	networkID base.NetworkID,
 	chans func() ([]network.Channel, error),
+	connInfo network.ConnInfo,
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
 		var sl seal.Seal
@@ -186,7 +187,7 @@ func NewSendHandler(
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 				defer cancel()
 
-				errchan <- chs[i].SendSeal(ctx, sl)
+				errchan <- chs[i].SendSeal(ctx, connInfo, sl)
 			}(i)
 		}
 
