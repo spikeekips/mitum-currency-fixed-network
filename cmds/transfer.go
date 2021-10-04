@@ -5,22 +5,22 @@ import (
 
 	"github.com/pkg/errors"
 
+	currency "github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
-
-	currency "github.com/spikeekips/mitum-currency/currency"
 )
 
 type TransferCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender   AddressFlag    `arg:"" name:"sender" help:"sender address" required:"true"`
-	Receiver AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:"true"`
-	Currency CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big      BigFlag        `arg:"" name:"big" help:"big to send" required:"true"`
-	Seal     FileLoad       `help:"seal" optional:""`
+	Sender   AddressFlag        `arg:"" name:"sender" help:"sender address" required:"true"`
+	Receiver AddressFlag        `arg:"" name:"receiver" help:"receiver address" required:"true"`
+	Currency CurrencyIDFlag     `arg:"" name:"currency" help:"currency id" required:"true"`
+	Big      BigFlag            `arg:"" name:"big" help:"big to send" required:"true"`
+	Seal     mitumcmds.FileLoad `help:"seal" optional:""`
 	sender   base.Address
 	receiver base.Address
 }

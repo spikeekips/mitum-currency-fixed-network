@@ -2,7 +2,6 @@ package cmds
 
 import (
 	"github.com/pkg/errors"
-
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
 )
@@ -12,7 +11,7 @@ type SignSealCommand struct {
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:"true"`
 	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:"true"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
-	Seal       FileLoad                `help:"seal" optional:""`
+	Seal       mitumcmds.FileLoad      `help:"seal" optional:""`
 }
 
 func NewSignSealCommand() SignSealCommand {

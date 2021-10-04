@@ -22,7 +22,7 @@ type SendCommand struct {
 	*BaseCommand
 	URL        []*url.URL              `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" `
-	Seal       FileLoad                `help:"seal" optional:""`
+	Seal       mitumcmds.FileLoad      `help:"seal" optional:""`
 	DryRun     bool                    `help:"dry-run, print operation" optional:"" default:"false"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey for sign"`

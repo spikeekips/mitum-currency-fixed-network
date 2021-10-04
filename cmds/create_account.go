@@ -5,24 +5,24 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
-
-	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type CreateAccountCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender    AddressFlag    `arg:"" name:"sender" help:"sender address" required:"true"`
-	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big       BigFlag        `arg:"" name:"big" help:"big to send" required:"true"`
-	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
-	Keys      []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
-	Seal      FileLoad       `help:"seal" optional:""`
+	Sender    AddressFlag        `arg:"" name:"sender" help:"sender address" required:"true"`
+	Currency  CurrencyIDFlag     `arg:"" name:"currency" help:"currency id" required:"true"`
+	Big       BigFlag            `arg:"" name:"big" help:"big to send" required:"true"`
+	Threshold uint               `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
+	Keys      []KeyFlag          `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
+	Seal      mitumcmds.FileLoad `help:"seal" optional:""`
 	sender    base.Address
 	keys      currency.Keys
 }

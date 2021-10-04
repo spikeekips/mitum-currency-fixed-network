@@ -2,8 +2,6 @@ package cmds
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -150,36 +148,6 @@ func (v *BigFlag) UnmarshalText(b []byte) error {
 	}
 
 	return nil
-}
-
-type FileLoad []byte
-
-func (v *FileLoad) UnmarshalText(b []byte) error {
-	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		c, err := mitumcmds.LoadFromStdInput()
-		if err != nil {
-			return err
-		}
-		*v = c
-
-		return nil
-	}
-
-	c, err := os.ReadFile(filepath.Clean(string(b)))
-	if err != nil {
-		return err
-	}
-	*v = c
-
-	return nil
-}
-
-func (v FileLoad) Bytes() []byte {
-	return []byte(v)
-}
-
-func (v FileLoad) String() string {
-	return string(v)
 }
 
 type CurrencyIDFlag struct {
