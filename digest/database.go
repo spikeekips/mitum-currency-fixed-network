@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
@@ -459,6 +460,61 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 	return rs, true, nil
 }
 
+// AccountsByPublickey finds Accounts, which are related with the given
+// Publickey.
+// *  offset: returns from next of offset, usually it is "<address>".
+func (st *Database) AccountsByPublickey(
+	pub key.Publickey,
+	loadBalance bool,
+	offset string,
+	limit int64,
+	callback func(AccountValue) (bool, error),
+) error {
+	filter, err := buildAccountsFilterByPublickey(pub, offset)
+	if err != nil {
+		return err
+	}
+
+	opt := options.Find().SetSort(
+		util.NewBSONFilter("address", 1).D(),
+	)
+
+	switch {
+	case limit <= 0: // no limit
+	case limit > maxLimit:
+		opt = opt.SetLimit(maxLimit)
+	default:
+		opt = opt.SetLimit(limit)
+	}
+
+	return st.database.Client().Find(
+		context.Background(),
+		defaultColNameAccount,
+		filter,
+		func(cursor *mongo.Cursor) (bool, error) {
+			va, err := LoadAccountValue(cursor.Decode, st.database.Encoders())
+			if err != nil {
+				return false, err
+			}
+
+			if loadBalance {
+				// NOTE load balance
+				switch am, lastHeight, previousHeight, err := st.balance(va.Account().Address()); {
+				case err != nil:
+					return false, err
+				default:
+					va = va.SetBalance(am).
+						SetHeight(lastHeight).
+						SetPreviousHeight(previousHeight)
+				}
+			}
+
+			return callback(va)
+		},
+		opt,
+	)
+}
+
 func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
 	lastHeight, previousHeight := base.NilHeight, base.NilHeight
 	var cids []string
@@ -579,6 +635,17 @@ func buildOperationsFilterByAddress(address base.Address, offset string, reverse
 			}
 		}
 	}
+
+	return filter, nil
+}
+
+func buildAccountsFilterByPublickey(pub key.Publickey, offset string) (bson.M, error) { // nolint:unparam
+	filter := bson.M{"pubs": bson.M{"$in": []string{pub.Raw() + ":" + pub.Hint().Type().String()}}}
+	if len(offset) < 1 {
+		return filter, nil
+	}
+
+	filter["address"] = bson.M{"$gt": offset}
 
 	return filter, nil
 }

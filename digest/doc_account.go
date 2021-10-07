@@ -14,6 +14,7 @@ type AccountDoc struct {
 	mongodbstorage.BaseDoc
 	address string
 	height  base.Height
+	pubs    []string
 }
 
 func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
@@ -22,10 +23,18 @@ func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
 		return AccountDoc{}, err
 	}
 
+	keys := rs.Account().Keys().Keys()
+	pubs := make([]string, len(keys))
+	for i := range keys {
+		k := keys[i].Key()
+		pubs[i] = k.Raw() + ":" + k.Hint().Type().String()
+	}
+
 	return AccountDoc{
 		BaseDoc: b,
 		address: currency.StateAddressKeyPrefix(rs.ac.Address()),
 		height:  rs.height,
+		pubs:    pubs,
 	}, nil
 }
 
@@ -37,6 +46,7 @@ func (doc AccountDoc) MarshalBSON() ([]byte, error) {
 
 	m["address"] = doc.address
 	m["height"] = doc.height
+	m["pubs"] = doc.pubs
 
 	return bsonenc.Marshal(m)
 }

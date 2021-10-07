@@ -8,11 +8,13 @@ import (
 	"io"
 	"net/url"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -355,6 +357,72 @@ func (t *testHandlerAccount) TestAccountOperationsReverseCache() {
 		uhashes := t.getHashes(handlers, int(limit), self)
 
 		t.Equal(hashes, uhashes)
+	}
+}
+
+func (t *testHandlerAccount) TestAccounts() {
+	st, _ := t.Database()
+
+	height := base.Height(33)
+	priv := key.MustNewBTCPrivatekey()
+	k, err := currency.NewKey(priv.Publickey(), 100)
+	t.NoError(err)
+
+	var sames []AccountValue
+	for i := 0; i < 3; i++ {
+		ac := t.newAccount()
+		keys, err := currency.NewKeys([]currency.Key{k}, 100)
+		t.NoError(err)
+		ac, err = ac.SetKeys(keys)
+		t.NoError(err)
+
+		am := currency.MustNewAmount(t.randomBig(), t.cid)
+
+		va, _ := t.insertAccount(st, height, ac, am)
+		sames = append(sames, va)
+	}
+
+	sort.Slice(sames, func(i, j int) bool {
+		return strings.Compare(sames[i].Account().Address().String(), sames[j].Account().Address().String()) < 0
+	})
+
+	for i := 0; i < 3; i++ {
+		ac := t.newAccount()
+
+		am := currency.MustNewAmount(t.randomBig(), t.cid)
+
+		_, _ = t.insertAccount(st, height, ac, am)
+	}
+
+	handlers := t.handlers(st, DummyCache{})
+	_ = handlers.SetLimiter(func(string) int64 {
+		return int64(len(sames))
+	})
+
+	queries := url.Values{}
+	queries.Set("publickey", priv.Publickey().String())
+
+	self, err := handlers.router.Get(HandlerPathAccounts).URL()
+	self.RawQuery = queries.Encode()
+	t.NoError(err)
+
+	w := t.requestOK(handlers, "GET", self.String(), nil)
+
+	b, err := io.ReadAll(w.Result().Body)
+	t.NoError(err)
+
+	hal := t.loadHal(b)
+
+	var items []BaseHal
+	t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &items))
+	t.Equal(len(sames), len(items))
+
+	for i := range items {
+		hinter, err := t.JSONEnc.Decode(items[i].RawInterface())
+		t.NoError(err)
+		va := hinter.(AccountValue)
+
+		t.compareAccount(sames[i].Account(), va.Account())
 	}
 }
 

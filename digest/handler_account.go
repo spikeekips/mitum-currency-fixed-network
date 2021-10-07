@@ -1,13 +1,16 @@
 package digest
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -236,6 +239,123 @@ func (hd *Handlers) buildAccountOperationsHal(
 	}
 
 	hal = hal.AddLink("reverse", NewHalLink(addQueryValue(baseSelf, stringBoolQuery("reverse", !reverse)), nil))
+
+	return hal, nil
+}
+
+func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
+	var pub key.Publickey
+
+	switch ps := strings.TrimSpace(r.URL.Query().Get("publickey")); {
+	case len(ps) < 1:
+		HTTP2ProblemWithError(w, errors.Errorf("empty query"), http.StatusBadRequest)
+
+		return
+	default:
+		i, err := key.DecodePublickey(hd.enc, ps)
+		if err == nil {
+			err = i.IsValid(nil)
+		}
+
+		if err != nil {
+			HTTP2ProblemWithError(w, fmt.Errorf("invalue publickey: %w", err), http.StatusBadRequest)
+
+			return
+		}
+
+		pub = i
+	}
+
+	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
+	cachekey := CacheKey(r.URL.Path, pub.Raw()+":"+pub.Hint().Type().String(), offset)
+	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
+		return
+	}
+	limit := hd.itemsLimiter("accounts")
+
+	i, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
+		var vas []Hal
+		if err := hd.database.AccountsByPublickey(pub, false, offset, limit,
+			func(va AccountValue) (bool, error) {
+				hal, err := hd.buildAccountHal(va)
+				if err != nil {
+					return false, err
+				}
+				vas = append(vas, hal)
+
+				return true, nil
+			}); err != nil {
+			return nil, err
+		}
+
+		return vas, nil
+	})
+	if err != nil {
+		hd.Log().Error().Err(err).Stringer("publickey", pub).Msg("failed to get accounts")
+
+		HTTP2HandleError(w, err)
+
+		return
+	}
+
+	vas := i.([]Hal)
+	switch hal, err := hd.buildAccountsHal(url.Values{"publickey": []string{pub.String()}}, vas, offset); {
+	case err != nil:
+		HTTP2HandleError(w, err)
+
+		return
+	default:
+		b, err := hd.enc.Marshal(hal)
+		if err != nil {
+			HTTP2HandleError(w, err)
+
+			return
+		}
+		HTTP2WriteHalBytes(hd.enc, w, b, http.StatusOK)
+	}
+
+	if !shared {
+		expire := hd.expireNotFilled
+		if len(offset) > 0 && int64(len(vas)) == limit {
+			expire = time.Hour * 30
+		}
+
+		HTTP2WriteCache(w, cachekey, expire)
+	}
+}
+
+func (*Handlers) buildAccountsHal(
+	queries url.Values,
+	vas []Hal,
+	offset string,
+) (Hal, error) { // nolint:unparam
+	baseSelf := HandlerPathAccounts
+	if len(queries) > 0 {
+		baseSelf += "?" + queries.Encode()
+	}
+
+	self := baseSelf
+	if len(offset) > 0 {
+		self = addQueryValue(baseSelf, stringOffsetQuery(offset))
+	}
+
+	var hal Hal
+	hal = NewBaseHal(vas, NewHalLink(self, nil))
+
+	var nextoffset string
+	if len(vas) > 0 {
+		va := vas[len(vas)-1].Interface().(AccountValue)
+		nextoffset = va.Account().Address().String()
+	}
+
+	if len(nextoffset) > 0 {
+		next := baseSelf
+		if len(nextoffset) > 0 {
+			next = addQueryValue(next, stringOffsetQuery(nextoffset))
+		}
+
+		hal = hal.AddLink("next", NewHalLink(next, nil))
+	}
 
 	return hal, nil
 }
