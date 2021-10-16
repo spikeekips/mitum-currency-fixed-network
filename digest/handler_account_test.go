@@ -363,35 +363,39 @@ func (t *testHandlerAccount) TestAccountOperationsReverseCache() {
 func (t *testHandlerAccount) TestAccounts() {
 	st, _ := t.Database()
 
-	height := base.Height(33)
 	priv := key.MustNewBTCPrivatekey()
 	k, err := currency.NewKey(priv.Publickey(), 100)
 	t.NoError(err)
 
 	var sames []AccountValue
-	for i := 0; i < 3; i++ {
-		ac := t.newAccount()
-		keys, err := currency.NewKeys([]currency.Key{k}, 100)
-		t.NoError(err)
-		ac, err = ac.SetKeys(keys)
-		t.NoError(err)
+	for h := base.Height(3); h < 6; h++ {
+		var vas []AccountValue
+		for i := 0; i < 3; i++ {
+			ac := t.newAccount()
+			keys, err := currency.NewKeys([]currency.Key{k}, 100)
+			t.NoError(err)
+			ac, err = ac.SetKeys(keys)
+			t.NoError(err)
 
-		am := currency.MustNewAmount(t.randomBig(), t.cid)
+			am := currency.MustNewAmount(t.randomBig(), t.cid)
 
-		va, _ := t.insertAccount(st, height, ac, am)
-		sames = append(sames, va)
+			va, _ := t.insertAccount(st, h, ac, am)
+			vas = append(vas, va)
+		}
+
+		sort.Slice(vas, func(i, j int) bool {
+			return strings.Compare(vas[i].Account().Address().String(), vas[j].Account().Address().String()) < 0
+		})
+
+		sames = append(sames, vas...)
 	}
 
-	sort.Slice(sames, func(i, j int) bool {
-		return strings.Compare(sames[i].Account().Address().String(), sames[j].Account().Address().String()) < 0
-	})
-
 	for i := 0; i < 3; i++ {
 		ac := t.newAccount()
 
 		am := currency.MustNewAmount(t.randomBig(), t.cid)
 
-		_, _ = t.insertAccount(st, height, ac, am)
+		_, _ = t.insertAccount(st, base.Height(4), ac, am)
 	}
 
 	handlers := t.handlers(st, DummyCache{})

@@ -476,7 +476,7 @@ func (st *Database) AccountsByPublickey(
 	}
 
 	opt := options.Find().SetSort(
-		util.NewBSONFilter("address", 1).D(),
+		util.NewBSONFilter("height", 1).Add("address", 1).D(),
 	)
 
 	switch {
