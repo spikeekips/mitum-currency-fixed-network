@@ -671,8 +671,8 @@ github.com/spf13/jwalterweatherman v0.0.0-20141219030609-3d60171a6431/go.mod h1:
 github.com/spf13/pflag v0.0.0-20161005214240-4bd69631f475/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/viper v0.0.0-20150621231900-db7ff930a189/go.mod h1:A8kyI5cUJhb8N+3pkfONlcEcZbueH6nhAm0Fq7SrnBM=
-github.com/spikeekips/mitum v0.0.0-20211007003057-c595b878ae8e h1:7dU7g1qpD96pbQEjnyj8psJyDPoKZBrZxul/Nv5xhe0=
-github.com/spikeekips/mitum v0.0.0-20211007003057-c595b878ae8e/go.mod h1:TFM+fp+b/YfFB1aW07lIh+akDR7iTnuMPoIDpifIMhs=
+github.com/spikeekips/mitum v0.0.0-20211018042902-a580db9e99f0 h1:UcMjlECRnBkOfks907ZpSJkbcT4XqCvzQjMDcrMCI9U=
+github.com/spikeekips/mitum v0.0.0-20211018042902-a580db9e99f0/go.mod h1:TFM+fp+b/YfFB1aW07lIh+akDR7iTnuMPoIDpifIMhs=
 github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4/go.mod h1:RZLeN1LMWmRsyYjvAu+I6Dm9QmlDaIIt+Y+4Kd7Tp+Q=
 github.com/stellar/go v0.0.0-20210923160507-e24fae34b916 h1:IkL4Fc941++SRVpB6rcawc3Tyi9riFsJeVctS01Qqh4=
 github.com/stellar/go v0.0.0-20210923160507-e24fae34b916/go.mod h1:4JAtqxZ9sVun3vwOD3YRF8y3eCDeY7SQa+FyQHAacRg=
