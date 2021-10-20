@@ -9,7 +9,9 @@ import (
 var (
 	TransfersItemSingleAmountType   = hint.Type("mitum-currency-transfers-item-single-amount")
 	TransfersItemSingleAmountHint   = hint.NewHint(TransfersItemSingleAmountType, "v0.0.1")
-	TransfersItemSingleAmountHinter = BaseTransfersItem{hint: TransfersItemSingleAmountHint}
+	TransfersItemSingleAmountHinter = TransfersItemSingleAmount{
+		BaseTransfersItem: BaseTransfersItem{hint: TransfersItemSingleAmountHint},
+	}
 )
 
 type TransfersItemSingleAmount struct {

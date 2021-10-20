@@ -16,11 +16,10 @@ import (
 type TransferCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender   AddressFlag        `arg:"" name:"sender" help:"sender address" required:"true"`
-	Receiver AddressFlag        `arg:"" name:"receiver" help:"receiver address" required:"true"`
-	Currency CurrencyIDFlag     `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big      BigFlag            `arg:"" name:"big" help:"big to send" required:"true"`
-	Seal     mitumcmds.FileLoad `help:"seal" optional:""`
+	Sender   AddressFlag          `arg:"" name:"sender" help:"sender address" required:"true"`
+	Receiver AddressFlag          `arg:"" name:"receiver" help:"receiver address" required:"true"`
+	Seal     mitumcmds.FileLoad   `help:"seal" optional:""`
+	Amounts  []CurrencyAmountFlag `arg:"" name:"currency-amount" help:"amount (ex: \"<currency>,<amount>\")"`
 	sender   base.Address
 	receiver base.Address
 }
@@ -64,6 +63,10 @@ func (cmd *TransferCommand) parseFlags() error {
 		return err
 	}
 
+	if len(cmd.Amounts) < 1 {
+		return errors.Errorf("empty currency-amount, must be given at least one")
+	}
+
 	if sender, err := cmd.Sender.Encode(jenc); err != nil {
 		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else if receiver, err := cmd.Receiver.Encode(jenc); err != nil {
@@ -89,12 +92,18 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // 
 		}
 	}
 
-	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
-	if err = am.IsValid(nil); err != nil {
-		return nil, err
+	ams := make([]currency.Amount, len(cmd.Amounts))
+	for i := range cmd.Amounts {
+		a := cmd.Amounts[i]
+		am := currency.NewAmount(a.Big, a.CID)
+		if err = am.IsValid(nil); err != nil {
+			return nil, err
+		}
+
+		ams[i] = am
 	}
 
-	item := currency.NewTransfersItemSingleAmount(cmd.receiver, am)
+	item := currency.NewTransfersItemMultiAmounts(cmd.receiver, ams)
 	if err = item.IsValid(nil); err != nil {
 		return nil, err
 	}
