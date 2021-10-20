@@ -17,12 +17,11 @@ import (
 type CreateAccountCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender    AddressFlag        `arg:"" name:"sender" help:"sender address" required:"true"`
-	Currency  CurrencyIDFlag     `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big       BigFlag            `arg:"" name:"big" help:"big to send" required:"true"`
-	Threshold uint               `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
-	Keys      []KeyFlag          `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
-	Seal      mitumcmds.FileLoad `help:"seal" optional:""`
+	Sender    AddressFlag          `arg:"" name:"sender" help:"sender address" required:"true"`
+	Threshold uint                 `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
+	Keys      []KeyFlag            `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
+	Seal      mitumcmds.FileLoad   `help:"seal" optional:""`
+	Amounts   []CurrencyAmountFlag `arg:"" name:"currency-amount" help:"amount (ex: \"<currency>,<amount>\")"`
 	sender    base.Address
 	keys      currency.Keys
 }
@@ -76,6 +75,10 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 		return errors.Errorf("--key must be given at least one")
 	}
 
+	if len(cmd.Amounts) < 1 {
+		return errors.Errorf("empty currency-amount, must be given at least one")
+	}
+
 	{
 		ks := make([]currency.Key, len(cmd.Keys))
 		for i := range cmd.Keys {
@@ -106,12 +109,18 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 		}
 	}
 
-	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
-	if err = am.IsValid(nil); err != nil {
-		return nil, err
+	ams := make([]currency.Amount, len(cmd.Amounts))
+	for i := range cmd.Amounts {
+		a := cmd.Amounts[i]
+		am := currency.NewAmount(a.Big, a.CID)
+		if err = am.IsValid(nil); err != nil {
+			return nil, err
+		}
+
+		ams[i] = am
 	}
 
-	item := currency.NewCreateAccountsItemSingleAmount(cmd.keys, am)
+	item := currency.NewCreateAccountsItemMultiAmounts(cmd.keys, ams)
 	if err = item.IsValid(nil); err != nil {
 		return nil, err
 	}

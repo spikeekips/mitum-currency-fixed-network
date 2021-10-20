@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -166,4 +167,38 @@ func (v *CurrencyIDFlag) UnmarshalText(b []byte) error {
 
 func (v *CurrencyIDFlag) String() string {
 	return v.CID.String()
+}
+
+type CurrencyAmountFlag struct {
+	CID currency.CurrencyID
+	Big currency.Big
+}
+
+func (v *CurrencyAmountFlag) UnmarshalText(b []byte) error {
+	l := strings.SplitN(string(b), ",", 2)
+	if len(l) != 2 {
+		return fmt.Errorf("invalid currency-amount, %q", string(b))
+	}
+
+	a, c := l[0], l[1]
+
+	cid := currency.CurrencyID(a)
+	if err := cid.IsValid(nil); err != nil {
+		return err
+	}
+	v.CID = cid
+
+	if a, err := currency.NewBigFromString(c); err != nil {
+		return errors.Wrapf(err, "invalid big string, %q", string(b))
+	} else if err := a.IsValid(nil); err != nil {
+		return err
+	} else {
+		v.Big = a
+	}
+
+	return nil
+}
+
+func (v *CurrencyAmountFlag) String() string {
+	return v.CID.String() + "," + v.Big.String()
 }
