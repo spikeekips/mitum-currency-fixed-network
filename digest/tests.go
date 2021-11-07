@@ -1,3 +1,4 @@
+//go:build test || mongodb
 // +build test mongodb
 
 package digest

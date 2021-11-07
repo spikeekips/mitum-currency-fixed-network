@@ -113,6 +113,10 @@ func (t *baseTestHandlers) getItems(handlers *Handlers, limit int, self *url.URL
 
 		hal := t.loadHal(b)
 
+		if len(hal.RawInterface()) < 1 {
+			break
+		}
+
 		var em []BaseHal
 		t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &em))
 		t.True(limit >= len(em))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -244,51 +245,45 @@ func (hd *Handlers) buildAccountOperationsHal(
 }
 
 func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
-	var pub key.Publickey
+	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
 
-	switch ps := strings.TrimSpace(r.URL.Query().Get("publickey")); {
-	case len(ps) < 1:
-		HTTP2ProblemWithError(w, errors.Errorf("empty query"), http.StatusBadRequest)
+	var pub key.Publickey
+	offsetHeight := base.NilHeight
+	var offsetAddress string
+	switch i, h, a, err := hd.parseAccountsQueries(r.URL.Query().Get("publickey"), offset); {
+	case err != nil:
+		HTTP2ProblemWithError(w, fmt.Errorf("invalue accounts query: %w", err), http.StatusBadRequest)
 
 		return
 	default:
-		i, err := key.DecodePublickey(hd.enc, ps)
-		if err == nil {
-			err = i.IsValid(nil)
-		}
-
-		if err != nil {
-			HTTP2ProblemWithError(w, fmt.Errorf("invalue publickey: %w", err), http.StatusBadRequest)
-
-			return
-		}
-
 		pub = i
+		offsetHeight = h
+		offsetAddress = a
 	}
 
-	offset := parseOffsetQuery(r.URL.Query().Get("offset"))
-	cachekey := CacheKey(r.URL.Path, pub.Raw()+":"+pub.Hint().Type().String(), offset)
+	cachekey := CacheKey(r.URL.Path, currency.RawTypeString(pub), offset)
 	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
-	limit := hd.itemsLimiter("accounts")
 
+	var lastaddress base.Address
 	i, err, shared := hd.rg.Do(cachekey, func() (interface{}, error) {
-		var vas []Hal
-		if err := hd.database.AccountsByPublickey(pub, false, offset, limit,
-			func(va AccountValue) (bool, error) {
-				hal, err := hd.buildAccountHal(va)
-				if err != nil {
-					return false, err
-				}
-				vas = append(vas, hal)
-
-				return true, nil
-			}); err != nil {
+		switch h, items, a, err := hd.accountsByPublickey(pub, offsetAddress); {
+		case err != nil:
 			return nil, err
-		}
+		case h == base.NilHeight:
+			return nil, nil
+		default:
+			if offsetHeight <= base.NilHeight {
+				offsetHeight = h
+			} else if offsetHeight > h {
+				offsetHeight = h
+			}
 
-		return vas, nil
+			lastaddress = a
+
+			return items, nil
+		}
 	})
 	if err != nil {
 		hd.Log().Error().Err(err).Stringer("publickey", pub).Msg("failed to get accounts")
@@ -298,8 +293,14 @@ func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vas := i.([]Hal)
-	switch hal, err := hd.buildAccountsHal(url.Values{"publickey": []string{pub.String()}}, vas, offset); {
+	var items []Hal
+	if i != nil {
+		items = i.([]Hal)
+	}
+
+	switch hal, err := hd.buildAccountsHal(url.Values{
+		"publickey": []string{pub.String()},
+	}, items, offset, offsetHeight, lastaddress); {
 	case err != nil:
 		HTTP2HandleError(w, err)
 
@@ -316,8 +317,8 @@ func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
 
 	if !shared {
 		expire := hd.expireNotFilled
-		if len(offset) > 0 && int64(len(vas)) == limit {
-			expire = time.Hour * 30
+		if offsetHeight > base.NilHeight && len(offsetAddress) > 0 {
+			expire = time.Minute
 		}
 
 		HTTP2WriteCache(w, cachekey, expire)
@@ -328,6 +329,8 @@ func (*Handlers) buildAccountsHal(
 	queries url.Values,
 	vas []Hal,
 	offset string,
+	topHeight base.Height,
+	lastaddress base.Address,
 ) (Hal, error) { // nolint:unparam
 	baseSelf := HandlerPathAccounts
 	if len(queries) > 0 {
@@ -344,8 +347,7 @@ func (*Handlers) buildAccountsHal(
 
 	var nextoffset string
 	if len(vas) > 0 {
-		va := vas[len(vas)-1].Interface().(AccountValue)
-		nextoffset = va.Account().Address().String()
+		nextoffset = buildOffsetByString(topHeight, currency.RawTypeString(lastaddress))
 	}
 
 	if len(nextoffset) > 0 {
@@ -358,4 +360,75 @@ func (*Handlers) buildAccountsHal(
 	}
 
 	return hal, nil
+}
+
+func (hd *Handlers) parseAccountsQueries(s, offset string) (key.Publickey, base.Height, string, error) {
+	var pub key.Publickey
+	switch ps := strings.TrimSpace(s); {
+	case len(ps) < 1:
+		return nil, base.NilHeight, "", errors.Errorf("empty query")
+	default:
+		i, err := key.DecodePublickey(hd.enc, ps)
+		if err == nil {
+			err = i.IsValid(nil)
+		}
+
+		if err != nil {
+			return nil, base.NilHeight, "", err
+		}
+
+		pub = i
+	}
+
+	offset = strings.TrimSpace(offset)
+	if len(offset) < 1 {
+		return pub, base.NilHeight, "", nil
+	}
+
+	switch h, a, err := parseOffsetByString(offset); {
+	case err != nil:
+		return nil, base.NilHeight, "", err
+	case len(a) < 1:
+		return nil, base.NilHeight, "", errors.Errorf("empty address in offset of accounts")
+	default:
+		return pub, h, a, nil
+	}
+}
+
+func (hd *Handlers) accountsByPublickey(
+	pub key.Publickey,
+	offsetAddress string,
+) (base.Height, []Hal, base.Address, error) {
+	offsetHeight := base.NilHeight
+	var lastaddress base.Address
+
+	switch h, err := hd.database.topHeightByPublickey(pub); {
+	case err != nil:
+		return offsetHeight, nil, nil, err
+	case h == base.NilHeight:
+		return offsetHeight, nil, nil, nil
+	default:
+		if offsetHeight <= base.NilHeight {
+			offsetHeight = h
+		} else if offsetHeight > h {
+			offsetHeight = h
+		}
+	}
+
+	var items []Hal
+	if err := hd.database.AccountsByPublickey(pub, false, offsetHeight, offsetAddress, hd.itemsLimiter("accounts"),
+		func(va AccountValue) (bool, error) {
+			hal, err := hd.buildAccountHal(va)
+			if err != nil {
+				return false, err
+			}
+			items = append(items, hal)
+			lastaddress = va.Account().Address()
+
+			return true, nil
+		}); err != nil {
+		return offsetHeight, nil, nil, err
+	}
+
+	return offsetHeight, items, lastaddress, nil
 }

@@ -3,6 +3,8 @@ package digest
 import (
 	"context"
 	"fmt"
+	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -462,57 +464,76 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 
 // AccountsByPublickey finds Accounts, which are related with the given
 // Publickey.
-// *  offset: returns from next of offset, usually it is "<address>".
+// *  offset: returns from next of offset, usually it is "<height>,<address>".
 func (st *Database) AccountsByPublickey(
 	pub key.Publickey,
 	loadBalance bool,
-	offset string,
+	offsetHeight base.Height,
+	offsetAddress string,
 	limit int64,
 	callback func(AccountValue) (bool, error),
 ) error {
-	filter, err := buildAccountsFilterByPublickey(pub, offset)
-	if err != nil {
+	if offsetHeight <= base.NilHeight {
+		return errors.Errorf("offset height should be over nil height")
+	}
+
+	filter := buildAccountsFilterByPublickey(pub)
+	filter["height"] = bson.M{"$lte": offsetHeight}
+
+	var sas []string
+	switch i, err := st.addressesByPublickey(filter); {
+	case err != nil:
 		return err
-	}
-
-	opt := options.Find().SetSort(
-		util.NewBSONFilter("height", 1).Add("address", 1).D(),
-	)
-
-	switch {
-	case limit <= 0: // no limit
-	case limit > maxLimit:
-		opt = opt.SetLimit(maxLimit)
 	default:
-		opt = opt.SetLimit(limit)
+		sas = i
 	}
 
-	return st.database.Client().Find(
-		context.Background(),
-		defaultColNameAccount,
-		filter,
-		func(cursor *mongo.Cursor) (bool, error) {
-			va, err := LoadAccountValue(cursor.Decode, st.database.Encoders())
-			if err != nil {
-				return false, err
-			}
+	if len(sas) < 1 {
+		return nil
+	}
 
-			if loadBalance {
-				// NOTE load balance
-				switch am, lastHeight, previousHeight, err := st.balance(va.Account().Address()); {
-				case err != nil:
-					return false, err
-				default:
-					va = va.SetBalance(am).
-						SetHeight(lastHeight).
-						SetPreviousHeight(previousHeight)
+	var filteredAddress []string
+	if len(offsetAddress) < 1 {
+		filteredAddress = sas
+	} else {
+		var found bool
+		for i := range sas {
+			a := sas[i]
+			if !found {
+				if offsetAddress == a {
+					found = true
 				}
+
+				continue
 			}
 
-			return callback(va)
-		},
-		opt,
-	)
+			filteredAddress = append(filteredAddress, a)
+		}
+	}
+
+	if len(filteredAddress) < 1 {
+		return nil
+	}
+
+end:
+	for i := int64(0); i < int64(math.Ceil(float64(len(filteredAddress))/50.0)); i++ {
+		l := (i + 1) + 50
+		if n := int64(len(filteredAddress)); l > n {
+			l = n
+		}
+
+		limited := filteredAddress[i*50 : l]
+		switch done, err := st.filterAccountByPublickey(
+			pub, limited, limit, loadBalance, callback,
+		); {
+		case err != nil:
+			return err
+		case done:
+			break end
+		}
+	}
+
+	return nil
 }
 
 func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, base.Height, error) {
@@ -576,6 +597,161 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 	return ams, lastHeight, previousHeight, nil
 }
 
+func (st *Database) topHeightByPublickey(pub key.Publickey) (base.Height, error) {
+	var sas []string
+	switch r, err := st.database.Client().Collection(defaultColNameAccount).Distinct(
+		context.Background(),
+		"address",
+		buildAccountsFilterByPublickey(pub),
+	); {
+	case err != nil:
+		return base.NilHeight, err
+	case len(r) < 1:
+		return base.NilHeight, err
+	default:
+		sas = make([]string, len(r))
+		for i := range r {
+			sas[i] = r[i].(string)
+		}
+	}
+
+	var top base.Height
+	for i := int64(0); i < int64(math.Ceil(float64(len(sas))/50.0)); i++ {
+		l := (i + 1) + 50
+		if n := int64(len(sas)); l > n {
+			l = n
+		}
+
+		switch h, err := st.partialTopHeightByPublickey(sas[i*50 : l]); {
+		case err != nil:
+			return base.NilHeight, err
+		case top <= base.NilHeight:
+			top = h
+		case h > top:
+			top = h
+		}
+	}
+
+	return top, nil
+}
+
+func (st *Database) partialTopHeightByPublickey(as []string) (base.Height, error) {
+	var top base.Height
+	err := st.database.Client().Find(
+		context.Background(),
+		defaultColNameAccount,
+		bson.M{"address": bson.M{"$in": as}},
+		func(cursor *mongo.Cursor) (bool, error) {
+			h, err := loadHeightDoc(cursor.Decode)
+			if err != nil {
+				return false, err
+			}
+
+			top = h
+
+			return false, nil
+		},
+		options.Find().
+			SetSort(util.NewBSONFilter("height", -1).D()).
+			SetLimit(1),
+	)
+
+	return top, err
+}
+
+func (st *Database) addressesByPublickey(filter bson.M) ([]string, error) {
+	r, err := st.database.Client().Collection(defaultColNameAccount).Distinct(context.Background(), "address", filter)
+	if err != nil {
+		return nil, storage.MergeStorageError(errors.Wrap(err, "failed to get distinct addresses"))
+	}
+
+	if len(r) < 1 {
+		return nil, nil
+	}
+
+	sas := make([]string, len(r))
+	for i := range r {
+		sas[i] = r[i].(string)
+	}
+
+	sort.Strings(sas)
+
+	return sas, nil
+}
+
+func (st *Database) filterAccountByPublickey(
+	pub key.Publickey,
+	addresses []string,
+	limit int64,
+	loadBalance bool,
+	callback func(AccountValue) (bool, error),
+) (bool, error) {
+	filter := bson.M{"address": bson.M{"$in": addresses}}
+
+	var lastAddress string
+	var called int64
+	var stopped bool
+	if err := st.database.Client().Find(
+		context.Background(),
+		defaultColNameAccount,
+		filter,
+		func(cursor *mongo.Cursor) (bool, error) {
+			if called == limit {
+				return false, nil
+			}
+
+			doc, err := loadBriefAccountDoc(cursor.Decode)
+			if err != nil {
+				return false, err
+			}
+
+			if len(lastAddress) > 0 {
+				if lastAddress == doc.Address {
+					return true, nil
+				}
+			}
+			lastAddress = doc.Address
+
+			if !doc.pubExists(pub) {
+				return true, nil
+			}
+
+			va, err := LoadAccountValue(cursor.Decode, st.database.Encoders())
+			if err != nil {
+				return false, err
+			}
+
+			if loadBalance { // NOTE load balance
+				switch am, lastHeight, previousHeight, err := st.balance(va.Account().Address()); {
+				case err != nil:
+					return false, err
+				default:
+					va = va.SetBalance(am).
+						SetHeight(lastHeight).
+						SetPreviousHeight(previousHeight)
+				}
+			}
+
+			called++
+			switch keep, err := callback(va); {
+			case err != nil:
+				return false, err
+			case !keep:
+				stopped = true
+
+				return false, nil
+			default:
+				return true, nil
+			}
+		},
+		options.Find().SetSort(util.NewBSONFilter("address", 1).Add("height", -1).D()),
+	); err != nil {
+		return false, err
+	}
+
+	return stopped || called == limit, nil
+}
+
 func loadLastBlock(st *Database) (base.Height, bool, error) {
 	switch b, found, err := st.database.Info(DigestStorageLastBlockKey); {
 	case err != nil:
@@ -610,7 +786,7 @@ func buildOffset(height base.Height, index uint64) string {
 }
 
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
-	filter := bson.M{"addresses": bson.M{"$in": []string{currency.StateAddressKeyPrefix(address)}}}
+	filter := bson.M{"addresses": bson.M{"$in": []string{currency.RawTypeString(address)}}}
 	if len(offset) > 0 {
 		height, index, err := parseOffset(offset)
 		if err != nil {
@@ -639,13 +815,73 @@ func buildOperationsFilterByAddress(address base.Address, offset string, reverse
 	return filter, nil
 }
 
-func buildAccountsFilterByPublickey(pub key.Publickey, offset string) (bson.M, error) { // nolint:unparam
-	filter := bson.M{"pubs": bson.M{"$in": []string{pub.Raw() + ":" + pub.Hint().Type().String()}}}
-	if len(offset) < 1 {
-		return filter, nil
+func parseOffsetByString(s string) (base.Height, string, error) {
+	var a, b string
+	switch n := strings.SplitN(s, ",", 2); {
+	case n == nil:
+		return base.NilHeight, "", errors.Errorf("invalid offset string: %q", s)
+	case len(n) < 2:
+		return base.NilHeight, "", errors.Errorf("invalid offset, %q", s)
+	default:
+		a = n[0]
+		b = n[1]
 	}
 
-	filter["address"] = bson.M{"$gt": offset}
+	h, err := base.NewHeightFromString(a)
+	if err != nil {
+		return base.NilHeight, "", errors.Wrap(err, "invalid height of offset")
+	}
 
-	return filter, nil
+	return h, b, nil
+}
+
+func buildOffsetByString(height base.Height, s string) string {
+	return fmt.Sprintf("%d,%s", height, s)
+}
+
+func buildAccountsFilterByPublickey(pub key.Publickey) bson.M {
+	return bson.M{"pubs": bson.M{"$in": []string{currency.RawTypeString(pub)}}}
+}
+
+type heightDoc struct {
+	H base.Height `bson:"height"`
+}
+
+func loadHeightDoc(decoder func(interface{}) error) (base.Height, error) {
+	var h heightDoc
+	if err := decoder(&h); err != nil {
+		return base.NilHeight, err
+	}
+
+	return h.H, nil
+}
+
+type briefAccountDoc struct {
+	ID      primitive.ObjectID `bson:"_id"`
+	Address string             `bson:"address"`
+	Pubs    []string           `bson:"pubs"`
+	Height  base.Height        `bson:"height"`
+}
+
+func (doc briefAccountDoc) pubExists(k key.Key) bool {
+	if len(doc.Pubs) < 1 {
+		return false
+	}
+
+	for i := range doc.Pubs {
+		if currency.RawTypeString(k) == doc.Pubs[i] {
+			return true
+		}
+	}
+
+	return false
+}
+
+func loadBriefAccountDoc(decoder func(interface{}) error) (briefAccountDoc, error) {
+	var a briefAccountDoc
+	if err := decoder(&a); err != nil {
+		return a, err
+	}
+
+	return a, nil
 }

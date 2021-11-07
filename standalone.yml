@@ -7,8 +7,8 @@ storage:
         path: ./mc-blockfs
 network-id: mc; Tue 08 Dec 2020 07:22:18 AM KST
 network:
-    bind: quic://0.0.0.0:54321
-    url: quic://127.0.0.1:54321
+    bind: https://0.0.0.0:54321
+    url: https://127.0.0.1:54321
 
 genesis-operations:
     - type: genesis-currencies

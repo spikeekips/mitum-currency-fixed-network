@@ -19,7 +19,7 @@ var (
 )
 
 func StateAddressKeyPrefix(a base.Address) string {
-	return fmt.Sprintf("%s-%s", a.Raw(), a.Hint().Type())
+	return RawTypeString(a)
 }
 
 func StateBalanceKeyPrefix(a base.Address, cid CurrencyID) string {

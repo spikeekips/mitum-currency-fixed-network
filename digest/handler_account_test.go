@@ -367,8 +367,14 @@ func (t *testHandlerAccount) TestAccounts() {
 	k, err := currency.NewKey(priv.Publickey(), 100)
 	t.NoError(err)
 
-	var sames []AccountValue
+	var topHeight base.Height
+
+	var olds []AccountValue
 	for h := base.Height(3); h < 6; h++ {
+		if h > topHeight {
+			topHeight = h
+		}
+
 		var vas []AccountValue
 		for i := 0; i < 3; i++ {
 			ac := t.newAccount()
@@ -383,12 +389,49 @@ func (t *testHandlerAccount) TestAccounts() {
 			vas = append(vas, va)
 		}
 
-		sort.Slice(vas, func(i, j int) bool {
-			return strings.Compare(vas[i].Account().Address().String(), vas[j].Account().Address().String()) < 0
-		})
-
-		sames = append(sames, vas...)
+		olds = append(olds, vas...)
 	}
+
+	oldsHigher := make([]AccountValue, len(olds))
+	for i := range olds {
+		ova := olds[i]
+
+		va, _ := t.insertAccount(st, ova.height+1, ova.ac, ova.balance[0])
+
+		oldsHigher[i] = va
+	}
+
+	sames := make([]AccountValue, len(oldsHigher)-2)
+
+	newpriv := key.MustNewBTCPrivatekey()
+	newkey, err := currency.NewKey(newpriv.Publickey(), 100)
+	t.NoError(err)
+
+	for i := range oldsHigher {
+		ova := oldsHigher[i]
+
+		if i > len(oldsHigher)-3 {
+			// NOTE remove pubkey from account
+			keys, err := currency.NewKeys([]currency.Key{newkey}, 100)
+			t.NoError(err)
+			ac, err := ova.ac.SetKeys(keys)
+			t.NoError(err)
+
+			_, _ = t.insertAccount(st, ova.height+1, ac, ova.balance[0])
+
+			if ova.height+1 > topHeight {
+				topHeight = ova.height + 1
+			}
+
+			continue
+		}
+
+		sames[i] = ova
+	}
+
+	sort.Slice(sames, func(i, j int) bool {
+		return strings.Compare(sames[i].Account().Address().String(), sames[j].Account().Address().String()) < 0
+	})
 
 	for i := 0; i < 3; i++ {
 		ac := t.newAccount()
@@ -398,10 +441,12 @@ func (t *testHandlerAccount) TestAccounts() {
 		_, _ = t.insertAccount(st, base.Height(4), ac, am)
 	}
 
-	handlers := t.handlers(st, DummyCache{})
+	var limit int64 = 4
+	handlers := t.handlers(st, NewLocalMemCache(1000, time.Minute))
 	_ = handlers.SetLimiter(func(string) int64 {
-		return int64(len(sames))
+		return limit
 	})
+	handlers.expireNotFilled = 0
 
 	queries := url.Values{}
 	queries.Set("publickey", priv.Publickey().String())
@@ -410,23 +455,66 @@ func (t *testHandlerAccount) TestAccounts() {
 	self.RawQuery = queries.Encode()
 	t.NoError(err)
 
-	w := t.requestOK(handlers, "GET", self.String(), nil)
+	{
+		items := t.getItems(handlers, int(limit), self, func(b []byte) (interface{}, error) {
+			return t.JSONEnc.Decode(b)
+		})
+		t.Equal(len(sames), len(items))
 
-	b, err := io.ReadAll(w.Result().Body)
-	t.NoError(err)
+		for i := range items {
+			a := sames[i].Account()
+			b := items[i].(AccountValue).Account()
 
-	hal := t.loadHal(b)
+			t.compareAccount(a, b)
+		}
+	}
 
-	var items []BaseHal
-	t.NoError(jsonenc.Unmarshal(hal.RawInterface(), &items))
-	t.Equal(len(sames), len(items))
+	{ // again; check cached
+		items := t.getItems(handlers, int(limit), self, func(b []byte) (interface{}, error) {
+			return t.JSONEnc.Decode(b)
+		})
+		t.Equal(len(sames), len(items))
 
-	for i := range items {
-		hinter, err := t.JSONEnc.Decode(items[i].RawInterface())
-		t.NoError(err)
-		va := hinter.(AccountValue)
+		for i := range items {
+			a := sames[i].Account()
+			b := items[i].(AccountValue).Account()
 
-		t.compareAccount(sames[i].Account(), va.Account())
+			t.compareAccount(a, b)
+		}
+	}
+
+	topHeight++
+	updated := make([]AccountValue, len(sames)-2)
+	for i := range sames {
+		ova := sames[i]
+
+		if i > len(sames)-3 {
+			// NOTE remove pubkey from account
+			keys, err := currency.NewKeys([]currency.Key{newkey}, 100)
+			t.NoError(err)
+			ac, err := ova.ac.SetKeys(keys)
+			t.NoError(err)
+
+			_, _ = t.insertAccount(st, topHeight, ac, ova.balance[0])
+
+			continue
+		}
+
+		updated[i] = ova
+	}
+
+	{ // again; check updated
+		items := t.getItems(handlers, int(limit), self, func(b []byte) (interface{}, error) {
+			return t.JSONEnc.Decode(b)
+		})
+		t.Equal(len(updated), len(items))
+
+		for i := range items {
+			a := updated[i].Account()
+			b := items[i].(AccountValue).Account()
+
+			t.compareAccount(a, b)
+		}
 	}
 }
 

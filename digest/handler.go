@@ -278,7 +278,27 @@ func CacheKeyPath(r *http.Request) string {
 }
 
 func CacheKey(key string, s ...string) string {
-	return fmt.Sprintf("%s-%s", key, strings.Join(s, ","))
+	var l []string
+	var notempty bool
+	for i := len(s) - 1; i >= 0; i-- {
+		a := s[i]
+
+		if !notempty {
+			if len(strings.TrimSpace(a)) < 1 {
+				continue
+			}
+			notempty = true
+		}
+
+		l = append(l, a)
+	}
+
+	r := make([]string, len(l))
+	for i := range l {
+		r[len(l)-1-i] = l[i]
+	}
+
+	return fmt.Sprintf("%s-%s", key, strings.Join(r, ","))
 }
 
 func DefaultItemsLimiter(string) int64 {

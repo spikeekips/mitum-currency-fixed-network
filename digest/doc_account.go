@@ -27,12 +27,12 @@ func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
 	pubs := make([]string, len(keys))
 	for i := range keys {
 		k := keys[i].Key()
-		pubs[i] = k.Raw() + ":" + k.Hint().Type().String()
+		pubs[i] = currency.RawTypeString(k)
 	}
 
 	return AccountDoc{
 		BaseDoc: b,
-		address: currency.StateAddressKeyPrefix(rs.ac.Address()),
+		address: currency.RawTypeString(rs.ac.Address()),
 		height:  rs.height,
 		pubs:    pubs,
 	}, nil

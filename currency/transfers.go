@@ -96,7 +96,7 @@ func (fact TransfersFact) IsValid([]byte) error {
 			return errors.Wrap(err, "invalid item found")
 		}
 
-		k := StateAddressKeyPrefix(it.Receiver())
+		k := RawTypeString(it.Receiver())
 		switch _, found := foundReceivers[k]; {
 		case found:
 			return errors.Errorf("duplicated receiver found, %s", it.Receiver())
