@@ -1,8 +1,10 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -483,7 +485,7 @@ func (t *testDatabase) TestCleanByHeight() {
 	t.NoError(st.SetLastBlock(lastHeight))
 
 	height := base.Height(3)
-	t.NoError(st.CleanByHeight(height))
+	t.NoError(st.CleanByHeight(context.Background(), height))
 
 	h, found, err := loadLastBlock(st)
 	t.NoError(err)
@@ -507,7 +509,7 @@ func (t *testDatabase) TestCleanByHeight() {
 
 	{ // NilHeight
 		height := base.NilHeight
-		t.NoError(st.CleanByHeight(height))
+		t.NoError(st.CleanByHeight(context.Background(), height))
 
 		h, found, err := loadLastBlock(st)
 		t.NoError(err)

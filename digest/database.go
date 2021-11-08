@@ -108,7 +108,7 @@ func (st *Database) Initialize() error {
 				return err
 			}
 
-			if err := st.cleanByHeight(h + 1); err != nil {
+			if err := st.cleanByHeight(context.Background(), h+1); err != nil {
 				return err
 			}
 		}
@@ -173,16 +173,16 @@ func (st *Database) Clean() error {
 	st.Lock()
 	defer st.Unlock()
 
-	return st.clean()
+	return st.clean(context.Background())
 }
 
-func (st *Database) clean() error {
+func (st *Database) clean(ctx context.Context) error {
 	for _, col := range []string{
 		defaultColNameAccount,
 		defaultColNameBalance,
 		defaultColNameOperation,
 	} {
-		if err := st.database.Client().Collection(col).Drop(context.Background()); err != nil {
+		if err := st.database.Client().Collection(col).Drop(ctx); err != nil {
 			return storage.MergeStorageError(err)
 		}
 
@@ -198,7 +198,7 @@ func (st *Database) clean() error {
 	return nil
 }
 
-func (st *Database) CleanByHeight(height base.Height) error {
+func (st *Database) CleanByHeight(ctx context.Context, height base.Height) error {
 	if st.readonly {
 		return errors.Errorf("readonly mode")
 	}
@@ -206,12 +206,12 @@ func (st *Database) CleanByHeight(height base.Height) error {
 	st.Lock()
 	defer st.Unlock()
 
-	return st.cleanByHeight(height)
+	return st.cleanByHeight(ctx, height)
 }
 
-func (st *Database) cleanByHeight(height base.Height) error {
+func (st *Database) cleanByHeight(ctx context.Context, height base.Height) error {
 	if height <= base.PreGenesisHeight+1 {
-		return st.clean()
+		return st.clean(ctx)
 	}
 
 	opts := options.BulkWrite().SetOrdered(true)
@@ -223,7 +223,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 		defaultColNameOperation,
 	} {
 		res, err := st.database.Client().Collection(col).BulkWrite(
-			context.Background(),
+			ctx,
 			[]mongo.WriteModel{removeByHeight},
 			opts,
 		)

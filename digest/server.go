@@ -155,7 +155,10 @@ func (sv *HTTP2Server) start(ctx context.Context) error {
 
 		return err
 	case <-ctx.Done():
-		return sv.srv.Shutdown(context.Background())
+		nctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		return sv.srv.Shutdown(nctx) // nolint:contextcheck
 	default:
 		return nil
 	}

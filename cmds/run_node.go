@@ -342,27 +342,29 @@ func (cmd *RunCommand) setDigestSendHandler(
 		return nil, err
 	}
 
-	handlers = handlers.SetSend(NewSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) {
-		remotes := suffrage.Nodes()
+	handlers = handlers.SetSend(
+		NewSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) { // nolint:contextcheck
+			remotes := suffrage.Nodes()
 
-		var chs []network.Channel
-		for i := range remotes {
-			s := remotes[i]
-			_, ch, found := nodepool.Node(s)
-			switch {
-			case !found:
-				return nil, errors.Errorf("suffrage node, %q not found in nodepool", s)
-			case ch == nil:
-				continue
-			default:
-				chs = append(chs, ch)
+			var chs []network.Channel
+			for i := range remotes {
+				s := remotes[i]
+				_, ch, found := nodepool.Node(s)
+				switch {
+				case !found:
+					return nil, errors.Errorf("suffrage node, %q not found in nodepool", s)
+				case ch == nil:
+					continue
+				default:
+					chs = append(chs, ch)
+				}
 			}
-		}
 
-		return chs, nil
-	},
-		conf.Network().ConnInfo(),
-	))
+			return chs, nil
+		},
+			conf.Network().ConnInfo(),
+		),
+	)
 
 	cmd.Log().Debug().Msg("send handler attached")
 

@@ -76,7 +76,7 @@ func (bs *BlockSession) Commit(ctx context.Context) error {
 		_ = bs.close()
 	}()
 
-	if err := bs.st.CleanByHeight(bs.block.Height()); err != nil {
+	if err := bs.st.CleanByHeight(ctx, bs.block.Height()); err != nil {
 		return err
 	}
 
