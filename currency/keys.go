@@ -61,7 +61,10 @@ func (Key) Hint() hint.Hint {
 }
 
 func (ky Key) Bytes() []byte {
-	return util.ConcatBytesSlice([]byte(ky.k.String()), util.UintToBytes(ky.w))
+	return util.ConcatBytesSlice(
+		[]byte(TypedString(ky.k, ky.k.Raw())),
+		util.UintToBytes(ky.w),
+	)
 }
 
 func (ky Key) Equal(b Key) bool {

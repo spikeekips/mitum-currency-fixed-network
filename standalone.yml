@@ -1,5 +1,5 @@
-address: mc-node:sa-v0.0.1
-privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w:btc-priv-v0.0.1
+address: mc-node~sa-v0.0.1
+privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w~btc-priv-v0.0.1
 storage:
     database:
         uri: mongodb://127.0.0.1:27017/mc
@@ -40,7 +40,7 @@ policy:
 
 suffrage:
     nodes:
-        - mc-node0:sa-v0.0.1
+        - mc-node0~sa-v0.0.1
 
 nodes:
 

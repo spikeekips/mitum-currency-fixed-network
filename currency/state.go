@@ -18,16 +18,12 @@ var (
 	StateKeyCurrencyDesignPrefix = "currencydesign:"
 )
 
-func StateAddressKeyPrefix(a base.Address) string {
-	return RawTypeString(a)
-}
-
 func StateBalanceKeyPrefix(a base.Address, cid CurrencyID) string {
-	return fmt.Sprintf("%s-%s", StateAddressKeyPrefix(a), cid)
+	return fmt.Sprintf("%s-%s", TypedString(a, a.Raw()), cid)
 }
 
 func StateKeyAccount(a base.Address) string {
-	return fmt.Sprintf("%s%s", StateAddressKeyPrefix(a), StateKeyAccountSuffix)
+	return fmt.Sprintf("%s%s", TypedString(a, a.Raw()), StateKeyAccountSuffix)
 }
 
 func IsStateAccountKey(key string) bool {

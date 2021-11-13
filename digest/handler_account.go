@@ -261,7 +261,7 @@ func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
 		offsetAddress = a
 	}
 
-	cachekey := CacheKey(r.URL.Path, currency.RawTypeString(pub), offset)
+	cachekey := CacheKey(r.URL.Path, currency.TypedString(pub, pub.Raw()), offset)
 	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
@@ -347,7 +347,10 @@ func (*Handlers) buildAccountsHal(
 
 	var nextoffset string
 	if len(vas) > 0 {
-		nextoffset = buildOffsetByString(topHeight, currency.RawTypeString(lastaddress))
+		nextoffset = buildOffsetByString(
+			topHeight,
+			currency.TypedString(lastaddress, lastaddress.Raw()),
+		)
 	}
 
 	if len(nextoffset) > 0 {

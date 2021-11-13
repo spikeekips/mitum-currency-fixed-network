@@ -430,7 +430,7 @@ func (st *Database) Account(a base.Address) (AccountValue, bool /* exists */, er
 	var rs AccountValue
 	if err := st.database.Client().GetByFilter(
 		defaultColNameAccount,
-		util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a)).D(),
+		util.NewBSONFilter("address", currency.TypedString(a, a.Raw())).D(),
 		func(res *mongo.SingleResult) error {
 			i, err := LoadAccountValue(res.Decode, st.database.Encoders())
 			if err != nil {
@@ -542,7 +542,7 @@ func (st *Database) balance(a base.Address) ([]currency.Amount, base.Height, bas
 
 	amm := map[currency.CurrencyID]currency.Amount{}
 	for {
-		filter := util.NewBSONFilter("address", currency.StateAddressKeyPrefix(a))
+		filter := util.NewBSONFilter("address", currency.TypedString(a, a.Raw()))
 
 		var q primitive.D
 		if len(cids) < 1 {
@@ -786,7 +786,9 @@ func buildOffset(height base.Height, index uint64) string {
 }
 
 func buildOperationsFilterByAddress(address base.Address, offset string, reverse bool) (bson.M, error) {
-	filter := bson.M{"addresses": bson.M{"$in": []string{currency.RawTypeString(address)}}}
+	filter := bson.M{"addresses": bson.M{"$in": []string{
+		currency.TypedString(address, address.Raw()),
+	}}}
 	if len(offset) > 0 {
 		height, index, err := parseOffset(offset)
 		if err != nil {
@@ -840,7 +842,7 @@ func buildOffsetByString(height base.Height, s string) string {
 }
 
 func buildAccountsFilterByPublickey(pub key.Publickey) bson.M {
-	return bson.M{"pubs": bson.M{"$in": []string{currency.RawTypeString(pub)}}}
+	return bson.M{"pubs": bson.M{"$in": []string{currency.TypedString(pub, pub.Raw())}}}
 }
 
 type heightDoc struct {
@@ -869,7 +871,7 @@ func (doc briefAccountDoc) pubExists(k key.Key) bool {
 	}
 
 	for i := range doc.Pubs {
-		if currency.RawTypeString(k) == doc.Pubs[i] {
+		if currency.TypedString(k, k.Raw()) == doc.Pubs[i] {
 			return true
 		}
 	}

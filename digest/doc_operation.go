@@ -36,7 +36,7 @@ func NewOperationDoc(
 		}
 		addresses = make([]string, len(as))
 		for i := range as {
-			addresses[i] = currency.RawTypeString(as[i])
+			addresses[i] = currency.TypedString(as[i], as[i].Raw())
 		}
 	}
 
