@@ -82,3 +82,10 @@ func (ac Account) SetKeys(keys Keys) (Account, error) {
 func (ac Account) IsEmpty() bool {
 	return ac.h == nil || ac.h.IsEmpty()
 }
+
+func ZeroAccount(cid CurrencyID) Account {
+	ac := Account{address: ZeroAddress(cid)}
+	ac.h = ac.GenerateHash()
+
+	return ac
+}

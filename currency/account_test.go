@@ -50,6 +50,12 @@ func (t *testAccount) TestNewFromKeys() {
 	t.True(ac.Keys().Equal(keys))
 }
 
+func (t *testAccount) TestZeroAccount() {
+	cid := CurrencyID("XYZ")
+	ac := ZeroAccount(cid)
+	t.True(IsZeroAddress(cid, ac.Address()))
+}
+
 func TestAccount(t *testing.T) {
 	suite.Run(t, new(testAccount))
 }
@@ -82,10 +88,32 @@ func testAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 	return t
 }
 
+func testAccountEncodeZero(enc encoder.Encoder) suite.TestingSuite {
+	t := new(baseTestEncode)
+
+	t.enc = enc
+	t.newObject = func() interface{} {
+		return ZeroAccount(CurrencyID("SHOWME"))
+	}
+
+	t.compare = func(a, b interface{}) {
+		ca := a.(Account)
+		cb := b.(Account)
+
+		t.True(ca.Address().Equal(cb.Address()))
+		t.True(ca.Keys().Equal(cb.Keys()))
+		t.Equal(0, len(cb.Keys().Keys()))
+	}
+
+	return t
+}
+
 func TestAccountEncodeJSON(t *testing.T) {
 	suite.Run(t, testAccountEncode(jsonenc.NewEncoder()))
+	suite.Run(t, testAccountEncodeZero(jsonenc.NewEncoder()))
 }
 
 func TestAccountEncodeBSON(t *testing.T) {
 	suite.Run(t, testAccountEncode(bsonenc.NewEncoder()))
+	suite.Run(t, testAccountEncodeZero(bsonenc.NewEncoder()))
 }

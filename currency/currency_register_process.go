@@ -91,12 +91,12 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 }
 
 func (opp *CurrencyRegisterProcessor) Process(
-	_ func(string) (state.State, bool, error),
+	getState func(string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := opp.Fact().(CurrencyRegisterFact)
 
-	sts := make([]state.State, 2)
+	sts := make([]state.State, 4)
 
 	sts[0] = opp.ga.Add(fact.currency.Big())
 	i, err := SetStateCurrencyDesignValue(opp.de, fact.currency)
@@ -105,5 +105,42 @@ func (opp *CurrencyRegisterProcessor) Process(
 	}
 	sts[1] = i
 
+	{
+		l, err := createZeroAccount(fact.currency.Currency(), getState)
+		if err != nil {
+			return err
+		}
+		sts[2], sts[3] = l[0], l[1]
+	}
+
 	return setState(fact.Hash(), sts...)
+}
+
+func createZeroAccount(
+	cid CurrencyID,
+	getState func(string) (state.State, bool, error),
+) ([]state.State, error) {
+	sts := make([]state.State, 2)
+
+	ac := ZeroAccount(cid)
+	ast, err := notExistsState(StateKeyAccount(ac.Address()), "keys of zero account", getState)
+	if err != nil {
+		return nil, err
+	}
+
+	ast, err = SetStateAccountValue(ast, ac)
+	if err != nil {
+		return nil, err
+	}
+	sts[0] = ast
+
+	bst, _, err := getState(StateKeyBalance(ac.Address(), cid))
+	if err != nil {
+		return nil, err
+	}
+	amst := NewAmountState(bst, cid)
+
+	sts[1] = amst
+
+	return sts, nil
 }

@@ -206,6 +206,63 @@ func (t *testCurrencyRegisterOperations) TestNew() {
 	t.compareCurrencyDesign(ugb, item)
 }
 
+func (t *testCurrencyRegisterOperations) TestZeroAccount() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+
+	cid := CurrencyID("FINDME")
+	item := t.currencyDesign(NewBig(33), cid, ga.Address)
+	op := t.newOperation(privs, item)
+
+	sts = append(sts, s...)
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	t.NoError(opr.Process(op))
+
+	zeroaddress := ZeroAddress(cid)
+
+	var gast, gbst, zast, zbst state.State
+	for _, st := range pool.Updates() {
+		switch st.Key() {
+		case StateKeyBalance(ga.Address, cid):
+			gast = st.GetState()
+		case StateKeyCurrencyDesign(cid):
+			gbst = st.GetState()
+		case StateKeyAccount(zeroaddress):
+			zast = st.GetState()
+		case StateKeyBalance(zeroaddress, cid):
+			zbst = st.GetState()
+		}
+	}
+
+	uga, err := StateBalanceValue(gast)
+	t.NoError(err)
+	t.True(uga.Big().Equal(item.Big()))
+	t.Equal(uga.Currency(), item.Currency())
+
+	ugb, err := StateCurrencyDesignValue(gbst)
+	t.NoError(err)
+	t.compareCurrencyDesign(ugb, item)
+
+	t.NotNil(zast)
+
+	zac, err := LoadStateAccountValue(zast)
+	t.NoError(err)
+	t.True(zeroaddress.Equal(zac.Address()))
+	t.Empty(zac.Keys())
+
+	uzb, err := StateBalanceValue(zbst)
+	t.NoError(err)
+	t.True(uzb.Big().IsZero())
+	t.Equal(uzb.Currency(), item.Currency())
+}
+
 func TestCurrencyRegisterOperations(t *testing.T) {
 	suite.Run(t, new(testCurrencyRegisterOperations))
 }

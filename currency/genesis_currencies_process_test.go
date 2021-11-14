@@ -71,20 +71,36 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 
 	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
-	t.Equal(5, len(sp.Updates()))
+	t.Equal(9, len(sp.Updates()))
 
 	var ns state.State
 	var nb []state.State
+	zast := map[CurrencyID]state.State{}
+	zbst := map[CurrencyID]state.State{}
 	dts := map[CurrencyID]CurrencyDesign{}
 	for _, st := range sp.Updates() {
-		if key := st.Key(); key == StateKeyAccount(newAddress) {
+		key := st.Key()
+		switch {
+		case key == StateKeyAccount(newAddress):
 			ns = st.GetState()
-		} else if IsStateBalanceKey(key) {
-			nb = append(nb, st.GetState())
-		} else if IsStateCurrencyDesignKey(key) {
+		case IsStateCurrencyDesignKey(key):
 			i, err := StateCurrencyDesignValue(st.GetState())
 			t.NoError(err)
 			dts[i.Currency()] = i
+		}
+
+		for i := range cs {
+			cid := cs[i].Currency()
+			zac := ZeroAccount(cid)
+
+			switch {
+			case key == StateKeyAccount(zac.Address()):
+				zast[cid] = st.GetState()
+			case key == StateKeyBalance(newAddress, cid):
+				nb = append(nb, st.GetState())
+			case key == StateKeyBalance(zac.Address(), cid):
+				zbst[cid] = st.GetState()
+			}
 		}
 	}
 
@@ -113,6 +129,26 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 		t.True(found)
 
 		t.compareCurrencyDesign(a, b)
+	}
+
+	// NOTE zero
+	for i := range cs {
+		cid := cs[i].Currency()
+		zac := ZeroAccount(cid)
+
+		ast, found := zast[cid]
+		t.True(found)
+		t.NotNil(ast)
+
+		bst, found := zbst[cid]
+		t.True(found)
+		t.NotNil(bst)
+
+		ac := ast.Value().Interface().(Account)
+		t.True(zac.Address().Equal(ac.Address()))
+
+		b := bst.Value().Interface().(Amount)
+		t.True(b.Big().IsZero())
 	}
 }
 

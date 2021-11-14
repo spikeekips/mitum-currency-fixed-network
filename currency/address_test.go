@@ -91,6 +91,14 @@ func (t *testAddress) TestMultipleKeyOrder() {
 	t.Equal(a, b)
 }
 
+func (t *testAddress) TestZeroAddress() {
+	cid := CurrencyID("XYZ")
+	ad := ZeroAddress(cid)
+	t.Equal("XYZ-X", ad.Raw())
+
+	t.True(IsZeroAddress(cid, ad))
+}
+
 func TestAddress(t *testing.T) {
 	suite.Run(t, new(testAddress))
 }

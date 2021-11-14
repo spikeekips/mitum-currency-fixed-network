@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	AddressType = hint.Type("mca")
-	AddressHint = hint.NewHint(AddressType, "v0.0.1")
+	AddressType       = hint.Type("mca")
+	AddressHint       = hint.NewHint(AddressType, "v0.0.1")
+	ZeroAddressSuffix = "-X"
 )
 
 var EmptyAddress = Address("")
@@ -80,4 +81,12 @@ func (ca *Address) UnmarshalText(b []byte) error {
 
 type Addresses interface {
 	Addresses() ([]base.Address, error)
+}
+
+func ZeroAddress(cid CurrencyID) Address {
+	return Address(cid.String() + ZeroAddressSuffix)
+}
+
+func IsZeroAddress(cid CurrencyID, address base.Address) bool {
+	return cid.String()+ZeroAddressSuffix == address.Raw()
 }

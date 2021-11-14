@@ -59,6 +59,13 @@ func (op GenesisCurrencies) Process(
 		} else {
 			states = append(states, gst, dst)
 		}
+
+		sts, err := createZeroAccount(c.Currency(), getState)
+		if err != nil {
+			return err
+		}
+
+		states = append(states, sts...)
 	}
 
 	return setState(fact.Hash(), states...)
