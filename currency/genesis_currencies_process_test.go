@@ -62,12 +62,18 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 	}
 
 	op := t.newOperaton(keys, cs)
+	fact := op.Fact().(GenesisCurrenciesFact)
 
 	sp, err := storage.NewStatepool(t.Database(nil, nil))
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys)
 	t.NoError(err)
+	{
+		fa, err := fact.Address()
+		t.NoError(err)
+		t.True(newAddress.Equal(fa))
+	}
 
 	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
@@ -127,6 +133,8 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 	for _, a := range cs {
 		b, found := dts[a.Currency()]
 		t.True(found)
+		t.NotNil(b.GenesisAccount())
+		t.True(b.GenesisAccount().Equal(newAddress))
 
 		t.compareCurrencyDesign(a, b)
 	}
