@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package currency
@@ -62,17 +63,19 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(Key{})
 	_ = t.Encs.TestAddHinter(Keys{})
 	_ = t.Encs.TestAddHinter(Address(""))
-	_ = t.Encs.TestAddHinter(CreateAccounts{})
-	_ = t.Encs.TestAddHinter(Transfers{})
+	_ = t.Encs.TestAddHinter(CreateAccountsHinter)
+	_ = t.Encs.TestAddHinter(TransfersHinter)
 	_ = t.Encs.TestAddHinter(KeyUpdaterFact{})
-	_ = t.Encs.TestAddHinter(KeyUpdater{})
+	_ = t.Encs.TestAddHinter(KeyUpdaterHinter)
 	_ = t.Encs.TestAddHinter(FeeOperationFact{})
 	_ = t.Encs.TestAddHinter(FeeOperation{})
 	_ = t.Encs.TestAddHinter(Account{})
 	_ = t.Encs.TestAddHinter(CurrencyDesign{})
 	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdaterFact{})
-	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdater{})
+	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdaterHinter)
 	_ = t.Encs.TestAddHinter(CurrencyPolicy{})
+	_ = t.Encs.TestAddHinter(SuffrageInflationFact{})
+	_ = t.Encs.TestAddHinter(SuffrageInflationHinter)
 
 	t.cid = CurrencyID("SEEME")
 }

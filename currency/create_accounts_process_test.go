@@ -22,7 +22,7 @@ type testCreateAccountsOperation struct {
 
 func (t *testCreateAccountsOperation) processor(cp *CurrencyPool, pool *storage.Statepool) prprocessor.OperationProcessor {
 	copr, err := NewOperationProcessor(nil).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(cp))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(cp))
 	t.NoError(err)
 
 	if pool == nil {
@@ -376,7 +376,7 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 
 	_, opr := t.statepool()
 	copr, err := opr.(*OperationProcessor).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(cp))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(cp))
 	t.NoError(err)
 
 	ams := []Amount{NewAmount(NewBig(33), cid)}
@@ -436,7 +436,7 @@ func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 
 	_, opr := t.statepool([]state.State{st})
 	copr, err := opr.(*OperationProcessor).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(nil))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(nil))
 	t.NoError(err)
 
 	na, _ := t.newAccount(false, nil)

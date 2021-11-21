@@ -32,17 +32,13 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 
 	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
-	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
-		cmd.Log().Debug().Msg("already signed")
-	} else {
-		s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
-		if err != nil {
-			return err
-		}
-		cmd.Log().Debug().Msg("seal signed")
-
-		sl = s
+	s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+	if err != nil {
+		return err
 	}
+	cmd.Log().Debug().Msg("seal signed")
+
+	sl = s
 
 	PrettyPrint(cmd.Out, cmd.Pretty, sl)
 

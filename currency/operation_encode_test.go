@@ -3,6 +3,7 @@ package currency
 import (
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -25,35 +26,38 @@ func (t *baseTestEncode) SetupSuite() {
 	t.encs.AddEncoder(t.enc)
 
 	t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	t.encs.TestAddHinter(base.StringAddress(""))
 	t.encs.TestAddHinter(Address(""))
 	t.encs.TestAddHinter(operation.BaseFactSign{})
 	t.encs.TestAddHinter(Key{})
 	t.encs.TestAddHinter(Keys{})
 	t.encs.TestAddHinter(TransfersFact{})
-	t.encs.TestAddHinter(Transfers{})
+	t.encs.TestAddHinter(TransfersHinter)
 	t.encs.TestAddHinter(CreateAccountsFact{})
-	t.encs.TestAddHinter(CreateAccounts{})
+	t.encs.TestAddHinter(CreateAccountsHinter)
 	t.encs.TestAddHinter(KeyUpdaterFact{})
-	t.encs.TestAddHinter(KeyUpdater{})
+	t.encs.TestAddHinter(KeyUpdaterHinter)
 	t.encs.TestAddHinter(FeeOperationFact{})
 	t.encs.TestAddHinter(FeeOperation{})
 	t.encs.TestAddHinter(Account{})
 	t.encs.TestAddHinter(GenesisCurrenciesFact{})
-	t.encs.TestAddHinter(GenesisCurrencies{})
+	t.encs.TestAddHinter(GenesisCurrenciesHinter)
 	t.encs.TestAddHinter(Amount{})
 	t.encs.TestAddHinter(CreateAccountsItemMultiAmountsHinter)
 	t.encs.TestAddHinter(CreateAccountsItemSingleAmountHinter)
 	t.encs.TestAddHinter(TransfersItemMultiAmountsHinter)
 	t.encs.TestAddHinter(TransfersItemSingleAmountHinter)
 	t.encs.TestAddHinter(CurrencyRegisterFact{})
-	t.encs.TestAddHinter(CurrencyRegister{})
+	t.encs.TestAddHinter(CurrencyRegisterHinter)
 	t.encs.TestAddHinter(CurrencyDesign{})
 	t.encs.TestAddHinter(NilFeeer{})
 	t.encs.TestAddHinter(FixedFeeer{})
 	t.encs.TestAddHinter(RatioFeeer{})
 	t.encs.TestAddHinter(CurrencyPolicyUpdaterFact{})
-	t.encs.TestAddHinter(CurrencyPolicyUpdater{})
+	t.encs.TestAddHinter(CurrencyPolicyUpdaterHinter)
 	t.encs.TestAddHinter(CurrencyPolicy{})
+	t.encs.TestAddHinter(SuffrageInflationFact{})
+	t.encs.TestAddHinter(SuffrageInflationHinter)
 }
 
 func (t *baseTestEncode) TestEncode() {
@@ -86,6 +90,7 @@ func (t *baseTestEncode) compareCurrencyDesign(a, b CurrencyDesign) {
 	t.True(a.Amount.Equal(b.Amount))
 	t.True(a.GenesisAccount().Equal(a.GenesisAccount()))
 	t.Equal(a.Policy(), b.Policy())
+	t.True(a.Aggregate().Equal(b.Aggregate()))
 }
 
 type baseTestOperationEncode struct {

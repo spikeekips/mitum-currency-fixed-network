@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -44,23 +45,23 @@ func (t *testBuilder) decodeHal(b []byte) Hal {
 func (t *testBuilder) TestUnknownFactTemplate() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	_, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	_, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	_, err = bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.Transfers{}.Hint())
+	_, err = bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.GenesisCurrencies{}.Hint())
+	_, err = bl.FactTemplate(currency.GenesisCurrenciesHinter.Hint())
 	t.Contains(err.Error(), "unknown operation")
 }
 
 func (t *testBuilder) TestFactTemplateCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	hal, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -74,7 +75,7 @@ func (t *testBuilder) TestFactTemplateCreateAccounts() {
 func (t *testBuilder) TestFactTemplateKeyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -88,7 +89,7 @@ func (t *testBuilder) TestFactTemplateKeyUpdater() {
 func (t *testBuilder) TestFactTemplateTransfers() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.Transfers{}.Hint())
+	hal, err := bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -102,7 +103,7 @@ func (t *testBuilder) TestFactTemplateTransfers() {
 func (t *testBuilder) TestFactTemplateCurrencyRegister() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyRegisterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -116,7 +117,7 @@ func (t *testBuilder) TestFactTemplateCurrencyRegister() {
 func (t *testBuilder) TestFactTemplateCurrencyPolicyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdaterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -130,7 +131,7 @@ func (t *testBuilder) TestFactTemplateCurrencyPolicyUpdater() {
 func (t *testBuilder) TestBuildFactCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	hal, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -180,7 +181,7 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 func (t *testBuilder) TestBuildFactKeyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -225,7 +226,7 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 func (t *testBuilder) TestBuildFactTransfers() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.Transfers{}.Hint())
+	hal, err := bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -286,7 +287,7 @@ func (t *testBuilder) TestBuildFactTransfers() {
 func (t *testBuilder) TestBuildFactCurrencyRegister() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyRegisterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -334,7 +335,7 @@ func (t *testBuilder) TestBuildFactCurrencyRegister() {
 func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdaterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)

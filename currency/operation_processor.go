@@ -121,9 +121,10 @@ func (opr *OperationProcessor) Process(op state.Processor) error {
 		*CreateAccountsProcessor,
 		*KeyUpdaterProcessor,
 		*CurrencyRegisterProcessor,
-		*CurrencyPolicyUpdaterProcessor:
+		*CurrencyPolicyUpdaterProcessor,
+		*SuffrageInflationProcessor:
 		return opr.process(op)
-	case Transfers, CreateAccounts, KeyUpdater, CurrencyRegister, CurrencyPolicyUpdater:
+	case Transfers, CreateAccounts, KeyUpdater, CurrencyRegister, CurrencyPolicyUpdater, SuffrageInflation:
 		pr, err := opr.PreProcess(op)
 		if err != nil {
 			return err
@@ -261,7 +262,8 @@ func (opr *OperationProcessor) getNewProcessor(op state.Processor) (state.Proces
 		CreateAccounts,
 		KeyUpdater,
 		CurrencyRegister,
-		CurrencyPolicyUpdater:
+		CurrencyPolicyUpdater,
+		SuffrageInflation:
 		return nil, false, errors.Errorf("%T needs SetProcessor", t)
 	default:
 		return op, false, nil

@@ -54,8 +54,9 @@ func (t *testCurrencyPolicyUpdaterOperations) processor(n int) ([]key.Privatekey
 	threshold, err := base.NewThreshold(uint(len(privs)), 100)
 	t.NoError(err)
 
-	opr := NewOperationProcessor(nil)
-	_, err = opr.SetProcessor(CurrencyPolicyUpdater{}, NewCurrencyPolicyUpdaterProcessor(nil, pubs, threshold))
+	cp := NewCurrencyPool()
+	opr := NewOperationProcessor(cp)
+	_, err = opr.SetProcessor(CurrencyPolicyUpdaterHinter, NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold))
 	t.NoError(err)
 
 	return privs, opr
@@ -82,6 +83,8 @@ func (t *testCurrencyPolicyUpdaterOperations) TestNew() {
 		nst, err := SetStateCurrencyDesignValue(st, de)
 		t.NoError(err)
 		sts = append(sts, nst)
+
+		t.NoError(copr.cp.Set(nst))
 	}
 
 	pool, _ := t.statepool(sts)
@@ -127,7 +130,7 @@ func (t *testCurrencyPolicyUpdaterOperations) TestEmptyPubs() {
 	pool, _ := t.statepool(sts)
 
 	copr := NewOperationProcessor(nil)
-	_, err := copr.SetProcessor(CurrencyPolicyUpdater{}, func(op state.Processor) (state.Processor, error) {
+	_, err := copr.SetProcessor(CurrencyPolicyUpdaterHinter, func(op state.Processor) (state.Processor, error) {
 		if i, ok := op.(CurrencyPolicyUpdater); !ok {
 			return nil, errors.Errorf("not CurrencyPolicyUpdater, %T", op)
 		} else {

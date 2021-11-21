@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -258,6 +259,27 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 	if no.network.ConnInfo() == nil {
 		connInfo, _ := network.NewHTTPConnInfoFromString(DefaultDigestURL, lconf.Network().ConnInfo().Insecure())
 		_ = no.network.SetConnInfo(connInfo)
+	}
+
+	if certs := no.network.Certs(); len(certs) < 1 {
+		priv, err := util.GenerateED25519Privatekey()
+		if err != nil {
+			return ctx, err
+		}
+
+		host := "localhost"
+		if no.network.ConnInfo() != nil {
+			host = no.network.ConnInfo().URL().Hostname()
+		}
+
+		ct, err := util.GenerateTLSCerts(host, priv)
+		if err != nil {
+			return ctx, err
+		}
+
+		if err := no.network.SetCerts(ct); err != nil {
+			return ctx, err
+		}
 	}
 
 	if no.CacheYAML == nil {

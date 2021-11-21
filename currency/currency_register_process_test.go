@@ -55,7 +55,7 @@ func (t *testCurrencyRegisterOperations) processor(n int) ([]key.Privatekey, *Op
 	t.NoError(err)
 
 	opr := NewOperationProcessor(nil)
-	_, err = opr.SetProcessor(CurrencyRegister{}, NewCurrencyRegisterProcessor(nil, pubs, threshold))
+	_, err = opr.SetProcessor(CurrencyRegisterHinter, NewCurrencyRegisterProcessor(nil, pubs, threshold))
 	t.NoError(err)
 
 	return privs, opr
@@ -129,7 +129,7 @@ func (t *testCurrencyRegisterOperations) TestEmptyPubs() {
 	pool, _ := t.statepool(sts)
 
 	copr := NewOperationProcessor(nil)
-	_, err := copr.SetProcessor(CurrencyRegister{}, func(op state.Processor) (state.Processor, error) {
+	_, err := copr.SetProcessor(CurrencyRegisterHinter, func(op state.Processor) (state.Processor, error) {
 		if i, ok := op.(CurrencyRegister); !ok {
 			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		} else {

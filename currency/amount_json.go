@@ -23,9 +23,9 @@ type AmountJSONUnpacker struct {
 	CR string `json:"currency"`
 }
 
-func (am *Amount) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (am *Amount) UnmarshalJSON(b []byte) error {
 	var uam AmountJSONUnpacker
-	if err := enc.Unmarshal(b, &uam); err != nil {
+	if err := jsonenc.Unmarshal(b, &uam); err != nil {
 		return err
 	}
 

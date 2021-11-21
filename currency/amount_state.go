@@ -51,17 +51,6 @@ func (st AmountState) IsValid(b []byte) error {
 	return nil
 }
 
-func (st AmountState) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		st.State.Bytes(),
-		st.fee.Bytes(),
-	)
-}
-
-func (st AmountState) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(st.Bytes())
-}
-
 func (st AmountState) Merge(b state.State) (state.State, error) {
 	var am Amount
 	if b, err := StateBalanceValue(b); err != nil {

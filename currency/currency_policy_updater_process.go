@@ -58,30 +58,18 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	fact := opp.Fact().(CurrencyPolicyUpdaterFact)
 
 	if opp.cp != nil {
-		if !opp.cp.Exists(fact.Currency()) {
+		i, found := opp.cp.State(fact.Currency())
+		if !found {
 			return nil, errors.Errorf("unknown currency, %q found", fact.Currency())
 		}
+		opp.st = i
+		opp.de, _ = opp.cp.Get(fact.Currency())
 	}
 
 	if receiver := fact.Policy().Feeer().Receiver(); receiver != nil {
 		if err := checkExistsState(StateKeyAccount(receiver), getState); err != nil {
 			return nil, errors.Wrap(err, "feeer receiver account not found")
 		}
-	}
-
-	switch st, found, err := getState(StateKeyCurrencyDesign(fact.Currency())); {
-	case err != nil:
-		return nil, err
-	case !found:
-		return nil, errors.Errorf("unknown currency, %q found", fact.Currency())
-	default:
-		opp.st = st
-
-		de, err := StateCurrencyDesignValue(st)
-		if err != nil {
-			return nil, err
-		}
-		opp.de = de
 	}
 
 	return opp, nil

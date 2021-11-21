@@ -15,6 +15,7 @@ var (
 	CurrencyRegisterFactHint = hint.NewHint(CurrencyRegisterFactType, "v0.0.1")
 	CurrencyRegisterType     = hint.Type("mitum-currency-currency-register-operation")
 	CurrencyRegisterHint     = hint.NewHint(CurrencyRegisterType, "v0.0.1")
+	CurrencyRegisterHinter   = CurrencyRegister{BaseOperation: operationHinter(CurrencyRegisterHint)}
 )
 
 type CurrencyRegisterFact struct {
@@ -46,13 +47,12 @@ func (fact CurrencyRegisterFact) Bytes() []byte {
 	return util.ConcatBytesSlice(fact.token, fact.currency.Bytes())
 }
 
-func (fact CurrencyRegisterFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for CurrencyRegisterFact")
+func (fact CurrencyRegisterFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
 		fact.currency,
 	}, nil, false); err != nil {
 		return errors.Wrap(err, "invalid fact")
@@ -60,10 +60,6 @@ func (fact CurrencyRegisterFact) IsValid([]byte) error {
 
 	if fact.currency.GenesisAccount() == nil {
 		return errors.Errorf("empty genesis account")
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -82,30 +78,14 @@ func (fact CurrencyRegisterFact) Currency() CurrencyDesign {
 }
 
 type CurrencyRegister struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewCurrencyRegister(fact CurrencyRegisterFact, fs []operation.FactSign, memo string) (CurrencyRegister, error) {
-	bo, err := operation.NewBaseOperationFromFact(CurrencyRegisterHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(CurrencyRegisterHint, fact, fs, memo)
 	if err != nil {
 		return CurrencyRegister{}, err
 	}
-	op := CurrencyRegister{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (CurrencyRegister) Hint() hint.Hint {
-	return CurrencyRegisterHint
-}
-
-func (op CurrencyRegister) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
+	return CurrencyRegister{BaseOperation: bo}, nil
 }

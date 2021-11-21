@@ -16,6 +16,7 @@ var (
 	CreateAccountsFactHint = hint.NewHint(CreateAccountsFactType, "v0.0.1")
 	CreateAccountsType     = hint.Type("mitum-currency-create-accounts-operation")
 	CreateAccountsHint     = hint.NewHint(CreateAccountsType, "v0.0.1")
+	CreateAccountsHinter   = CreateAccounts{BaseOperation: operationHinter(CreateAccountsHint)}
 )
 
 var MaxCreateAccountsItems uint = 10
@@ -77,19 +78,18 @@ func (fact CreateAccountsFact) Bytes() []byte {
 	)
 }
 
-func (fact CreateAccountsFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for CreateAccountsFact")
-	} else if n := len(fact.items); n < 1 {
+func (fact CreateAccountsFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
+	}
+
+	if n := len(fact.items); n < 1 {
 		return errors.Errorf("empty items")
 	} else if n > int(MaxCreateAccountsItems) {
 		return errors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
-		fact.sender,
-	}, nil, false); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{fact.sender}, nil, false); err != nil {
 		return err
 	}
 
@@ -113,10 +113,6 @@ func (fact CreateAccountsFact) IsValid([]byte) error {
 		default:
 			foundKeys[k] = struct{}{}
 		}
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -175,55 +171,14 @@ func (fact CreateAccountsFact) Rebuild() CreateAccountsFact {
 }
 
 type CreateAccounts struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo string) (CreateAccounts, error) {
-	bo, err := operation.NewBaseOperationFromFact(CreateAccountsHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(CreateAccountsHint, fact, fs, memo)
 	if err != nil {
 		return CreateAccounts{}, err
 	}
-	op := CreateAccounts{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (CreateAccounts) Hint() hint.Hint {
-	return CreateAccountsHint
-}
-
-func (op CreateAccounts) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
-}
-
-func (op CreateAccounts) GenerateHash() valuehash.Hash {
-	bs := make([][]byte, len(op.Signs())+1)
-	for i := range op.Signs() {
-		bs[i] = op.Signs()[i].Bytes()
-	}
-
-	bs[len(bs)-1] = []byte(op.Memo)
-
-	e := util.ConcatBytesSlice(op.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
-
-	return valuehash.NewSHA256(e)
-}
-
-func (op CreateAccounts) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	o, err := op.BaseOperation.AddFactSigns(fs...)
-	if err != nil {
-		return nil, err
-	}
-	op.BaseOperation = o.(operation.BaseOperation)
-
-	op.BaseOperation = op.SetHash(op.GenerateHash())
-
-	return op, nil
+	return CreateAccounts{BaseOperation: bo}, nil
 }

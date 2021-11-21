@@ -21,7 +21,7 @@ type testKeyUpdaterOperation struct {
 
 func (t *testKeyUpdaterOperation) processor(cp *CurrencyPool, pool *storage.Statepool) prprocessor.OperationProcessor {
 	copr, err := NewOperationProcessor(cp).
-		SetProcessor(KeyUpdater{}, NewKeyUpdaterProcessor(cp))
+		SetProcessor(KeyUpdaterHinter, NewKeyUpdaterProcessor(cp))
 	t.NoError(err)
 
 	if pool == nil {
@@ -164,7 +164,7 @@ func (t *testKeyUpdaterOperation) TestTargetNotExist() {
 
 	_, opr := t.statepool()
 	_, err := opr.(*OperationProcessor).
-		SetProcessor(KeyUpdater{}, NewKeyUpdaterProcessor(nil))
+		SetProcessor(KeyUpdaterHinter, NewKeyUpdaterProcessor(nil))
 	t.NoError(err)
 
 	npk := key.MustNewBTCPrivatekey()
@@ -188,7 +188,7 @@ func (t *testKeyUpdaterOperation) TestSameKeys() {
 
 	_, opr := t.statepool(st)
 	_, err := opr.(*OperationProcessor).
-		SetProcessor(KeyUpdater{}, NewKeyUpdaterProcessor(nil))
+		SetProcessor(KeyUpdaterHinter, NewKeyUpdaterProcessor(nil))
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, sa.Keys(), sa.Privs(), t.cid)

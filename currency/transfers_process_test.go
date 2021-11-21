@@ -31,7 +31,7 @@ func (t *testTransfersOperations) SetupSuite() {
 
 func (t *testTransfersOperations) processor(cp *CurrencyPool, pool *storage.Statepool) prprocessor.OperationProcessor {
 	copr, err := NewOperationProcessor(cp).
-		SetProcessor(Transfers{}, NewTransfersProcessor(cp))
+		SetProcessor(TransfersHinter, NewTransfersProcessor(cp))
 	t.NoError(err)
 
 	if pool == nil {
@@ -536,11 +536,11 @@ func (t *testTransfersOperations) TestConcurrentOperationsProcessor() {
 	t.NoError(cp.Set(t.newCurrencyDesignState(t.cid, NewBig(99), NewTestAddress(), feeer)))
 
 	copr, err := NewOperationProcessor(cp).
-		SetProcessor(Transfers{}, NewTransfersProcessor(cp))
+		SetProcessor(TransfersHinter, NewTransfersProcessor(cp))
 	t.NoError(err)
 
 	oppHintSet := hint.NewHintmap()
-	t.NoError(oppHintSet.Add(Transfers{}, copr))
+	t.NoError(oppHintSet.Add(TransfersHinter, copr))
 
 	pool, _ := t.statepool(sts...)
 

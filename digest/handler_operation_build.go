@@ -14,10 +14,10 @@ import (
 )
 
 var factTypesByHint = map[string]hint.Hinter{
-	"create-accounts":   currency.CreateAccounts{},
-	"key-updater":       currency.KeyUpdater{},
-	"transfers":         currency.Transfers{},
-	"currency-register": currency.CurrencyRegister{},
+	"create-accounts":   currency.CreateAccountsHinter,
+	"key-updater":       currency.KeyUpdaterHinter,
+	"transfers":         currency.TransfersHinter,
+	"currency-register": currency.CurrencyRegisterHinter,
 }
 
 func (hd *Handlers) handleOperationBuild(w http.ResponseWriter, r *http.Request) {

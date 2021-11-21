@@ -31,7 +31,7 @@ func (t *testGenesisCurrenciesOperation) SetupSuite() {
 	t.Encs.TestAddHinter(Keys{})
 	t.Encs.TestAddHinter(Address(""))
 	t.Encs.TestAddHinter(GenesisCurrenciesFact{})
-	t.Encs.TestAddHinter(GenesisCurrencies{})
+	t.Encs.TestAddHinter(GenesisCurrenciesHinter)
 	t.Encs.TestAddHinter(Account{})
 	t.Encs.TestAddHinter(Amount{})
 	t.Encs.TestAddHinter(CurrencyDesign{})

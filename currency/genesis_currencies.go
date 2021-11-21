@@ -17,6 +17,7 @@ var (
 	GenesisCurrenciesFactHint = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
 	GenesisCurrenciesType     = hint.Type("mitum-currency-genesis-currencies-operation")
 	GenesisCurrenciesHint     = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
+	GenesisCurrenciesHinter   = GenesisCurrencies{BaseOperation: operation.BaseOperation{}.SetHint(GenesisCurrenciesHint)}
 )
 
 type GenesisCurrenciesFact struct {
@@ -66,15 +67,16 @@ func (fact GenesisCurrenciesFact) Bytes() []byte {
 	return util.ConcatBytesSlice(bs...)
 }
 
-func (fact GenesisCurrenciesFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for GenesisCurrenciesFact")
-	} else if len(fact.cs) < 1 {
+func (fact GenesisCurrenciesFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
+	}
+
+	if len(fact.cs) < 1 {
 		return errors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
 		fact.genesisNodeKey,
 		fact.keys,
 	}, nil, false); err != nil {
@@ -91,10 +93,6 @@ func (fact GenesisCurrenciesFact) IsValid([]byte) error {
 		} else {
 			founds[c.Currency()] = struct{}{}
 		}
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -147,10 +145,6 @@ func NewGenesisCurrencies(
 		return GenesisCurrencies{}, err
 	}
 	return GenesisCurrencies{BaseOperation: bo}, nil
-}
-
-func (GenesisCurrencies) Hint() hint.Hint {
-	return GenesisCurrenciesHint
 }
 
 func (op GenesisCurrencies) IsValid(networkID []byte) error {

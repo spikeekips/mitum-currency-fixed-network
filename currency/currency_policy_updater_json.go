@@ -3,7 +3,6 @@ package currency
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/base/operation"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -42,26 +41,13 @@ func (fact *CurrencyPolicyUpdaterFact) UnpackJSON(b []byte, enc *jsonenc.Encoder
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.CI, ufact.PO)
 }
 
-func (op CurrencyPolicyUpdater) MarshalJSON() ([]byte, error) {
-	m := op.BaseOperation.JSONM()
-	m["memo"] = op.Memo
-
-	return jsonenc.Marshal(m)
-}
-
 func (op *CurrencyPolicyUpdater) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ubo operation.BaseOperation
+	var ubo BaseOperation
 	if err := ubo.UnpackJSON(b, enc); err != nil {
 		return err
 	}
 
-	*op = CurrencyPolicyUpdater{BaseOperation: ubo}
-
-	var um MemoJSONUnpacker
-	if err := enc.Unmarshal(b, &um); err != nil {
-		return err
-	}
-	op.Memo = um.Memo
+	op.BaseOperation = ubo
 
 	return nil
 }

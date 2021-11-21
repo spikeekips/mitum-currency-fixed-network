@@ -14,14 +14,16 @@ func (de CurrencyDesign) MarshalBSON() ([]byte, error) {
 			"amount":          de.Amount,
 			"genesis_account": de.genesisAccount,
 			"policy":          de.policy,
+			"aggregate":       de.aggregate,
 		}),
 	)
 }
 
 type CurrencyDesignBSONUnpacker struct {
-	AM bson.Raw            `bson:"amount"`
+	AM Amount              `bson:"amount"`
 	GA base.AddressDecoder `bson:"genesis_account"`
 	PO bson.Raw            `bson:"policy"`
+	AG Big                 `bson:"aggregate"`
 }
 
 func (de *CurrencyDesign) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -30,5 +32,5 @@ func (de *CurrencyDesign) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return de.unpack(enc, ude.AM, ude.GA, ude.PO)
+	return de.unpack(enc, ude.AM, ude.GA, ude.PO, ude.AG)
 }

@@ -3,8 +3,6 @@ package currency
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -68,7 +66,7 @@ func (am Amount) IsValid([]byte) error {
 		am.cid,
 		am.big,
 	}, nil, false); err != nil {
-		return errors.Wrap(err, "invalid Balance")
+		return isvalid.InvalidError.Errorf("invalid Balance: %w", err)
 	}
 
 	return nil

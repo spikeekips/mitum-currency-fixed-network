@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
@@ -15,17 +16,26 @@ type CurrencyDesign struct {
 	Amount
 	genesisAccount base.Address
 	policy         CurrencyPolicy
+	aggregate      Big
 }
 
 func NewCurrencyDesign(amount Amount, genesisAccount base.Address, po CurrencyPolicy) CurrencyDesign {
-	return CurrencyDesign{Amount: amount, genesisAccount: genesisAccount, policy: po}
+	return CurrencyDesign{Amount: amount, genesisAccount: genesisAccount, policy: po, aggregate: amount.Big()}
 }
 
 func (de CurrencyDesign) IsValid([]byte) error {
-	if err := de.Amount.IsValid(nil); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{
+		de.Amount,
+		de.aggregate,
+	}, nil, false); err != nil {
 		return errors.Wrap(err, "invalid currency balance")
-	} else if !de.Big().OverZero() {
+	}
+
+	switch {
+	case !de.Big().OverZero():
 		return errors.Errorf("currency balance should be over zero")
+	case !de.aggregate.OverZero():
+		return errors.Errorf("aggregate should be over zero")
 	}
 
 	if de.genesisAccount != nil {
@@ -57,4 +67,18 @@ func (de CurrencyDesign) SetPolicy(po CurrencyPolicy) CurrencyDesign {
 	de.policy = po
 
 	return de
+}
+
+func (de CurrencyDesign) Aggregate() Big {
+	return de.aggregate
+}
+
+func (de CurrencyDesign) AddAggregate(b Big) (CurrencyDesign, error) {
+	if !b.OverZero() {
+		return de, errors.Errorf("new aggregate not over zero")
+	}
+
+	de.aggregate = de.aggregate.Add(b)
+
+	return de, nil
 }

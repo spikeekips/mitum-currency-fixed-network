@@ -15,6 +15,7 @@ var (
 	CurrencyPolicyUpdaterFactHint = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
 	CurrencyPolicyUpdaterType     = hint.Type("mitum-currency-currency-policy-updater-operation")
 	CurrencyPolicyUpdaterHint     = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
+	CurrencyPolicyUpdaterHinter   = CurrencyPolicyUpdater{BaseOperation: operationHinter(CurrencyPolicyUpdaterHint)}
 )
 
 type CurrencyPolicyUpdaterFact struct {
@@ -52,21 +53,16 @@ func (fact CurrencyPolicyUpdaterFact) Bytes() []byte {
 	)
 }
 
-func (fact CurrencyPolicyUpdaterFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for CurrencyPolicyUpdaterFact")
+func (fact CurrencyPolicyUpdaterFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
 		fact.cid,
 		fact.policy,
 	}, nil, false); err != nil {
 		return errors.Wrap(err, "invalid fact")
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -89,8 +85,7 @@ func (fact CurrencyPolicyUpdaterFact) Policy() CurrencyPolicy {
 }
 
 type CurrencyPolicyUpdater struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewCurrencyPolicyUpdater(
@@ -98,25 +93,10 @@ func NewCurrencyPolicyUpdater(
 	fs []operation.FactSign,
 	memo string,
 ) (CurrencyPolicyUpdater, error) {
-	bo, err := operation.NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs, memo)
 	if err != nil {
 		return CurrencyPolicyUpdater{}, err
 	}
-	op := CurrencyPolicyUpdater{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (CurrencyPolicyUpdater) Hint() hint.Hint {
-	return CurrencyPolicyUpdaterHint
-}
-
-func (op CurrencyPolicyUpdater) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
+	return CurrencyPolicyUpdater{BaseOperation: bo}, nil
 }

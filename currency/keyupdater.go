@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
@@ -16,6 +14,7 @@ var (
 	KeyUpdaterFactHint = hint.NewHint(KeyUpdaterFactType, "v0.0.1")
 	KeyUpdaterType     = hint.Type("mitum-currency-keyupdater-operation")
 	KeyUpdaterHint     = hint.NewHint(KeyUpdaterType, "v0.0.1")
+	KeyUpdaterHinter   = KeyUpdater{BaseOperation: operationHinter(KeyUpdaterHint)}
 )
 
 type KeyUpdaterFact struct {
@@ -59,25 +58,16 @@ func (fact KeyUpdaterFact) Bytes() []byte {
 	)
 }
 
-func (fact KeyUpdaterFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for KeyUpdaterFact")
-	}
-
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
-		fact.target,
-		fact.keys,
-		fact.currency,
-	}, nil, false); err != nil {
+func (fact KeyUpdaterFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
 		return err
 	}
 
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
-	}
-
-	return nil
+	return isvalid.Check([]isvalid.IsValider{
+		fact.target,
+		fact.keys,
+		fact.currency,
+	}, nil, false)
 }
 
 func (fact KeyUpdaterFact) Token() []byte {
@@ -101,55 +91,14 @@ func (fact KeyUpdaterFact) Addresses() ([]base.Address, error) {
 }
 
 type KeyUpdater struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewKeyUpdater(fact KeyUpdaterFact, fs []operation.FactSign, memo string) (KeyUpdater, error) {
-	bo, err := operation.NewBaseOperationFromFact(KeyUpdaterHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(KeyUpdaterHint, fact, fs, memo)
 	if err != nil {
 		return KeyUpdater{}, err
 	}
-	op := KeyUpdater{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (KeyUpdater) Hint() hint.Hint {
-	return KeyUpdaterHint
-}
-
-func (op KeyUpdater) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
-}
-
-func (op KeyUpdater) GenerateHash() valuehash.Hash {
-	bs := make([][]byte, len(op.Signs())+1)
-	for i := range op.Signs() {
-		bs[i] = op.Signs()[i].Bytes()
-	}
-
-	bs[len(bs)-1] = []byte(op.Memo)
-
-	e := util.ConcatBytesSlice(op.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
-
-	return valuehash.NewSHA256(e)
-}
-
-func (op KeyUpdater) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	o, err := op.BaseOperation.AddFactSigns(fs...)
-	if err != nil {
-		return nil, err
-	}
-	op.BaseOperation = o.(operation.BaseOperation)
-
-	op.BaseOperation = op.SetHash(op.GenerateHash())
-
-	return op, nil
+	return KeyUpdater{BaseOperation: bo}, nil
 }

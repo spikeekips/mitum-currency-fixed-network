@@ -31,6 +31,8 @@ import (
 	"github.com/spikeekips/mitum-currency/digest"
 )
 
+const localhost = "localhost"
+
 var BaseNodeCommandHooks = func(cmd *BaseNodeCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
@@ -144,11 +146,11 @@ func AttachProposalProcessor(
 	cp *currency.CurrencyPool,
 ) (*currency.OperationProcessor, error) {
 	opr := currency.NewOperationProcessor(cp)
-	if _, err := opr.SetProcessor(currency.CreateAccounts{}, currency.NewCreateAccountsProcessor(cp)); err != nil {
+	if _, err := opr.SetProcessor(currency.CreateAccountsHinter, currency.NewCreateAccountsProcessor(cp)); err != nil {
 		return nil, err
-	} else if _, err := opr.SetProcessor(currency.KeyUpdater{}, currency.NewKeyUpdaterProcessor(cp)); err != nil {
+	} else if _, err := opr.SetProcessor(currency.KeyUpdaterHinter, currency.NewKeyUpdaterProcessor(cp)); err != nil {
 		return nil, err
-	} else if _, err := opr.SetProcessor(currency.Transfers{}, currency.NewTransfersProcessor(cp)); err != nil {
+	} else if _, err := opr.SetProcessor(currency.TransfersHinter, currency.NewTransfersProcessor(cp)); err != nil {
 		return nil, err
 	}
 
@@ -167,14 +169,20 @@ func AttachProposalProcessor(
 		pubs[i] = n.Publickey()
 	}
 
-	if _, err := opr.SetProcessor(currency.CurrencyRegister{},
+	if _, err := opr.SetProcessor(currency.CurrencyRegisterHinter,
 		currency.NewCurrencyRegisterProcessor(cp, pubs, threshold),
 	); err != nil {
 		return nil, err
 	}
 
-	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdater{},
+	if _, err := opr.SetProcessor(currency.CurrencyPolicyUpdaterHinter,
 		currency.NewCurrencyPolicyUpdaterProcessor(cp, pubs, threshold),
+	); err != nil {
+		return nil, err
+	}
+
+	if _, err := opr.SetProcessor(currency.SuffrageInflationHinter,
+		currency.NewSuffrageInflationProcessor(cp, pubs, threshold),
 	); err != nil {
 		return nil, err
 	}
@@ -197,11 +205,12 @@ func InitializeProposalProcessor(ctx context.Context, opr *currency.OperationPro
 	}
 
 	for _, hinter := range []hint.Hinter{
-		currency.CreateAccounts{},
-		currency.KeyUpdater{},
-		currency.Transfers{},
-		currency.CurrencyPolicyUpdater{},
-		currency.CurrencyRegister{},
+		currency.CreateAccountsHinter,
+		currency.KeyUpdaterHinter,
+		currency.TransfersHinter,
+		currency.CurrencyPolicyUpdaterHinter,
+		currency.CurrencyRegisterHinter,
+		currency.SuffrageInflationHinter,
 	} {
 		if err := oprs.Add(hinter, opr); err != nil {
 			return ctx, err
@@ -284,13 +293,13 @@ func (cmd *BaseNodeCommand) validateDigestConfigNetwork(
 	}
 
 	if len(design.Network().Certs()) < 1 && design.Network().Bind().Scheme == "https" {
-		if h := design.Network().Bind().Hostname(); !strings.HasPrefix(h, "127.") && h != "localhost" {
+		if h := design.Network().Bind().Hostname(); !strings.HasPrefix(h, "127.") && h != localhost {
 			return ctx, errors.Errorf("missing certificates for https")
 		}
 
 		if priv, err := util.GenerateED25519Privatekey(); err != nil {
 			return ctx, err
-		} else if ct, err := util.GenerateTLSCerts("localhost", priv); err != nil {
+		} else if ct, err := util.GenerateTLSCerts(localhost, priv); err != nil {
 			return ctx, err
 		} else if err := design.Network().SetCerts(ct); err != nil {
 			return ctx, err
@@ -329,7 +338,7 @@ func (*BaseNodeCommand) validateDigestConfigNetworkRateLimit(
 func isLocal(u *url.URL) bool {
 	h := u.Hostname()
 
-	return h == "localhost" || strings.HasPrefix(h, "127.") || strings.HasPrefix(h, "0.")
+	return h == localhost || strings.HasPrefix(h, "127.") || strings.HasPrefix(h, "0.")
 }
 
 func sameBind(a, b *url.URL) bool {
@@ -411,5 +420,5 @@ func (op *OperationFlags) IsValid([]byte) error {
 		op.Token = localtime.String(localtime.UTCNow())
 	}
 
-	return nil
+	return op.NetworkID.NetworkID().IsValid(nil)
 }
