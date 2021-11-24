@@ -40,13 +40,13 @@ func (t *testCreateAccountsSingleAmount) TestNew() {
 	item := NewCreateAccountsItemSingleAmount(skeys, am)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -87,13 +87,13 @@ func (t *testCreateAccountsSingleAmount) TestZeroBig() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -129,13 +129,13 @@ func (t *testCreateAccountsSingleAmount) TestEmptyAmounts() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -175,13 +175,13 @@ func (t *testCreateAccountsSingleAmount) TestTooManyAmounts() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -218,13 +218,13 @@ func testCreateAccountsSingleAmountEncode(enc encoder.Encoder) suite.TestingSuit
 		item := NewCreateAccountsItemSingleAmount(skeys, am)
 		fact := NewCreateAccountsFact(util.UUID().Bytes(), sender, []CreateAccountsItem{item})
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range pks {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		ca, err := NewCreateAccounts(fact, fs, util.UUID().String())

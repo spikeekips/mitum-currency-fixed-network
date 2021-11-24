@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -10,8 +11,8 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
@@ -181,7 +182,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	t.NoError(err)
 
 	// expected sig base
-	usigBase := operation.NewBytesForFactSignature(uf, t.networkID)
+	usigBase := base.NewBytesForFactSignature(uf, t.networkID)
 	t.Equal(usigBase, sigBase)
 
 	priv := key.MustNewBTCPrivatekey()

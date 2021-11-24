@@ -23,17 +23,17 @@ func (t *testCurrencyPolicyUpdater) TestNew() {
 
 	fact := NewCurrencyPolicyUpdaterFact(token, t.cid, po)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyPolicyUpdater(fact, fs, "")
@@ -56,17 +56,17 @@ func (t *testCurrencyPolicyUpdater) TestWithInvalidPolicy() {
 
 	fact := NewCurrencyPolicyUpdaterFact(token, t.cid, po)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyPolicyUpdater(fact, fs, "")
@@ -91,17 +91,17 @@ func testCurrencyPolicyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		fact := NewCurrencyPolicyUpdaterFact(token, CurrencyID("FINDME"), po)
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 		} {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		op, err := NewCurrencyPolicyUpdater(fact, fs, "")

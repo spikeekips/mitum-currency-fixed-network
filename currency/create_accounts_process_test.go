@@ -36,14 +36,14 @@ func (t *testCreateAccountsOperation) newOperation(sender base.Address, items []
 	token := util.UUID().Bytes()
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		if err != nil {
 			panic(err)
 		}
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")

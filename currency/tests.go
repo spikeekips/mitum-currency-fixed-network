@@ -8,7 +8,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
@@ -59,7 +58,7 @@ func (t *baseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
 	_ = t.Encs.TestAddHinter(key.BTCPublickey{})
-	_ = t.Encs.TestAddHinter(operation.BaseFactSign{})
+	_ = t.Encs.TestAddHinter(base.BaseFactSign{})
 	_ = t.Encs.TestAddHinter(Key{})
 	_ = t.Encs.TestAddHinter(Keys{})
 	_ = t.Encs.TestAddHinter(Address(""))

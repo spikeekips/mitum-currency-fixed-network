@@ -2,7 +2,6 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -131,7 +130,7 @@ type SuffrageInflation struct {
 	BaseOperation
 }
 
-func NewSuffrageInflation(fact SuffrageInflationFact, fs []operation.FactSign, memo string) (SuffrageInflation, error) {
+func NewSuffrageInflation(fact SuffrageInflationFact, fs []base.FactSign, memo string) (SuffrageInflation, error) {
 	bo, err := NewBaseOperationFromFact(SuffrageInflationHint, fact, fs, memo)
 	if err != nil {
 		return SuffrageInflation{}, err

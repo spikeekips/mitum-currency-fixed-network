@@ -2,7 +2,6 @@ package currency
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -94,7 +93,7 @@ type KeyUpdater struct {
 	BaseOperation
 }
 
-func NewKeyUpdater(fact KeyUpdaterFact, fs []operation.FactSign, memo string) (KeyUpdater, error) {
+func NewKeyUpdater(fact KeyUpdaterFact, fs []base.FactSign, memo string) (KeyUpdater, error) {
 	bo, err := NewBaseOperationFromFact(KeyUpdaterHint, fact, fs, memo)
 	if err != nil {
 		return KeyUpdater{}, err

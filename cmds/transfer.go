@@ -111,12 +111,12 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // 
 
 	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.sender, items)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return nil, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 
 	op, err := currency.NewTransfers(fact, fs, cmd.Memo)
 	if err != nil {

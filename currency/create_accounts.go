@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -174,7 +173,7 @@ type CreateAccounts struct {
 	BaseOperation
 }
 
-func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo string) (CreateAccounts, error) {
+func NewCreateAccounts(fact CreateAccountsFact, fs []base.FactSign, memo string) (CreateAccounts, error) {
 	bo, err := NewBaseOperationFromFact(CreateAccountsHint, fact, fs, memo)
 	if err != nil {
 		return CreateAccounts{}, err

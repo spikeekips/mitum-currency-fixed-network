@@ -189,8 +189,8 @@ func (cmd *CurrencyRegisterCommand) parseFlags() error {
 func (cmd *CurrencyRegisterCommand) createOperation() (currency.CurrencyRegister, error) {
 	fact := currency.NewCurrencyRegisterFact([]byte(cmd.Token), cmd.currencyDesign)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(
 		cmd.OperationFlags.Privatekey,
 		fact,
 		[]byte(cmd.OperationFlags.NetworkID),
@@ -198,7 +198,7 @@ func (cmd *CurrencyRegisterCommand) createOperation() (currency.CurrencyRegister
 	if err != nil {
 		return currency.CurrencyRegister{}, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
 
 	return currency.NewCurrencyRegister(fact, fs, cmd.OperationFlags.Memo)
 }

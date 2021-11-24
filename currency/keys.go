@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -213,7 +213,7 @@ func (ks Keys) Equal(b Keys) bool {
 	return true
 }
 
-func checkThreshold(fs []operation.FactSign, keys Keys) error {
+func checkThreshold(fs []base.FactSign, keys Keys) error {
 	var sum uint
 	for i := range fs {
 		ky, found := keys.Key(fs[i].Signer())

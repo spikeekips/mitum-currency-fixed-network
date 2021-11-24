@@ -27,12 +27,12 @@ func (t *testSuffrageInflationOperations) newOperation(keys []key.Privatekey, it
 	token := util.UUID().Bytes()
 	fact := NewSuffrageInflationFact(token, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range keys {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	tf, err := NewSuffrageInflation(fact, fs, "")

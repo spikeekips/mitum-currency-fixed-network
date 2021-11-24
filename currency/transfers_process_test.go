@@ -51,12 +51,12 @@ func (t *testTransfersOperations) newTransfer(sender base.Address, keys []key.Pr
 	token := util.UUID().Bytes()
 	fact := NewTransfersFact(token, sender, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range keys {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	tf, err := NewTransfers(fact, fs, "")
@@ -218,9 +218,9 @@ func (t *testTransfersOperations) TestMultipleItemsWithFee() {
 		t.newTransfersItem(ra1.Address, sent),
 	}
 	fact := NewTransfersFact(token, sa.Address, items)
-	sig, err := operation.NewFactSignature(sa.Privs()[0], fact, nil)
+	sig, err := base.NewFactSignature(sa.Privs()[0], fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
 
@@ -270,9 +270,9 @@ func (t *testTransfersOperations) TestInsufficientMultipleItemsWithFee() {
 		t.newTransfersItem(ra1.Address, sent),
 	}
 	fact := NewTransfersFact(token, sa.Address, items)
-	sig, err := operation.NewFactSignature(sa.Privs()[0], fact, nil)
+	sig, err := base.NewFactSignature(sa.Privs()[0], fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(sa.Privs()[0].Publickey(), sig)}
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
 

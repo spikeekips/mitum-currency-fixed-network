@@ -128,12 +128,12 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 
 	fact := currency.NewCreateAccountsFact([]byte(cmd.Token), cmd.sender, items)
 
-	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	sig, err := base.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return nil, err
 	}
-	fs := []operation.FactSign{
-		operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig),
+	fs := []base.FactSign{
+		base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig),
 	}
 
 	op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo)

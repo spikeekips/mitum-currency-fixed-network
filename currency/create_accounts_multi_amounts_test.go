@@ -44,13 +44,13 @@ func (t *testCreateAccountsMultiAmounts) TestNew() {
 	item := NewCreateAccountsItemMultiAmounts(skeys, ams)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -94,13 +94,13 @@ func (t *testCreateAccountsMultiAmounts) TestZeroBig() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -133,13 +133,13 @@ func (t *testCreateAccountsMultiAmounts) TestEmptyAmounts() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -177,13 +177,13 @@ func (t *testCreateAccountsMultiAmounts) TestOverMaxAmounts() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -221,13 +221,13 @@ func (t *testCreateAccountsMultiAmounts) TestDuplicatedCurrency() {
 
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -267,13 +267,13 @@ func testCreateAccountsMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuit
 		item := NewCreateAccountsItemMultiAmounts(skeys, ams)
 		fact := NewCreateAccountsFact(util.UUID().Bytes(), sender, []CreateAccountsItem{item})
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range pks {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		ca, err := NewCreateAccounts(fact, fs, util.UUID().String())

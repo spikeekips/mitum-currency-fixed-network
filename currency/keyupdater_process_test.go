@@ -35,14 +35,14 @@ func (t *testKeyUpdaterOperation) newOperation(target base.Address, keys Keys, p
 	token := util.UUID().Bytes()
 	fact := NewKeyUpdaterFact(token, target, keys, cid)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		if err != nil {
 			panic(err)
 		}
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewKeyUpdater(fact, fs, "")

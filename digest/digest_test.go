@@ -33,7 +33,7 @@ func (t *testDigester) TestDigest() {
 	target := base.Height(3)
 
 	var blocks []block.Block
-	for i := base.Height(0); i <= target; i++ {
+	for i := base.GenesisHeight; i <= target; i++ {
 		blk := t.newBlock(i, mst)
 		blocks = append(blocks, blk)
 	}
@@ -84,7 +84,7 @@ func (t *testDigester) TestDigestAgain() {
 	target := base.Height(3)
 
 	var blocks []block.Block
-	for i := base.Height(0); i <= target; i++ {
+	for i := base.GenesisHeight; i <= target; i++ {
 		blk := t.newBlock(i, mst)
 		blocks = append(blocks, blk)
 	}

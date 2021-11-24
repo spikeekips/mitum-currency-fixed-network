@@ -9,7 +9,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -26,7 +25,7 @@ func (t *testGenesisCurrenciesOperation) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
 	t.Encs.TestAddHinter(key.BTCPublickey{})
-	t.Encs.TestAddHinter(operation.BaseFactSign{})
+	t.Encs.TestAddHinter(base.BaseFactSign{})
 	t.Encs.TestAddHinter(Key{})
 	t.Encs.TestAddHinter(Keys{})
 	t.Encs.TestAddHinter(Address(""))

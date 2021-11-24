@@ -25,12 +25,12 @@ func (t *testCurrencyRegisterOperations) newOperation(keys []key.Privatekey, ite
 	token := util.UUID().Bytes()
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range keys {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	tf, err := NewCurrencyRegister(fact, fs, "")

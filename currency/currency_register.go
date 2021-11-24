@@ -3,7 +3,7 @@ package currency
 import (
 	"github.com/pkg/errors"
 
-	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -81,7 +81,7 @@ type CurrencyRegister struct {
 	BaseOperation
 }
 
-func NewCurrencyRegister(fact CurrencyRegisterFact, fs []operation.FactSign, memo string) (CurrencyRegister, error) {
+func NewCurrencyRegister(fact CurrencyRegisterFact, fs []base.FactSign, memo string) (CurrencyRegister, error) {
 	bo, err := NewBaseOperationFromFact(CurrencyRegisterHint, fact, fs, memo)
 	if err != nil {
 		return CurrencyRegister{}, err

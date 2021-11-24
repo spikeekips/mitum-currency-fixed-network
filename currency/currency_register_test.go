@@ -22,17 +22,17 @@ func (t *testCurrencyRegister) TestNew() {
 	item := t.currencyDesign(NewBig(33), CurrencyID("SHOWME"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -51,17 +51,17 @@ func (t *testCurrencyRegister) TestZeroAmount() {
 	item := t.currencyDesign(NewBig(0), CurrencyID("SHOWME"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -76,17 +76,17 @@ func (t *testCurrencyRegister) TestInvalidCurrencyID() {
 	item := t.currencyDesign(NewBig(33), CurrencyID("showme"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -110,17 +110,17 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		de := NewCurrencyDesign(NewAmount(NewBig(33), CurrencyID("SHOWME")), NewTestAddress(), po)
 		fact := NewCurrencyRegisterFact(token, de)
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 		} {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		op, err := NewCurrencyRegister(fact, fs, "findme")

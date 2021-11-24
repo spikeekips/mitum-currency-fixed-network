@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -151,7 +150,7 @@ type Transfers struct {
 
 func NewTransfers(
 	fact TransfersFact,
-	fs []operation.FactSign,
+	fs []base.FactSign,
 	memo string,
 ) (Transfers, error) {
 	bo, err := NewBaseOperationFromFact(TransfersHint, fact, fs, memo)

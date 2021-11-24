@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -14,7 +15,7 @@ type BaseOperation struct {
 }
 
 func NewBaseOperationFromFact(
-	ht hint.Hint, fact operation.OperationFact, fs []operation.FactSign, memo string,
+	ht hint.Hint, fact operation.OperationFact, fs []base.FactSign, memo string,
 ) (BaseOperation, error) {
 	bo, err := operation.NewBaseOperationFromFact(ht, fact, fs)
 	if err != nil {
@@ -48,7 +49,7 @@ func (op BaseOperation) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(e)
 }
 
-func (op BaseOperation) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
+func (op BaseOperation) AddFactSigns(fs ...base.FactSign) (base.FactSignUpdater, error) {
 	o, err := op.BaseOperation.AddFactSigns(fs...)
 	if err != nil {
 		return nil, err

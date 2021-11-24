@@ -64,17 +64,17 @@ func (t *testSuffrageInflation) TestNew() {
 	item := t.item(NewBig(33), CurrencyID("SHOWME"), base.RandomStringAddress())
 	fact := NewSuffrageInflationFact(token, []SuffrageInflationItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewSuffrageInflation(fact, fs, "")
@@ -102,17 +102,17 @@ func (t *testSuffrageInflation) TestDuplicatedItem() {
 
 	fact := NewSuffrageInflationFact(token, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 		key.MustNewBTCPrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewSuffrageInflation(fact, fs, "")
@@ -140,17 +140,17 @@ func testSuffrageInflationEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		fact := NewSuffrageInflationFact(token, items)
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 			key.MustNewBTCPrivatekey(),
 		} {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		op, err := NewSuffrageInflation(fact, fs, "findme")

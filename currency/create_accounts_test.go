@@ -38,13 +38,13 @@ func (t *testCreateAccounts) TestNew() {
 	item := NewCreateAccountsItemSingleAmount(skeys, am)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCreateAccounts(fact, fs, "")
@@ -82,9 +82,9 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 	sender, _ := NewAddressFromKeys(keys)
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	op, err := NewCreateAccounts(fact, fs, "")
 	t.NoError(err)
@@ -107,9 +107,9 @@ func (t *testCreateAccounts) TestSameWithSender() {
 	sender, _ := NewAddressFromKeys(keys)
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	op, err := NewCreateAccounts(fact, fs, "")
 	t.NoError(err)
@@ -138,13 +138,13 @@ func (t *testCreateAccounts) TestOverSizeMemo() {
 	item := NewCreateAccountsItemSingleAmount(skeys, am)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	memo := strings.Repeat("a", MaxMemoSize) + "a"

@@ -11,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
@@ -399,10 +400,10 @@ func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operatio
 
 	npriv := key.MustNewBTCPrivatekey()
 	nsig, err := npriv.Sign(sb)
-	var nfs operation.FactSign
+	var nfs base.FactSign
 	{ // add new FactSign
 		t.NoError(err)
-		nfs = operation.RawBaseFactSign(npriv.Publickey(), nsig, time.Now())
+		nfs = base.RawBaseFactSign(npriv.Publickey(), nsig, time.Now())
 
 		ib, err := jsonenc.Marshal(nfs)
 		t.NoError(err)

@@ -11,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch"
@@ -101,12 +100,12 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 	fact := currency.NewTransfersFact(token, sender, items)
 
 	pk := key.MustNewEtherPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, t.networkID)
+	sig, err := base.NewFactSignature(pk, fact, t.networkID)
 	t.NoError(err)
 
 	tf, err := currency.NewTransfers(
 		fact,
-		[]operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)},
+		[]base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)},
 		util.UUID().String(),
 	)
 	t.NoError(err)

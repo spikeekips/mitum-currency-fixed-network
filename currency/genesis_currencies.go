@@ -134,11 +134,11 @@ func NewGenesisCurrencies(
 ) (GenesisCurrencies, error) {
 	fact := NewGenesisCurrenciesFact(networkID, genesisNodeKey.Publickey(), keys, cs)
 
-	sig, err := operation.NewFactSignature(genesisNodeKey, fact, networkID)
+	sig, err := base.NewFactSignature(genesisNodeKey, fact, networkID)
 	if err != nil {
 		return GenesisCurrencies{}, err
 	}
-	fs := []operation.FactSign{operation.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
 
 	bo, err := operation.NewBaseOperationFromFact(GenesisCurrenciesHint, fact, fs)
 	if err != nil {

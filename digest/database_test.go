@@ -434,7 +434,7 @@ func (t *testDatabase) TestClean() {
 	sender := currency.MustAddress(util.UUID().String())
 
 	lastHeight := base.Height(3)
-	for height := base.Height(0); height < lastHeight+1; height++ {
+	for height := base.GenesisHeight; height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
 		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(height))
 		t.NoError(err)
@@ -473,7 +473,7 @@ func (t *testDatabase) TestCleanByHeight() {
 	var hashes []string
 
 	lastHeight := base.Height(10)
-	for height := base.Height(0); height < lastHeight+1; height++ {
+	for height := base.GenesisHeight; height < lastHeight+1; height++ {
 		tf := t.newTransfer(sender, currency.MustAddress(util.UUID().String()))
 		doc, err := NewOperationDoc(tf, t.BSONEnc, height, localtime.UTCNow(), true, nil, uint64(height))
 		t.NoError(err)
@@ -699,7 +699,7 @@ func (t *testDatabase) TestOperations() {
 
 	{ // NOTE offset
 		reverse := false
-		offset := buildOffset(base.Height(0), 1)
+		offset := buildOffset(base.GenesisHeight, 1)
 		filter, err := buildOperationsFilterByOffset(offset, reverse)
 		t.NoError(err)
 

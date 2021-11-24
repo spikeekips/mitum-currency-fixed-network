@@ -114,7 +114,7 @@ func (op FeeOperation) Hash() valuehash.Hash {
 	return op.h
 }
 
-func (FeeOperation) Signs() []operation.FactSign {
+func (FeeOperation) Signs() []base.FactSign {
 	return nil
 }
 
@@ -144,7 +144,7 @@ func (op FeeOperation) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(op.Fact().Hash().Bytes())
 }
 
-func (FeeOperation) AddFactSigns(...operation.FactSign) (operation.FactSignUpdater, error) {
+func (FeeOperation) AddFactSigns(...base.FactSign) (base.FactSignUpdater, error) {
 	return nil, nil
 }
 

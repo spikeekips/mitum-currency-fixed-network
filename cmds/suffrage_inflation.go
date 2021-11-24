@@ -149,8 +149,8 @@ func (cmd *SuffrageInflationCommand) parseFlags() error {
 func (cmd *SuffrageInflationCommand) createOperation() (currency.SuffrageInflation, error) {
 	fact := currency.NewSuffrageInflationFact([]byte(cmd.Token), cmd.items)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(
 		cmd.OperationFlags.Privatekey,
 		fact,
 		[]byte(cmd.OperationFlags.NetworkID),
@@ -158,7 +158,7 @@ func (cmd *SuffrageInflationCommand) createOperation() (currency.SuffrageInflati
 	if err != nil {
 		return currency.SuffrageInflation{}, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
 
 	return currency.NewSuffrageInflation(fact, fs, cmd.OperationFlags.Memo)
 }

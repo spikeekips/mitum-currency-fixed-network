@@ -3,7 +3,7 @@ package currency
 import (
 	"github.com/pkg/errors"
 
-	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -90,7 +90,7 @@ type CurrencyPolicyUpdater struct {
 
 func NewCurrencyPolicyUpdater(
 	fact CurrencyPolicyUpdaterFact,
-	fs []operation.FactSign,
+	fs []base.FactSign,
 	memo string,
 ) (CurrencyPolicyUpdater, error) {
 	bo, err := NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs, memo)
