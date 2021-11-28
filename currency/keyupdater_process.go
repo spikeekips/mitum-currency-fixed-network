@@ -60,7 +60,7 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	op.sb = NewAmountState(st, fact.currency)
 
 	if err = checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
-		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
+		return nil, errors.Wrap(err, "invalid signing")
 	}
 
 	feeer, found := op.cp.Feeer(fact.currency)
@@ -93,7 +93,7 @@ func (op *KeyUpdaterProcessor) Process(
 	op.sb = op.sb.Sub(op.fee).AddFee(op.fee)
 	st, err := SetStateKeysValue(op.sa, fact.keys)
 	if err != nil {
-		return err
+		return operation.NewBaseReasonErrorFromError(err)
 	}
 	return setState(fact.Hash(), st, op.sb)
 }

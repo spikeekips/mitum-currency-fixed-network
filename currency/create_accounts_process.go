@@ -34,20 +34,20 @@ func (opp *CreateAccountsItemProcessor) PreProcess(
 		if opp.cp != nil {
 			i, found := opp.cp.Policy(am.Currency())
 			if !found {
-				return errors.Errorf("currency not registered, %q", am.Currency())
+				return operation.NewBaseReasonError("currency not registered, %q", am.Currency())
 			}
 			policy = i
 		}
 
 		if am.Big().Compare(policy.NewAccountMinBalance()) < 0 {
-			return errors.Errorf(
+			return operation.NewBaseReasonError(
 				"amount should be over minimum balance, %v < %v", am.Big(), policy.NewAccountMinBalance())
 		}
 	}
 
 	target, err := opp.item.Address()
 	if err != nil {
-		return err
+		return operation.NewBaseReasonErrorFromError(err)
 	}
 
 	st, err := notExistsState(StateKeyAccount(target), "keys of target", getState)
@@ -77,7 +77,7 @@ func (opp *CreateAccountsItemProcessor) Process(
 ) ([]state.State, error) {
 	nac, err := NewAccountFromKeys(opp.item.Keys())
 	if err != nil {
-		return nil, err
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	}
 
 	sts := make([]state.State, len(opp.item.Amounts())+1)
@@ -139,14 +139,14 @@ func (opp *CreateAccountsProcessor) PreProcess(
 	for i := range fact.items {
 		c := &CreateAccountsItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
 		if err := c.PreProcess(getState, setState); err != nil {
-			return nil, operation.NewBaseReasonErrorFromError(err)
+			return nil, err
 		}
 
 		ns[i] = c
 	}
 
 	if err := checkFactSignsByState(fact.sender, opp.Signs(), getState); err != nil {
-		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
+		return nil, errors.Wrap(err, "invalid signing")
 	}
 
 	opp.ns = ns

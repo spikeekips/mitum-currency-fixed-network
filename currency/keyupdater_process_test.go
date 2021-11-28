@@ -200,6 +200,35 @@ func (t *testKeyUpdaterOperation) TestSameKeys() {
 	t.Contains(err.Error(), "same Keys")
 }
 
+func (t *testKeyUpdaterOperation) TestWrongSigning() {
+	am := NewAmount(NewBig(3), t.cid)
+	sa, st := t.newAccount(true, []Amount{am})
+
+	pool, _ := t.statepool(st)
+
+	fee := NewBig(1)
+	feeer := NewFixedFeeer(sa.Address, fee)
+
+	cp := NewCurrencyPool()
+	t.NoError(cp.Set(t.newCurrencyDesignState(t.cid, NewBig(99), NewTestAddress(), feeer)))
+
+	opr := t.processor(cp, pool)
+
+	npk := key.MustNewBTCPrivatekey()
+	nkey, err := NewKey(npk.Publickey(), 100)
+	t.NoError(err)
+	nkeys, err := NewKeys([]Key{nkey}, 100)
+	t.NoError(err)
+
+	op := t.newOperation(sa.Address, nkeys, []key.Privatekey{key.MustNewBTCPrivatekey()}, t.cid)
+
+	err = opr.Process(op)
+
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
+	t.Contains(err.Error(), "invalid signing")
+}
+
 func TestKeyUpdaterOperation(t *testing.T) {
 	suite.Run(t, new(testKeyUpdaterOperation))
 }

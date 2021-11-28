@@ -54,7 +54,8 @@ func (t *testCurrencyRegisterOperations) processor(n int) ([]key.Privatekey, *Op
 	threshold, err := base.NewThreshold(uint(len(privs)), 100)
 	t.NoError(err)
 
-	opr := NewOperationProcessor(nil)
+	cp := NewCurrencyPool()
+	opr := NewOperationProcessor(cp)
 	_, err = opr.SetProcessor(CurrencyRegisterHinter, NewCurrencyRegisterProcessor(nil, pubs, threshold))
 	t.NoError(err)
 
@@ -112,6 +113,8 @@ func (t *testCurrencyRegisterOperations) TestSameCurrencyID() {
 	t.NoError(opr.Process(op0))
 
 	err := opr.Process(op1)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "duplicated currency id")
 }
 
@@ -143,6 +146,8 @@ func (t *testCurrencyRegisterOperations) TestEmptyPubs() {
 	opr := copr.New(pool)
 
 	err = opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "empty publickeys")
 }
 
@@ -164,6 +169,8 @@ func (t *testCurrencyRegisterOperations) TestNotEnoughSigns() {
 	opr := copr.New(pool)
 
 	err := opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "not enough suffrage signs")
 }
 
@@ -261,6 +268,40 @@ func (t *testCurrencyRegisterOperations) TestZeroAccount() {
 	t.NoError(err)
 	t.True(uzb.Big().IsZero())
 	t.Equal(uzb.Currency(), item.Currency())
+}
+
+func (t *testCurrencyRegisterOperations) TestKnownCurrency() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+	sts = append(sts, s...)
+
+	de := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+
+	{
+		st, err := state.NewStateV0(StateKeyCurrencyDesign(de.Currency()), nil, base.Height(33))
+		t.NoError(err)
+
+		nst, err := SetStateCurrencyDesignValue(st, de)
+		t.NoError(err)
+		sts = append(sts, nst)
+
+		t.NoError(copr.cp.Set(nst))
+	}
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	item := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+	op := t.newOperation(privs, item)
+
+	err := opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
+	t.Contains(err.Error(), "currency already registered")
 }
 
 func TestCurrencyRegisterOperations(t *testing.T) {

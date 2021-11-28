@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -46,7 +47,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, errors.Errorf("empty publickeys for operation signs")
+		return nil, operation.NewBaseReasonError("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 
 	if opp.cp != nil {
 		if opp.cp.Exists(item.Currency()) {
-			return nil, errors.Errorf("currency already registered, %q", item.Currency())
+			return nil, operation.NewBaseReasonError("currency already registered, %q", item.Currency())
 		}
 	}
 
@@ -73,7 +74,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, errors.Errorf("currency already registered, %q", item.Currency())
+		return nil, operation.NewBaseReasonError("currency already registered, %q", item.Currency())
 	default:
 		opp.de = st
 	}
@@ -82,7 +83,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, errors.Errorf("genesis account has already the currency, %q", item.Currency())
+		return nil, operation.NewBaseReasonError("genesis account has already the currency, %q", item.Currency())
 	default:
 		opp.ga = NewAmountState(st, item.Currency())
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
@@ -146,6 +147,8 @@ func (t *testCurrencyPolicyUpdaterOperations) TestEmptyPubs() {
 	op := t.newOperation(ga.Privs(), t.cid, po)
 
 	err = opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "empty publickeys")
 }
 
@@ -176,7 +179,79 @@ func (t *testCurrencyPolicyUpdaterOperations) TestNotEnoughSigns() {
 	op := t.newOperation(privs[:2], t.cid, po)
 
 	err := opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "not enough suffrage signs")
+}
+
+func (t *testCurrencyPolicyUpdaterOperations) TestUnknownCurrency() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+	sts = append(sts, s...)
+
+	de := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+
+	{
+		st, err := state.NewStateV0(StateKeyCurrencyDesign(de.Currency()), nil, base.Height(33))
+		t.NoError(err)
+
+		nst, err := SetStateCurrencyDesignValue(st, de)
+		t.NoError(err)
+		sts = append(sts, nst)
+
+		t.NoError(copr.cp.Set(nst))
+	}
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	po := NewCurrencyPolicy(NewBig(1), NewFixedFeeer(ga.Address, NewBig(44)))
+	op := t.newOperation(privs, "FINEME", po)
+
+	err := opr.Process(op)
+
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
+	t.Contains(err.Error(), "unknown currency")
+}
+
+func (t *testCurrencyPolicyUpdaterOperations) TestUnknownReceiver() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+	sts = append(sts, s...)
+
+	de := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+
+	{
+		st, err := state.NewStateV0(StateKeyCurrencyDesign(de.Currency()), nil, base.Height(33))
+		t.NoError(err)
+
+		nst, err := SetStateCurrencyDesignValue(st, de)
+		t.NoError(err)
+		sts = append(sts, nst)
+
+		t.NoError(copr.cp.Set(nst))
+	}
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	po := NewCurrencyPolicy(NewBig(1), NewFixedFeeer(base.RandomStringAddress(), NewBig(44)))
+	op := t.newOperation(privs, t.cid, po)
+
+	err := opr.Process(op)
+
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
+	t.Contains(err.Error(), "feeer receiver account not found")
 }
 
 func TestCurrencyPolicyUpdaterOperations(t *testing.T) {

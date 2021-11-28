@@ -49,7 +49,7 @@ func (opp *SuffrageInflationProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, errors.Errorf("empty publickeys for operation signs")
+		return nil, operation.NewBaseReasonError("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (opp *SuffrageInflationProcessor) PreProcess(
 		if _, found := ast[aid]; !found {
 			bst, _, err := getState(StateKeyBalance(item.receiver, cid))
 			if err != nil {
-				return nil, operation.NewBaseReasonError("inflation receiver account not found: %w", err)
+				return nil, err
 			}
 
 			ast[aid] = NewAmountState(bst, cid)
@@ -117,7 +117,7 @@ func (opp *SuffrageInflationProcessor) Process(
 	for cid := range inc {
 		dc, err := opp.dc[cid].AddAggregate(inc[cid])
 		if err != nil {
-			return err
+			return operation.NewBaseReasonErrorFromError(err)
 		}
 
 		j, err := SetStateCurrencyDesignValue(opp.dst[cid], dc)

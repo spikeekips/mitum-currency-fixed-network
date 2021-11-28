@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -50,7 +51,7 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, errors.Errorf("empty publickeys for operation signs")
+		return nil, operation.NewBaseReasonError("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	if opp.cp != nil {
 		i, found := opp.cp.State(fact.Currency())
 		if !found {
-			return nil, errors.Errorf("unknown currency, %q found", fact.Currency())
+			return nil, operation.NewBaseReasonError("unknown currency, %q found", fact.Currency())
 		}
 		opp.st = i
 		opp.de, _ = opp.cp.Get(fact.Currency())
