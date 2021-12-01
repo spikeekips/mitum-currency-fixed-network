@@ -8,10 +8,8 @@ import (
 func (fa NilFeeer) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		jsonenc.HintedHead
-		TY string `json:"type"`
 	}{
 		HintedHead: jsonenc.NewHintedHead(fa.Hint()),
-		TY:         fa.Type(),
 	})
 }
 
@@ -21,7 +19,6 @@ func (*NilFeeer) UnmarsahlJSON() error {
 
 type FixedFeeerJSONPacker struct {
 	jsonenc.HintedHead
-	TY string       `json:"type"`
 	RC base.Address `json:"receiver"`
 	AM Big          `json:"amount"`
 }
@@ -29,7 +26,6 @@ type FixedFeeerJSONPacker struct {
 func (fa FixedFeeer) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(FixedFeeerJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(fa.Hint()),
-		TY:         fa.Type(),
 		RC:         fa.receiver,
 		AM:         fa.amount,
 	})
@@ -51,7 +47,6 @@ func (fa *FixedFeeer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 
 type RatioFeeerJSONPacker struct {
 	jsonenc.HintedHead
-	TY string       `json:"type"`
 	RC base.Address `json:"receiver"`
 	RA float64      `json:"ratio"`
 	MI Big          `json:"min"`
@@ -61,7 +56,6 @@ type RatioFeeerJSONPacker struct {
 func (fa RatioFeeer) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(RatioFeeerJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(fa.Hint()),
-		TY:         fa.Type(),
 		RC:         fa.receiver,
 		RA:         fa.ratio,
 		MI:         fa.min,
