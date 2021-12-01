@@ -53,6 +53,24 @@ func (t *baseTestHandlers) requestOK(handlers *Handlers, method, path string, da
 	return w
 }
 
+func (t *baseTestHandlers) request400(handlers *Handlers, method, path string, data []byte) (*httptest.ResponseRecorder, Problem) {
+	w := t.request(handlers, method, path, data)
+
+	t.Equal(http.StatusBadRequest, w.Result().StatusCode)
+	t.Equal(ProblemMimetype, w.Result().Header.Get("content-type"))
+
+	b, err := io.ReadAll(w.Result().Body)
+	t.NoError(err)
+
+	hinter, err := t.JSONEnc.Decode(b)
+	t.NoError(err)
+
+	problem, ok := hinter.(Problem)
+	t.True(ok)
+
+	return w, problem
+}
+
 func (t *baseTestHandlers) request404(handlers *Handlers, method, path string, data []byte) *httptest.ResponseRecorder {
 	w := t.request(handlers, method, path, data)
 
