@@ -10,7 +10,7 @@ var (
 	TransfersItemSingleAmountType   = hint.Type("mitum-currency-transfers-item-single-amount")
 	TransfersItemSingleAmountHint   = hint.NewHint(TransfersItemSingleAmountType, "v0.0.1")
 	TransfersItemSingleAmountHinter = TransfersItemSingleAmount{
-		BaseTransfersItem: BaseTransfersItem{hint: TransfersItemSingleAmountHint},
+		BaseTransfersItem: BaseTransfersItem{BaseHinter: hint.NewBaseHinter(TransfersItemSingleAmountHint)},
 	}
 )
 

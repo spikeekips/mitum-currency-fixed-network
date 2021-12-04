@@ -29,6 +29,10 @@ func NewBaseOperationFromFact(
 }
 
 func (op BaseOperation) IsValid(networkID []byte) error {
+	if err := op.BaseOperation.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if err := IsValidMemo(op.Memo); err != nil {
 		return err
 	}
@@ -62,7 +66,7 @@ func (op BaseOperation) AddFactSigns(fs ...base.FactSign) (base.FactSignUpdater,
 }
 
 func operationHinter(ht hint.Hint) BaseOperation {
-	return BaseOperation{BaseOperation: operation.BaseOperation{}.SetHint(ht)}
+	return BaseOperation{BaseOperation: operation.EmptyBaseOperation(ht)}
 }
 
 func IsValidOperationFact(fact operation.OperationFact, b []byte) error {

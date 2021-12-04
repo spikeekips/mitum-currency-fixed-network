@@ -15,13 +15,16 @@ import (
 )
 
 var (
-	FeeOperationFactType = hint.Type("mitum-currency-fee-operation-fact")
-	FeeOperationFactHint = hint.NewHint(FeeOperationFactType, "v0.0.1")
-	FeeOperationType     = hint.Type("mitum-currency-fee-operation")
-	FeeOperationHint     = hint.NewHint(FeeOperationType, "v0.0.1")
+	FeeOperationFactType   = hint.Type("mitum-currency-fee-operation-fact")
+	FeeOperationFactHint   = hint.NewHint(FeeOperationFactType, "v0.0.1")
+	FeeOperationFactHinter = FeeOperationFact{BaseHinter: hint.NewBaseHinter(FeeOperationFactHint)}
+	FeeOperationType       = hint.Type("mitum-currency-fee-operation")
+	FeeOperationHint       = hint.NewHint(FeeOperationType, "v0.0.1")
+	FeeOperationHinter     = FeeOperation{BaseHinter: hint.NewBaseHinter(FeeOperationHint)}
 )
 
 type FeeOperationFact struct {
+	hint.BaseHinter
 	h       valuehash.Hash
 	token   []byte
 	amounts []Amount
@@ -37,16 +40,13 @@ func NewFeeOperationFact(height base.Height, ams map[CurrencyID]Big) FeeOperatio
 
 	// TODO replace random bytes with height
 	fact := FeeOperationFact{
-		token:   height.Bytes(), // for unique token
-		amounts: amounts,
+		BaseHinter: hint.NewBaseHinter(FeeOperationFactHint),
+		token:      height.Bytes(), // for unique token
+		amounts:    amounts,
 	}
 	fact.h = valuehash.NewSHA256(fact.Bytes())
 
 	return fact
-}
-
-func (FeeOperationFact) Hint() hint.Hint {
-	return FeeOperationFactHint
 }
 
 func (fact FeeOperationFact) Hash() valuehash.Hash {
@@ -91,19 +91,16 @@ func (fact FeeOperationFact) Amounts() []Amount {
 }
 
 type FeeOperation struct {
+	hint.BaseHinter
 	fact FeeOperationFact
 	h    valuehash.Hash
 }
 
 func NewFeeOperation(fact FeeOperationFact) FeeOperation {
-	op := FeeOperation{fact: fact}
+	op := FeeOperation{BaseHinter: hint.NewBaseHinter(FeeOperationHint), fact: fact}
 	op.h = op.GenerateHash()
 
 	return op
-}
-
-func (FeeOperation) Hint() hint.Hint {
-	return FeeOperationHint
 }
 
 func (op FeeOperation) Fact() base.Fact {
@@ -119,7 +116,10 @@ func (FeeOperation) Signs() []base.FactSign {
 }
 
 func (op FeeOperation) IsValid([]byte) error {
-	if err := op.Hint().IsValid(nil); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{
+		op.BaseHinter,
+		op.h,
+	}, nil, false); err != nil {
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (op FeeOperation) IsValid([]byte) error {
 		return isvalid.InvalidError.Errorf("FeeOperation token size too large: %d > %d", l, operation.MaxTokenSize)
 	}
 
-	if err := op.Fact().IsValid(nil); err != nil {
+	if err := op.fact.IsValid(nil); err != nil {
 		return err
 	}
 

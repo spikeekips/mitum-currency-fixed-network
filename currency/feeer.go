@@ -19,12 +19,15 @@ const (
 )
 
 var (
-	NilFeeerType   = hint.Type("mitum-currency-nil-feeer")
-	NilFeeerHint   = hint.NewHint(NilFeeerType, "v0.0.1")
-	FixedFeeerType = hint.Type("mitum-currency-fixed-feeer")
-	FixedFeeerHint = hint.NewHint(FixedFeeerType, "v0.0.1")
-	RatioFeeerType = hint.Type("mitum-currency-ratio-feeer")
-	RatioFeeerHint = hint.NewHint(RatioFeeerType, "v0.0.1")
+	NilFeeerType     = hint.Type("mitum-currency-nil-feeer")
+	NilFeeerHint     = hint.NewHint(NilFeeerType, "v0.0.1")
+	NilFeeerHinter   = NilFeeer{BaseHinter: hint.NewBaseHinter(NilFeeerHint)}
+	FixedFeeerType   = hint.Type("mitum-currency-fixed-feeer")
+	FixedFeeerHint   = hint.NewHint(FixedFeeerType, "v0.0.1")
+	FixedFeeerHinter = FixedFeeer{BaseHinter: hint.NewBaseHinter(FixedFeeerHint)}
+	RatioFeeerType   = hint.Type("mitum-currency-ratio-feeer")
+	RatioFeeerHint   = hint.NewHint(RatioFeeerType, "v0.0.1")
+	RatioFeeerHinter = RatioFeeer{BaseHinter: hint.NewBaseHinter(RatioFeeerHint)}
 )
 
 var UnlimitedMaxFeeAmount = NewBig(-1)
@@ -39,18 +42,16 @@ type Feeer interface {
 	Fee(Big) (Big, error)
 }
 
-type NilFeeer struct{}
+type NilFeeer struct {
+	hint.BaseHinter
+}
 
 func NewNilFeeer() NilFeeer {
-	return NilFeeer{}
+	return NilFeeer{BaseHinter: hint.NewBaseHinter(NilFeeerHint)}
 }
 
 func (NilFeeer) Type() string {
 	return FeeerNil
-}
-
-func (NilFeeer) Hint() hint.Hint {
-	return NilFeeerHint
 }
 
 func (NilFeeer) Bytes() []byte {
@@ -69,25 +70,26 @@ func (NilFeeer) Fee(Big) (Big, error) {
 	return ZeroBig, nil
 }
 
-func (NilFeeer) IsValid([]byte) error {
-	return nil
+func (fa NilFeeer) IsValid([]byte) error {
+	return fa.BaseHinter.IsValid(nil)
 }
 
 type FixedFeeer struct {
+	hint.BaseHinter
 	receiver base.Address
 	amount   Big
 }
 
 func NewFixedFeeer(receiver base.Address, amount Big) FixedFeeer {
-	return FixedFeeer{receiver: receiver, amount: amount}
+	return FixedFeeer{
+		BaseHinter: hint.NewBaseHinter(FixedFeeerHint),
+		receiver:   receiver,
+		amount:     amount,
+	}
 }
 
 func (FixedFeeer) Type() string {
 	return FeeerFixed
-}
-
-func (FixedFeeer) Hint() hint.Hint {
-	return FixedFeeerHint
 }
 
 func (fa FixedFeeer) Bytes() []byte {
@@ -111,6 +113,10 @@ func (fa FixedFeeer) Fee(Big) (Big, error) {
 }
 
 func (fa FixedFeeer) IsValid([]byte) error {
+	if err := fa.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if err := fa.receiver.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid receiver for fixed feeer")
 	}
@@ -127,6 +133,7 @@ func (fa FixedFeeer) isZero() bool {
 }
 
 type RatioFeeer struct {
+	hint.BaseHinter
 	receiver base.Address
 	ratio    float64 // 0 >=, or <= 1.0
 	min      Big
@@ -135,19 +142,16 @@ type RatioFeeer struct {
 
 func NewRatioFeeer(receiver base.Address, ratio float64, min, max Big) RatioFeeer {
 	return RatioFeeer{
-		receiver: receiver,
-		ratio:    ratio,
-		min:      min,
-		max:      max,
+		BaseHinter: hint.NewBaseHinter(RatioFeeerHint),
+		receiver:   receiver,
+		ratio:      ratio,
+		min:        min,
+		max:        max,
 	}
 }
 
 func (RatioFeeer) Type() string {
 	return FeeerRatio
-}
-
-func (RatioFeeer) Hint() hint.Hint {
-	return RatioFeeerHint
 }
 
 func (fa RatioFeeer) Bytes() []byte {
@@ -185,6 +189,10 @@ func (fa RatioFeeer) Fee(a Big) (Big, error) {
 }
 
 func (fa RatioFeeer) IsValid([]byte) error {
+	if err := fa.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if err := fa.receiver.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid receiver for ratio feeer")
 	}

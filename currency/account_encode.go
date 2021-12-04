@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -15,12 +13,13 @@ func (ac *Account) unpack(enc encoder.Encoder, h valuehash.Hash, bad base.Addres
 	}
 	ac.address = a
 
-	if hinter, err := enc.Decode(bks); err != nil {
-		return err
-	} else if k, ok := hinter.(Keys); !ok {
-		return errors.Errorf("not Keys: %T", hinter)
-	} else {
-		ac.keys = k
+	if len(bks) > 0 {
+		i, err := DecodeAccountKeys(bks, enc)
+		if err != nil {
+			return err
+		}
+
+		ac.keys = i
 	}
 
 	ac.h = h

@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2
 	github.com/rs/zerolog v1.26.0
-	github.com/spikeekips/mitum v0.0.0-20211128025912-4358dd85b2b1
+	github.com/spikeekips/mitum v0.0.0-20211204030409-c2e6cd02b7a4
 	github.com/stretchr/testify v1.7.0
 	github.com/ulule/limiter/v3 v3.8.0
 	go.mongodb.org/mongo-driver v1.7.4

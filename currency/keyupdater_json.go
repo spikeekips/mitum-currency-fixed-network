@@ -13,7 +13,7 @@ type KeyUpdaterFactJSONPacker struct {
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
 	TG base.Address   `json:"target"`
-	KS Keys           `json:"keys"`
+	KS AccountKeys    `json:"keys"`
 	CR CurrencyID     `json:"currency"`
 }
 

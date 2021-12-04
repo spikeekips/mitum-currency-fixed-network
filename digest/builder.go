@@ -64,8 +64,8 @@ func (bl Builder) FactTemplate(ht hint.Hint) (Hal, error) {
 }
 
 func (Builder) templateCreateAccountsFact() Hal {
-	nkey, _ := currency.NewKey(templatePublickey, 100)
-	nkeys, _ := currency.NewKeys([]currency.Key{nkey}, 100)
+	nkey, _ := currency.NewBaseAccountKey(templatePublickey, 100)
+	nkeys, _ := currency.NewBaseAccountKeys([]currency.AccountKey{nkey}, 100)
 
 	fact := currency.NewCreateAccountsFact(
 		templateToken,
@@ -87,8 +87,8 @@ func (Builder) templateCreateAccountsFact() Hal {
 }
 
 func (Builder) templateKeyUpdaterFact() Hal {
-	nkey, _ := currency.NewKey(templatePublickey, 100)
-	nkeys, _ := currency.NewKeys([]currency.Key{nkey}, 100)
+	nkey, _ := currency.NewBaseAccountKey(templatePublickey, 100)
+	nkeys, _ := currency.NewBaseAccountKeys([]currency.AccountKey{nkey}, 100)
 
 	fact := currency.NewKeyUpdaterFact(
 		templateToken,
@@ -199,7 +199,7 @@ func (bl Builder) buildFactCreateAccounts(fact currency.CreateAccountsFact) (Hal
 			return nil, errors.Errorf("empty Amounts")
 		}
 
-		ks, e := currency.NewKeys(item.Keys().Keys(), item.Keys().Threshold())
+		ks, e := currency.NewBaseAccountKeys(item.Keys().Keys(), item.Keys().Threshold())
 		if e != nil {
 			return nil, e
 		}
@@ -240,7 +240,7 @@ func (bl Builder) buildFactKeyUpdater(fact currency.KeyUpdaterFact) (Hal, error)
 		return nil, err
 	}
 
-	ks, err := currency.NewKeys(fact.Keys().Keys(), fact.Keys().Threshold())
+	ks, err := currency.NewBaseAccountKeys(fact.Keys().Keys(), fact.Keys().Threshold())
 	if err != nil {
 		return nil, err
 	}

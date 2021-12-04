@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -90,6 +91,7 @@ func testCurrencyPolicyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 		t.NoError(po.IsValid(nil))
 
 		fact := NewCurrencyPolicyUpdaterFact(token, CurrencyID("FINDME"), po)
+		fact.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.9"))
 
 		var fs []base.FactSign
 
@@ -106,6 +108,7 @@ func testCurrencyPolicyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		op, err := NewCurrencyPolicyUpdater(fact, fs, "")
 		t.NoError(err)
+		op.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.9"))
 
 		t.NoError(op.IsValid(nil))
 
@@ -116,11 +119,13 @@ func testCurrencyPolicyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 		ta := a.(CurrencyPolicyUpdater)
 		tb := b.(CurrencyPolicyUpdater)
 
+		t.True(ta.Hint().Equal(tb.Hint()))
 		t.Equal(ta.Memo, tb.Memo)
 
 		fact := ta.Fact().(CurrencyPolicyUpdaterFact)
 		ufact := tb.Fact().(CurrencyPolicyUpdaterFact)
 
+		t.True(fact.Hint().Equal(ufact.Hint()))
 		t.Equal(fact.cid, ufact.cid)
 		t.Equal(fact.policy, ufact.policy)
 	}

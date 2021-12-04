@@ -18,7 +18,7 @@ import (
 )
 
 type KeyFlag struct {
-	Key currency.Key
+	Key currency.BaseAccountKey
 }
 
 func (v *KeyFlag) UnmarshalText(b []byte) error {
@@ -51,7 +51,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 		weight = uint(i)
 	}
 
-	if k, err := currency.NewKey(pk, weight); err != nil {
+	if k, err := currency.NewBaseAccountKey(pk, weight); err != nil {
 		return err
 	} else if err := k.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid key string")

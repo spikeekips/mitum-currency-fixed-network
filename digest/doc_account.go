@@ -23,11 +23,14 @@ func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
 		return AccountDoc{}, err
 	}
 
-	keys := rs.Account().Keys().Keys()
-	pubs := make([]string, len(keys))
-	for i := range keys {
-		k := keys[i].Key()
-		pubs[i] = currency.TypedString(k, k.Raw())
+	var pubs []string
+	if keys := rs.Account().Keys(); keys != nil {
+		ks := keys.Keys()
+		pubs = make([]string, len(ks))
+		for i := range ks {
+			k := ks[i].Key()
+			pubs[i] = currency.TypedString(k, k.Raw())
+		}
 	}
 
 	address := rs.ac.Address()

@@ -26,21 +26,21 @@ func (t *testGenesisCurrenciesOperation) SetupSuite() {
 
 	t.Encs.TestAddHinter(key.BTCPublickey{})
 	t.Encs.TestAddHinter(base.BaseFactSign{})
-	t.Encs.TestAddHinter(Key{})
-	t.Encs.TestAddHinter(Keys{})
+	t.Encs.TestAddHinter(AccountKeyHinter)
+	t.Encs.TestAddHinter(AccountKeysHinter)
 	t.Encs.TestAddHinter(Address(""))
-	t.Encs.TestAddHinter(GenesisCurrenciesFact{})
+	t.Encs.TestAddHinter(GenesisCurrenciesFactHinter)
 	t.Encs.TestAddHinter(GenesisCurrenciesHinter)
-	t.Encs.TestAddHinter(Account{})
-	t.Encs.TestAddHinter(Amount{})
-	t.Encs.TestAddHinter(CurrencyDesign{})
-	t.Encs.TestAddHinter(CurrencyPolicy{})
+	t.Encs.TestAddHinter(AccountHinter)
+	t.Encs.TestAddHinter(AmountHinter)
+	t.Encs.TestAddHinter(CurrencyDesignHinter)
+	t.Encs.TestAddHinter(CurrencyPolicyHinter)
 
 	t.pk = key.MustNewBTCPrivatekey()
 	t.networkID = util.UUID().Bytes()
 }
 
-func (t *testGenesisCurrenciesOperation) newOperaton(keys Keys, cs []CurrencyDesign) GenesisCurrencies {
+func (t *testGenesisCurrenciesOperation) newOperaton(keys AccountKeys, cs []CurrencyDesign) GenesisCurrencies {
 	gc, err := NewGenesisCurrencies(t.pk, keys, cs, t.networkID)
 	t.NoError(err)
 	t.NoError(gc.IsValid(t.networkID))
@@ -54,7 +54,7 @@ func (t *testGenesisCurrenciesOperation) genesisCurrency(cid string, amount int6
 
 func (t *testGenesisCurrenciesOperation) TestNew() {
 	pk := key.MustNewBTCPrivatekey()
-	keys, _ := NewKeys([]Key{t.newKey(pk.Publickey(), 100)}, 100)
+	keys, _ := NewBaseAccountKeys([]AccountKey{t.newKey(pk.Publickey(), 100)}, 100)
 	cs := []CurrencyDesign{
 		t.genesisCurrency("FIND*ME", 44),
 		t.genesisCurrency("SHOW_ME", 33),
@@ -96,7 +96,8 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 
 		for i := range cs {
 			cid := cs[i].Currency()
-			zac := ZeroAccount(cid)
+			zac, err := ZeroAccount(cid)
+			t.NoError(err)
 
 			switch {
 			case key == StateKeyAccount(zac.Address()):
@@ -141,7 +142,8 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 	// NOTE zero
 	for i := range cs {
 		cid := cs[i].Currency()
-		zac := ZeroAccount(cid)
+		zac, err := ZeroAccount(cid)
+		t.NoError(err)
 
 		ast, found := zast[cid]
 		t.True(found)

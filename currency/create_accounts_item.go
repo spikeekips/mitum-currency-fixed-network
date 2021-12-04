@@ -6,24 +6,21 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type BaseCreateAccountsItem struct {
-	hint    hint.Hint
-	keys    Keys
+	hint.BaseHinter
+	keys    AccountKeys
 	amounts []Amount
 }
 
-func NewBaseCreateAccountsItem(ht hint.Hint, keys Keys, amounts []Amount) BaseCreateAccountsItem {
+func NewBaseCreateAccountsItem(ht hint.Hint, keys AccountKeys, amounts []Amount) BaseCreateAccountsItem {
 	return BaseCreateAccountsItem{
-		hint:    ht,
-		keys:    keys,
-		amounts: amounts,
+		BaseHinter: hint.NewBaseHinter(ht),
+		keys:       keys,
+		amounts:    amounts,
 	}
-}
-
-func (it BaseCreateAccountsItem) Hint() hint.Hint {
-	return it.hint
 }
 
 func (it BaseCreateAccountsItem) Bytes() []byte {
@@ -38,12 +35,12 @@ func (it BaseCreateAccountsItem) Bytes() []byte {
 }
 
 func (it BaseCreateAccountsItem) IsValid([]byte) error {
-	if err := it.keys.IsValid(nil); err != nil {
-		return err
-	}
-
 	if n := len(it.amounts); n == 0 {
 		return errors.Errorf("empty amounts")
+	}
+
+	if err := isvalid.Check([]isvalid.IsValider{it.BaseHinter, it.keys}, nil, false); err != nil {
+		return err
 	}
 
 	founds := map[CurrencyID]struct{}{}
@@ -64,7 +61,7 @@ func (it BaseCreateAccountsItem) IsValid([]byte) error {
 	return nil
 }
 
-func (it BaseCreateAccountsItem) Keys() Keys {
+func (it BaseCreateAccountsItem) Keys() AccountKeys {
 	return it.keys
 }
 

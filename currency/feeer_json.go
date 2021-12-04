@@ -3,17 +3,23 @@ package currency
 import (
 	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 func (fa NilFeeer) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(struct {
-		jsonenc.HintedHead
-	}{
-		HintedHead: jsonenc.NewHintedHead(fa.Hint()),
+	return jsonenc.Marshal(jsonenc.HintedHead{
+		H: fa.Hint(),
 	})
 }
 
-func (*NilFeeer) UnmarsahlJSON() error {
+func (fa *NilFeeer) UnmarsahlJSON(b []byte) error {
+	var ht jsonenc.HintedHead
+	if err := jsonenc.Unmarshal(b, &ht); err != nil {
+		return err
+	}
+
+	fa.BaseHinter = hint.NewBaseHinter(ht.H)
+
 	return nil
 }
 
@@ -32,6 +38,7 @@ func (fa FixedFeeer) MarshalJSON() ([]byte, error) {
 }
 
 type FixedFeeerJSONUnpacker struct {
+	HT hint.Hint           `json:"_hint"`
 	RC base.AddressDecoder `json:"receiver"`
 	AM Big                 `json:"amount"`
 }
@@ -42,7 +49,7 @@ func (fa *FixedFeeer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return fa.unpack(enc, ufa.RC, ufa.AM)
+	return fa.unpack(enc, ufa.HT, ufa.RC, ufa.AM)
 }
 
 type RatioFeeerJSONPacker struct {
@@ -64,6 +71,7 @@ func (fa RatioFeeer) MarshalJSON() ([]byte, error) {
 }
 
 type RatioFeeerJSONUnpacker struct {
+	HT hint.Hint           `json:"_hint"`
 	RC base.AddressDecoder `json:"receiver"`
 	RA float64             `json:"ratio"`
 	MI Big                 `json:"min"`
@@ -76,5 +84,5 @@ func (fa *RatioFeeer) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return fa.unpack(enc, ufa.RC, ufa.RA, ufa.MI, ufa.MA)
+	return fa.unpack(enc, ufa.HT, ufa.RC, ufa.RA, ufa.MI, ufa.MA)
 }

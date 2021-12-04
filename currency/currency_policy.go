@@ -4,24 +4,26 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
-	CurrencyPolicyType = hint.Type("mitum-currency-currency-policy")
-	CurrencyPolicyHint = hint.NewHint(CurrencyPolicyType, "v0.0.1")
+	CurrencyPolicyType   = hint.Type("mitum-currency-currency-policy")
+	CurrencyPolicyHint   = hint.NewHint(CurrencyPolicyType, "v0.0.1")
+	CurrencyPolicyHinter = CurrencyPolicy{BaseHinter: hint.NewBaseHinter(CurrencyPolicyHint)}
 )
 
 type CurrencyPolicy struct {
+	hint.BaseHinter
 	newAccountMinBalance Big
 	feeer                Feeer
 }
 
 func NewCurrencyPolicy(newAccountMinBalance Big, feeer Feeer) CurrencyPolicy {
-	return CurrencyPolicy{newAccountMinBalance: newAccountMinBalance, feeer: feeer}
-}
-
-func (CurrencyPolicy) Hint() hint.Hint {
-	return CurrencyPolicyHint
+	return CurrencyPolicy{
+		BaseHinter:           hint.NewBaseHinter(CurrencyPolicyHint),
+		newAccountMinBalance: newAccountMinBalance, feeer: feeer,
+	}
 }
 
 func (po CurrencyPolicy) Bytes() []byte {
@@ -33,7 +35,14 @@ func (po CurrencyPolicy) IsValid([]byte) error {
 		return errors.Errorf("NewAccountMinBalance under zero")
 	}
 
-	return po.feeer.IsValid(nil)
+	if err := isvalid.Check([]isvalid.IsValider{
+		po.BaseHinter,
+		po.feeer,
+	}, nil, false); err != nil {
+		return errors.Wrap(err, "invalid currency policy")
+	}
+
+	return nil
 }
 
 func (po CurrencyPolicy) NewAccountMinBalance() Big {

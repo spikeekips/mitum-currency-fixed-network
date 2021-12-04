@@ -123,7 +123,10 @@ func createZeroAccount(
 ) ([]state.State, error) {
 	sts := make([]state.State, 2)
 
-	ac := ZeroAccount(cid)
+	ac, err := ZeroAccount(cid)
+	if err != nil {
+		return nil, err
+	}
 	ast, err := notExistsState(StateKeyAccount(ac.Address()), "keys of zero account", getState)
 	if err != nil {
 		return nil, err

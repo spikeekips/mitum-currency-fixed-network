@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	TransfersFactType = hint.Type("mitum-currency-transfers-operation-fact")
-	TransfersFactHint = hint.NewHint(TransfersFactType, "v0.0.1")
-	TransfersType     = hint.Type("mitum-currency-transfers-operation")
-	TransfersHint     = hint.NewHint(TransfersType, "v0.0.1")
-	TransfersHinter   = Transfers{BaseOperation: operationHinter(TransfersHint)}
+	TransfersFactType   = hint.Type("mitum-currency-transfers-operation-fact")
+	TransfersFactHint   = hint.NewHint(TransfersFactType, "v0.0.1")
+	TransfersFactHinter = TransfersFact{BaseHinter: hint.NewBaseHinter(TransfersFactHint)}
+	TransfersType       = hint.Type("mitum-currency-transfers-operation")
+	TransfersHint       = hint.NewHint(TransfersType, "v0.0.1")
+	TransfersHinter     = Transfers{BaseOperation: operationHinter(TransfersHint)}
 )
 
 var MaxTransferItems uint = 10
@@ -30,6 +31,7 @@ type TransfersItem interface {
 }
 
 type TransfersFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	sender base.Address
@@ -38,17 +40,14 @@ type TransfersFact struct {
 
 func NewTransfersFact(token []byte, sender base.Address, items []TransfersItem) TransfersFact {
 	fact := TransfersFact{
-		token:  token,
-		sender: sender,
-		items:  items,
+		BaseHinter: hint.NewBaseHinter(TransfersFactHint),
+		token:      token,
+		sender:     sender,
+		items:      items,
 	}
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (TransfersFact) Hint() hint.Hint {
-	return TransfersFactHint
 }
 
 func (fact TransfersFact) Hash() valuehash.Hash {

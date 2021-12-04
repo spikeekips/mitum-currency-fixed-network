@@ -27,15 +27,10 @@ type BaseTransfersItemJSONUnpacker struct {
 }
 
 func (it *BaseTransfersItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ht jsonenc.HintedHead
-	if err := enc.Unmarshal(b, &ht); err != nil {
-		return err
-	}
-
 	var uit BaseTransfersItemJSONUnpacker
 	if err := enc.Unmarshal(b, &uit); err != nil {
 		return err
 	}
 
-	return it.unpack(enc, ht.H, uit.RC, uit.AM)
+	return it.unpack(enc, uit.RC, uit.AM)
 }

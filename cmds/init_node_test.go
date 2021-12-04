@@ -31,9 +31,9 @@ func (t *testGenesisCurrencies) TestLoad() {
 
 	pub := key.MustNewBTCPrivatekey().Publickey()
 
-	k, err := currency.NewKey(pub, 99)
+	k, err := currency.NewBaseAccountKey(pub, 99)
 	t.NoError(err)
-	ks, err := currency.NewKeys([]currency.Key{k}, 98)
+	ks, err := currency.NewBaseAccountKeys([]currency.AccountKey{k}, 98)
 	t.NoError(err)
 
 	genesisAccount, err := currency.NewAddressFromKeys(ks)

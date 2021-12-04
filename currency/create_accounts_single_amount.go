@@ -10,7 +10,9 @@ var (
 	CreateAccountsItemSingleAmountType   = hint.Type("mitum-currency-create-accounts-single-amount")
 	CreateAccountsItemSingleAmountHint   = hint.NewHint(CreateAccountsItemSingleAmountType, "v0.0.1")
 	CreateAccountsItemSingleAmountHinter = CreateAccountsItemSingleAmount{
-		BaseCreateAccountsItem: BaseCreateAccountsItem{hint: CreateAccountsItemSingleAmountHint},
+		BaseCreateAccountsItem: BaseCreateAccountsItem{
+			BaseHinter: hint.NewBaseHinter(CreateAccountsItemSingleAmountHint),
+		},
 	}
 )
 
@@ -18,7 +20,7 @@ type CreateAccountsItemSingleAmount struct {
 	BaseCreateAccountsItem
 }
 
-func NewCreateAccountsItemSingleAmount(keys Keys, amount Amount) CreateAccountsItemSingleAmount {
+func NewCreateAccountsItemSingleAmount(keys AccountKeys, amount Amount) CreateAccountsItemSingleAmount {
 	return CreateAccountsItemSingleAmount{
 		BaseCreateAccountsItem: NewBaseCreateAccountsItem(CreateAccountsItemSingleAmountHint, keys, []Amount{amount}),
 	}

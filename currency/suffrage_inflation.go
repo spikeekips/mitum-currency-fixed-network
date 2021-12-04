@@ -9,11 +9,12 @@ import (
 )
 
 var (
-	SuffrageInflationFactType = hint.Type("mitum-currency-suffrage-inflation-operation-fact")
-	SuffrageInflationFactHint = hint.NewHint(SuffrageInflationFactType, "v0.0.1")
-	SuffrageInflationType     = hint.Type("mitum-currency-suffrage-inflation-operation")
-	SuffrageInflationHint     = hint.NewHint(SuffrageInflationType, "v0.0.1")
-	SuffrageInflationHinter   = SuffrageInflation{BaseOperation: operationHinter(SuffrageInflationHint)}
+	SuffrageInflationFactType   = hint.Type("mitum-currency-suffrage-inflation-operation-fact")
+	SuffrageInflationFactHint   = hint.NewHint(SuffrageInflationFactType, "v0.0.1")
+	SuffrageInflationFactHinter = SuffrageInflationFact{BaseHinter: hint.NewBaseHinter(SuffrageInflationFactHint)}
+	SuffrageInflationType       = hint.Type("mitum-currency-suffrage-inflation-operation")
+	SuffrageInflationHint       = hint.NewHint(SuffrageInflationType, "v0.0.1")
+	SuffrageInflationHinter     = SuffrageInflation{BaseOperation: operationHinter(SuffrageInflationHint)}
 )
 
 type SuffrageInflationItem struct {
@@ -53,6 +54,7 @@ func (item SuffrageInflationItem) IsValid([]byte) error {
 }
 
 type SuffrageInflationFact struct {
+	hint.BaseHinter
 	h     valuehash.Hash
 	token []byte
 	items []SuffrageInflationItem
@@ -60,17 +62,14 @@ type SuffrageInflationFact struct {
 
 func NewSuffrageInflationFact(token []byte, items []SuffrageInflationItem) SuffrageInflationFact {
 	fact := SuffrageInflationFact{
-		token: token,
-		items: items,
+		BaseHinter: hint.NewBaseHinter(SuffrageInflationFactHint),
+		token:      token,
+		items:      items,
 	}
 
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (SuffrageInflationFact) Hint() hint.Hint {
-	return SuffrageInflationFactHint
 }
 
 func (fact SuffrageInflationFact) Hash() valuehash.Hash {

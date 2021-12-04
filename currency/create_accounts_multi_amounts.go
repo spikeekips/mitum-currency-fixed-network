@@ -12,7 +12,9 @@ var (
 	CreateAccountsItemMultiAmountsType   = hint.Type("mitum-currency-create-accounts-multiple-amounts")
 	CreateAccountsItemMultiAmountsHint   = hint.NewHint(CreateAccountsItemMultiAmountsType, "v0.0.1")
 	CreateAccountsItemMultiAmountsHinter = CreateAccountsItemMultiAmounts{
-		BaseCreateAccountsItem: BaseCreateAccountsItem{hint: CreateAccountsItemMultiAmountsHint},
+		BaseCreateAccountsItem: BaseCreateAccountsItem{
+			BaseHinter: hint.NewBaseHinter(CreateAccountsItemMultiAmountsHint),
+		},
 	}
 )
 
@@ -20,7 +22,7 @@ type CreateAccountsItemMultiAmounts struct {
 	BaseCreateAccountsItem
 }
 
-func NewCreateAccountsItemMultiAmounts(keys Keys, amounts []Amount) CreateAccountsItemMultiAmounts {
+func NewCreateAccountsItemMultiAmounts(keys AccountKeys, amounts []Amount) CreateAccountsItemMultiAmounts {
 	return CreateAccountsItemMultiAmounts{
 		BaseCreateAccountsItem: NewBaseCreateAccountsItem(CreateAccountsItemMultiAmountsHint, keys, amounts),
 	}

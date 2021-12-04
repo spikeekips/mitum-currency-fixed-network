@@ -21,11 +21,11 @@ func (fact *GenesisCurrenciesFact) unpack(
 		return err
 	}
 
-	var keys Keys
+	var keys AccountKeys
 	hinter, err := enc.Decode(bks)
 	if err != nil {
 		return err
-	} else if k, ok := hinter.(Keys); !ok {
+	} else if k, ok := hinter.(AccountKeys); !ok {
 		return errors.Errorf("not Keys: %T", hinter)
 	} else {
 		keys = k

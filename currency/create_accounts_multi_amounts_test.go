@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testCreateAccountsMultiAmounts struct {
@@ -23,15 +24,15 @@ func (t *testCreateAccountsMultiAmounts) TestNew() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -70,15 +71,15 @@ func (t *testCreateAccountsMultiAmounts) TestZeroBig() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -114,15 +115,15 @@ func (t *testCreateAccountsMultiAmounts) TestEmptyAmounts() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -153,15 +154,15 @@ func (t *testCreateAccountsMultiAmounts) TestOverMaxAmounts() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -197,15 +198,15 @@ func (t *testCreateAccountsMultiAmounts) TestDuplicatedCurrency() {
 	spk := key.MustNewBTCPrivatekey()
 	rpk := key.MustNewBTCPrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -249,11 +250,11 @@ func testCreateAccountsMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuit
 		spk := key.MustNewBTCPrivatekey()
 		rpk := key.MustNewBTCPrivatekey()
 
-		skey, err := NewKey(spk.Publickey(), 50)
+		skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 		t.NoError(err)
-		rkey, err := NewKey(rpk.Publickey(), 50)
+		rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 		t.NoError(err)
-		skeys, err := NewKeys([]Key{skey, rkey}, 100)
+		skeys, err := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 		t.NoError(err)
 
 		pks := []key.Privatekey{spk, rpk}
@@ -266,6 +267,7 @@ func testCreateAccountsMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuit
 
 		item := NewCreateAccountsItemMultiAmounts(skeys, ams)
 		fact := NewCreateAccountsFact(util.UUID().Bytes(), sender, []CreateAccountsItem{item})
+		fact.BaseHinter = hint.NewBaseHinter(hint.NewHint(CreateAccountsFactType, "v0.0.9"))
 
 		var fs []base.FactSign
 
@@ -291,6 +293,7 @@ func testCreateAccountsMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuit
 		fact := ca.Fact().(CreateAccountsFact)
 		ufact := cb.Fact().(CreateAccountsFact)
 
+		t.True(fact.Hint().Equal(ufact.Hint()))
 		t.True(fact.sender.Equal(ufact.sender))
 		t.Equal(len(fact.Items()), len(ufact.Items()))
 

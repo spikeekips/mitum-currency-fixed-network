@@ -6,42 +6,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeAmount(b []byte, enc encoder.Encoder) (Amount, error) {
-	if i, err := enc.Decode(b); err != nil {
-		return Amount{}, err
-	} else if i == nil {
-		return Amount{}, nil
-	} else if v, ok := i.(Amount); !ok {
-		return Amount{}, util.WrongTypeError.Errorf("not Amount; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
-func DecodeCreateAccountsItem(b []byte, enc encoder.Encoder) (CreateAccountsItem, error) {
-	if i, err := enc.Decode(b); err != nil {
-		return nil, err
-	} else if i == nil {
-		return nil, nil
-	} else if v, ok := i.(CreateAccountsItem); !ok {
-		return nil, util.WrongTypeError.Errorf("not CreateAccountsItem; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
-func DecodeTransfersItem(b []byte, enc encoder.Encoder) (TransfersItem, error) {
-	if i, err := enc.Decode(b); err != nil {
-		return nil, err
-	} else if i == nil {
-		return nil, nil
-	} else if v, ok := i.(TransfersItem); !ok {
-		return nil, util.WrongTypeError.Errorf("not TransfersItem; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
 func DecodeCurrencyPolicy(b []byte, enc encoder.Encoder) (CurrencyPolicy, error) {
 	if i, err := enc.Decode(b); err != nil {
 		return CurrencyPolicy{}, err
@@ -86,4 +50,21 @@ func DecodeAccount(b []byte, enc encoder.Encoder) (Account, error) {
 	} else {
 		return ac, nil
 	}
+}
+
+func DecodeAccountKeys(b []byte, enc encoder.Encoder) (AccountKeys, error) {
+	i, err := enc.Decode(b)
+	switch {
+	case err != nil:
+		return nil, err
+	case i == nil:
+		return nil, nil
+	}
+
+	v, ok := i.(AccountKeys)
+	if !ok {
+		return nil, util.WrongTypeError.Errorf("not AccountKeys; type=%T", i)
+	}
+
+	return v, nil
 }

@@ -13,28 +13,31 @@ import (
 )
 
 var (
-	GenesisCurrenciesFactType = hint.Type("mitum-currency-genesis-currencies-operation-fact")
-	GenesisCurrenciesFactHint = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
-	GenesisCurrenciesType     = hint.Type("mitum-currency-genesis-currencies-operation")
-	GenesisCurrenciesHint     = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
-	GenesisCurrenciesHinter   = GenesisCurrencies{BaseOperation: operation.BaseOperation{}.SetHint(GenesisCurrenciesHint)}
+	GenesisCurrenciesFactType   = hint.Type("mitum-currency-genesis-currencies-operation-fact")
+	GenesisCurrenciesFactHint   = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
+	GenesisCurrenciesFactHinter = GenesisCurrenciesFact{BaseHinter: hint.NewBaseHinter(GenesisCurrenciesFactHint)}
+	GenesisCurrenciesType       = hint.Type("mitum-currency-genesis-currencies-operation")
+	GenesisCurrenciesHint       = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
+	GenesisCurrenciesHinter     = GenesisCurrencies{BaseOperation: operation.EmptyBaseOperation(GenesisCurrenciesHint)}
 )
 
 type GenesisCurrenciesFact struct {
+	hint.BaseHinter
 	h              valuehash.Hash
 	token          []byte
 	genesisNodeKey key.Publickey
-	keys           Keys
+	keys           AccountKeys
 	cs             []CurrencyDesign
 }
 
 func NewGenesisCurrenciesFact(
 	token []byte,
 	genesisNodeKey key.Publickey,
-	keys Keys,
+	keys AccountKeys,
 	cs []CurrencyDesign,
 ) GenesisCurrenciesFact {
 	fact := GenesisCurrenciesFact{
+		BaseHinter:     hint.NewBaseHinter(GenesisCurrenciesFactHint),
 		token:          token,
 		genesisNodeKey: genesisNodeKey,
 		keys:           keys,
@@ -44,10 +47,6 @@ func NewGenesisCurrenciesFact(
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (GenesisCurrenciesFact) Hint() hint.Hint {
-	return GenesisCurrenciesFactHint
 }
 
 func (fact GenesisCurrenciesFact) Hash() valuehash.Hash {
@@ -110,7 +109,7 @@ func (fact GenesisCurrenciesFact) GenesisNodeKey() key.Publickey {
 	return fact.genesisNodeKey
 }
 
-func (fact GenesisCurrenciesFact) Keys() Keys {
+func (fact GenesisCurrenciesFact) Keys() AccountKeys {
 	return fact.keys
 }
 
@@ -128,7 +127,7 @@ type GenesisCurrencies struct {
 
 func NewGenesisCurrencies(
 	genesisNodeKey key.Privatekey,
-	keys Keys,
+	keys AccountKeys,
 	cs []CurrencyDesign,
 	networkID base.NetworkID,
 ) (GenesisCurrencies, error) {

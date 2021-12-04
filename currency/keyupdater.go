@@ -9,35 +9,34 @@ import (
 )
 
 var (
-	KeyUpdaterFactType = hint.Type("mitum-currency-keyupdater-operation-fact")
-	KeyUpdaterFactHint = hint.NewHint(KeyUpdaterFactType, "v0.0.1")
-	KeyUpdaterType     = hint.Type("mitum-currency-keyupdater-operation")
-	KeyUpdaterHint     = hint.NewHint(KeyUpdaterType, "v0.0.1")
-	KeyUpdaterHinter   = KeyUpdater{BaseOperation: operationHinter(KeyUpdaterHint)}
+	KeyUpdaterFactType   = hint.Type("mitum-currency-keyupdater-operation-fact")
+	KeyUpdaterFactHint   = hint.NewHint(KeyUpdaterFactType, "v0.0.1")
+	KeyUpdaterFactHinter = KeyUpdaterFact{BaseHinter: hint.NewBaseHinter(KeyUpdaterFactHint)}
+	KeyUpdaterType       = hint.Type("mitum-currency-keyupdater-operation")
+	KeyUpdaterHint       = hint.NewHint(KeyUpdaterType, "v0.0.1")
+	KeyUpdaterHinter     = KeyUpdater{BaseOperation: operationHinter(KeyUpdaterHint)}
 )
 
 type KeyUpdaterFact struct {
+	hint.BaseHinter
 	h        valuehash.Hash
 	token    []byte
 	target   base.Address
-	keys     Keys
+	keys     AccountKeys
 	currency CurrencyID
 }
 
-func NewKeyUpdaterFact(token []byte, target base.Address, keys Keys, currency CurrencyID) KeyUpdaterFact {
+func NewKeyUpdaterFact(token []byte, target base.Address, keys AccountKeys, currency CurrencyID) KeyUpdaterFact {
 	fact := KeyUpdaterFact{
-		token:    token,
-		target:   target,
-		keys:     keys,
-		currency: currency,
+		BaseHinter: hint.NewBaseHinter(KeyUpdaterFactHint),
+		token:      token,
+		target:     target,
+		keys:       keys,
+		currency:   currency,
 	}
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (KeyUpdaterFact) Hint() hint.Hint {
-	return KeyUpdaterFactHint
 }
 
 func (fact KeyUpdaterFact) Hash() valuehash.Hash {
@@ -77,7 +76,7 @@ func (fact KeyUpdaterFact) Target() base.Address {
 	return fact.target
 }
 
-func (fact KeyUpdaterFact) Keys() Keys {
+func (fact KeyUpdaterFact) Keys() AccountKeys {
 	return fact.keys
 }
 

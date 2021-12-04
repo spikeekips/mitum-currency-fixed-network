@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -79,6 +80,7 @@ func testCurrencyDesignEncode(enc encoder.Encoder) suite.TestingSuite {
 				NewFixedFeeer(MustAddress(util.UUID().String()), NewBig(44)),
 			),
 		)
+		de.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyDesignType, "v0.0.9"))
 		t.NoError(de.IsValid(nil))
 
 		return de

@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ky Key) MarshalBSON() ([]byte, error) {
+func (ky BaseAccountKey) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(ky.Hint()),
 		bson.M{
@@ -23,7 +23,7 @@ type KeyBSONUnpacker struct {
 	K key.PublickeyDecoder `bson:"key"`
 }
 
-func (ky *Key) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (ky *BaseAccountKey) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uk KeyBSONUnpacker
 	if err := bson.Unmarshal(b, &uk); err != nil {
 		return err
@@ -32,7 +32,7 @@ func (ky *Key) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return ky.unpack(enc, uk.W, uk.K)
 }
 
-func (ks Keys) MarshalBSON() ([]byte, error) {
+func (ks BaseAccountKeys) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(ks.Hint()),
 		bson.M{
@@ -49,7 +49,7 @@ type KeysBSONUnpacker struct {
 	TH uint            `bson:"threshold"`
 }
 
-func (ks *Keys) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (ks *BaseAccountKeys) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uks KeysBSONUnpacker
 	if err := bson.Unmarshal(b, &uks); err != nil {
 		return err

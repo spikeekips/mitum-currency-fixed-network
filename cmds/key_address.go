@@ -30,12 +30,12 @@ func (cmd *KeyAddressCommand) Run(version util.Version) error {
 		return errors.Wrap(err, "failed to initialize command")
 	}
 
-	ks := make([]currency.Key, len(cmd.Keys))
+	ks := make([]currency.AccountKey, len(cmd.Keys))
 	for i := range cmd.Keys {
 		ks[i] = cmd.Keys[i].Key
 	}
 
-	keys, err := currency.NewKeys(ks, cmd.Threshold)
+	keys, err := currency.NewBaseAccountKeys(ks, cmd.Threshold)
 	if err != nil {
 		return err
 	}

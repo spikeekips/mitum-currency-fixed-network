@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	CreateAccountsFactType = hint.Type("mitum-currency-create-accounts-operation-fact")
-	CreateAccountsFactHint = hint.NewHint(CreateAccountsFactType, "v0.0.1")
-	CreateAccountsType     = hint.Type("mitum-currency-create-accounts-operation")
-	CreateAccountsHint     = hint.NewHint(CreateAccountsType, "v0.0.1")
-	CreateAccountsHinter   = CreateAccounts{BaseOperation: operationHinter(CreateAccountsHint)}
+	CreateAccountsFactType   = hint.Type("mitum-currency-create-accounts-operation-fact")
+	CreateAccountsFactHint   = hint.NewHint(CreateAccountsFactType, "v0.0.1")
+	CreateAccountsFactHinter = CreateAccountsFact{BaseHinter: hint.NewBaseHinter(CreateAccountsFactHint)}
+	CreateAccountsType       = hint.Type("mitum-currency-create-accounts-operation")
+	CreateAccountsHint       = hint.NewHint(CreateAccountsType, "v0.0.1")
+	CreateAccountsHinter     = CreateAccounts{BaseOperation: operationHinter(CreateAccountsHint)}
 )
 
 var MaxCreateAccountsItems uint = 10
@@ -29,12 +30,13 @@ type CreateAccountsItem interface {
 	isvalid.IsValider
 	AmountsItem
 	Bytes() []byte
-	Keys() Keys
+	Keys() AccountKeys
 	Address() (base.Address, error)
 	Rebuild() CreateAccountsItem
 }
 
 type CreateAccountsFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	sender base.Address
@@ -43,17 +45,14 @@ type CreateAccountsFact struct {
 
 func NewCreateAccountsFact(token []byte, sender base.Address, items []CreateAccountsItem) CreateAccountsFact {
 	fact := CreateAccountsFact{
-		token:  token,
-		sender: sender,
-		items:  items,
+		BaseHinter: hint.NewBaseHinter(CreateAccountsFactHint),
+		token:      token,
+		sender:     sender,
+		items:      items,
 	}
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (CreateAccountsFact) Hint() hint.Hint {
-	return CreateAccountsFactHint
 }
 
 func (fact CreateAccountsFact) Hash() valuehash.Hash {
@@ -78,6 +77,10 @@ func (fact CreateAccountsFact) Bytes() []byte {
 }
 
 func (fact CreateAccountsFact) IsValid(b []byte) error {
+	if err := fact.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if err := IsValidOperationFact(fact, b); err != nil {
 		return err
 	}

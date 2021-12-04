@@ -340,8 +340,8 @@ func (t *testTransfersOperations) TestUnderThreshold() {
 
 	skey := t.newKey(spk.Publickey(), 50)
 	rkey := t.newKey(rpk.Publickey(), 50)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
-	rkeys, _ := NewKeys([]Key{rkey}, 50)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
+	rkeys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 50)
 
 	pks := []key.Privatekey{spk}
 	sender, _ := NewAddressFromKeys(skeys)
@@ -618,7 +618,8 @@ func (t *testTransfersOperations) TestFromZeroAccountWithUnknownKeys() {
 	fa, st0 := t.newAccount(true, []Amount{faBalance})
 	ra, st2 := t.newAccount(true, []Amount{raBalance})
 
-	zac := ZeroAccount(t.cid)
+	zac, err := ZeroAccount(t.cid)
+	t.NoError(err)
 	zacv, _ := state.NewHintedValue(zac)
 	var st1 []state.State
 	su, err := state.NewStateV0(StateKeyAccount(zac.Address()), zacv, base.NilHeight)
@@ -642,7 +643,7 @@ func (t *testTransfersOperations) TestFromZeroAccountWithUnknownKeys() {
 	tf := t.newTransfer(zac.Address(), ra.Privs(), []TransfersItem{t.newTransfersItem(ra.Address, sent)})
 
 	err = opr.Process(tf)
-	t.Contains(err.Error(), "unknown key found")
+	t.Contains(err.Error(), "empty keys found")
 }
 
 func (t *testTransfersOperations) TestToZeroAccount() {
@@ -653,10 +654,11 @@ func (t *testTransfersOperations) TestToZeroAccount() {
 	sa, st1 := t.newAccount(true, []Amount{saBalance})
 
 	var st2 []state.State
-	var ra Account
+
+	ra, err := ZeroAccount(t.cid)
+	t.NoError(err)
 
 	{
-		ra = ZeroAccount(t.cid)
 		zacv, _ := state.NewHintedValue(ra)
 		su, err := state.NewStateV0(StateKeyAccount(ra.Address()), zacv, base.NilHeight)
 		st2 = append(st2, su)

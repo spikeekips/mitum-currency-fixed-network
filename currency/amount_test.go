@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testAmount struct {
@@ -41,6 +42,8 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		am := NewAmount(NewBig(99), cid)
 		t.NoError(am.IsValid(nil))
+
+		am.BaseHinter = hint.NewBaseHinter(hint.NewHint(AmountType, "v0.0.9"))
 
 		return am
 	}
@@ -78,13 +81,14 @@ func testAmountEncode(enc encoder.Encoder) suite.TestingSuite {
 	}
 
 	t.decode = func(enc encoder.Encoder, b []byte) (interface{}, error) {
-		return DecodeAmount(b, enc)
+		return enc.Decode(b)
 	}
 
 	t.compare = func(a, b interface{}) {
 		ca := a.(Amount)
 		cb := b.(Amount)
 
+		t.True(ca.Hint().Equal(cb.Hint()))
 		t.True(ca.Big().Equal(cb.Big()))
 		t.Equal(ca.Currency(), cb.Currency())
 	}

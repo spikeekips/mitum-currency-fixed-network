@@ -11,14 +11,18 @@ import (
 )
 
 var (
-	CurrencyPolicyUpdaterFactType = hint.Type("mitum-currency-currency-policy-updater-operation-fact")
-	CurrencyPolicyUpdaterFactHint = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
-	CurrencyPolicyUpdaterType     = hint.Type("mitum-currency-currency-policy-updater-operation")
-	CurrencyPolicyUpdaterHint     = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
-	CurrencyPolicyUpdaterHinter   = CurrencyPolicyUpdater{BaseOperation: operationHinter(CurrencyPolicyUpdaterHint)}
+	CurrencyPolicyUpdaterFactType   = hint.Type("mitum-currency-currency-policy-updater-operation-fact")
+	CurrencyPolicyUpdaterFactHint   = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
+	CurrencyPolicyUpdaterFactHinter = CurrencyPolicyUpdaterFact{
+		BaseHinter: hint.NewBaseHinter(CurrencyPolicyUpdaterFactHint),
+	}
+	CurrencyPolicyUpdaterType   = hint.Type("mitum-currency-currency-policy-updater-operation")
+	CurrencyPolicyUpdaterHint   = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
+	CurrencyPolicyUpdaterHinter = CurrencyPolicyUpdater{BaseOperation: operationHinter(CurrencyPolicyUpdaterHint)}
 )
 
 type CurrencyPolicyUpdaterFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	cid    CurrencyID
@@ -27,18 +31,15 @@ type CurrencyPolicyUpdaterFact struct {
 
 func NewCurrencyPolicyUpdaterFact(token []byte, cid CurrencyID, policy CurrencyPolicy) CurrencyPolicyUpdaterFact {
 	fact := CurrencyPolicyUpdaterFact{
-		token:  token,
-		cid:    cid,
-		policy: policy,
+		BaseHinter: hint.NewBaseHinter(CurrencyPolicyUpdaterFactHint),
+		token:      token,
+		cid:        cid,
+		policy:     policy,
 	}
 
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (CurrencyPolicyUpdaterFact) Hint() hint.Hint {
-	return CurrencyPolicyUpdaterFactHint
 }
 
 func (fact CurrencyPolicyUpdaterFact) Hash() valuehash.Hash {

@@ -31,7 +31,7 @@ func (t *testKeyUpdaterOperation) processor(cp *CurrencyPool, pool *storage.Stat
 	return copr.New(pool)
 }
 
-func (t *testKeyUpdaterOperation) newOperation(target base.Address, keys Keys, pks []key.Privatekey, cid CurrencyID) KeyUpdater {
+func (t *testKeyUpdaterOperation) newOperation(target base.Address, keys AccountKeys, pks []key.Privatekey, cid CurrencyID) KeyUpdater {
 	token := util.UUID().Bytes()
 	fact := NewKeyUpdaterFact(token, target, keys, cid)
 
@@ -73,9 +73,9 @@ func (t *testKeyUpdaterOperation) TestNew() {
 	opr := t.processor(cp, pool)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
@@ -117,9 +117,9 @@ func (t *testKeyUpdaterOperation) TestUnknownCurrency() {
 	opr := t.processor(cp, pool)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
@@ -144,9 +144,9 @@ func (t *testKeyUpdaterOperation) TestEmptyBalance() {
 	opr := t.processor(cp, pool)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
@@ -168,9 +168,9 @@ func (t *testKeyUpdaterOperation) TestTargetNotExist() {
 	t.NoError(err)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, nkeys, sa.Privs(), t.cid)
@@ -215,9 +215,9 @@ func (t *testKeyUpdaterOperation) TestWrongSigning() {
 	opr := t.processor(cp, pool)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	op := t.newOperation(sa.Address, nkeys, []key.Privatekey{key.MustNewBTCPrivatekey()}, t.cid)

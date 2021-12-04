@@ -2,6 +2,7 @@ package currency
 
 import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -21,8 +22,9 @@ func (am Amount) MarshalBSON() ([]byte, error) {
 }
 
 type AmountBSONUnpacker struct {
-	CR string `bson:"currency"`
-	BG Big    `bson:"amount"`
+	HT hint.Hint `bson:"_hint"`
+	CR string    `bson:"currency"`
+	BG Big       `bson:"amount"`
 }
 
 func (am *Amount) UnmarshalBSON(b []byte) error {
@@ -31,6 +33,7 @@ func (am *Amount) UnmarshalBSON(b []byte) error {
 		return err
 	}
 
+	am.BaseHinter = hint.NewBaseHinter(uam.HT)
 	am.big = uam.BG
 	am.cid = CurrencyID(uam.CR)
 

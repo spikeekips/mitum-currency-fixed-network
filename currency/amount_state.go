@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	AmountStateType = hint.Type("mitum-currency-amount-state")
-	AmountStateHint = hint.NewHint(AmountStateType, "v0.0.1")
+	amountStateType = hint.Type("mitum-currency-amount-state")
+	amountStateHint = hint.NewHint(amountStateType, "v0.0.1")
 )
 
 type AmountState struct {
@@ -36,7 +36,7 @@ func NewAmountState(st state.State, cid CurrencyID) AmountState {
 }
 
 func (AmountState) Hint() hint.Hint {
-	return AmountStateHint
+	return amountStateHint
 }
 
 func (st AmountState) IsValid(b []byte) error {

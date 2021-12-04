@@ -262,7 +262,7 @@ func (t *testCurrencyRegisterOperations) TestZeroAccount() {
 	zac, err := LoadStateAccountValue(zast)
 	t.NoError(err)
 	t.True(zeroaddress.Equal(zac.Address()))
-	t.Empty(zac.Keys())
+	t.Nil(zac.Keys())
 
 	uzb, err := StateBalanceValue(zbst)
 	t.NoError(err)

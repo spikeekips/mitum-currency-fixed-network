@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -109,6 +110,7 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		po := NewCurrencyPolicy(ZeroBig, NewNilFeeer())
 		de := NewCurrencyDesign(NewAmount(NewBig(33), CurrencyID("SHOWME")), NewTestAddress(), po)
 		fact := NewCurrencyRegisterFact(token, de)
+		fact.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyRegisterFactType, "v0.0.9"))
 
 		var fs []base.FactSign
 
@@ -125,6 +127,7 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 
 		op, err := NewCurrencyRegister(fact, fs, "findme")
 		t.NoError(err)
+		op.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyRegisterType, "v0.0.9"))
 
 		t.NoError(op.IsValid(nil))
 
@@ -135,10 +138,13 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		ta := a.(CurrencyRegister)
 		tb := b.(CurrencyRegister)
 
+		t.True(ta.Hint().Equal(tb.Hint()))
 		t.Equal(ta.Memo, tb.Memo)
 
 		fact := ta.Fact().(CurrencyRegisterFact)
 		ufact := tb.Fact().(CurrencyRegisterFact)
+
+		t.True(fact.Hint().Equal(ufact.Hint()))
 
 		ac := fact.currency
 		bc := ufact.currency

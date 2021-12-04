@@ -36,8 +36,11 @@ func checkFactSignsByState(
 		return err
 	}
 	keys, err := StateKeysValue(st)
-	if err != nil {
+	switch {
+	case err != nil:
 		return operation.NewBaseReasonErrorFromError(err)
+	case keys == nil:
+		return operation.NewBaseReasonError("empty keys found")
 	}
 
 	if err := checkThreshold(fs, keys); err != nil {

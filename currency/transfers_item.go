@@ -8,21 +8,17 @@ import (
 )
 
 type BaseTransfersItem struct {
-	hint     hint.Hint
+	hint.BaseHinter
 	receiver base.Address
 	amounts  []Amount
 }
 
 func NewBaseTransfersItem(ht hint.Hint, receiver base.Address, amounts []Amount) BaseTransfersItem {
 	return BaseTransfersItem{
-		hint:     ht,
-		receiver: receiver,
-		amounts:  amounts,
+		BaseHinter: hint.NewBaseHinter(ht),
+		receiver:   receiver,
+		amounts:    amounts,
 	}
-}
-
-func (it BaseTransfersItem) Hint() hint.Hint {
-	return it.hint
 }
 
 func (it BaseTransfersItem) Bytes() []byte {

@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testFeeOperation struct {
@@ -45,16 +46,24 @@ func testFeeOperationEncode(enc encoder.Encoder) suite.TestingSuite {
 	t.enc = enc
 	t.newObject = func() interface{} {
 		fact := NewFeeOperationFact(base.Height(3), map[CurrencyID]Big{CurrencyID("SHOWME"): NewBig(33)})
+		fact.BaseHinter = hint.NewBaseHinter(hint.NewHint(FeeOperationFactType, "v0.0.1"))
 
-		return NewFeeOperation(fact)
+		op := NewFeeOperation(fact)
+		op.BaseHinter = hint.NewBaseHinter(hint.NewHint(FeeOperationType, "v0.0.9"))
+
+		return op
 	}
 
 	t.compare = func(a, b interface{}) {
 		ca := a.(FeeOperation)
 		cb := b.(FeeOperation)
+
+		t.True(ca.Hint().Equal(cb.Hint()))
+
 		fact := ca.Fact().(FeeOperationFact)
 		ufact := cb.Fact().(FeeOperationFact)
 
+		t.True(fact.Hint().Equal(ufact.Hint()))
 		t.Equal(fact.token, ufact.token)
 
 		t.Equal(len(fact.Amounts()), len(ufact.Amounts()))

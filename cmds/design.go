@@ -31,7 +31,7 @@ func init() {
 type KeyDesign struct {
 	PublickeyString string `yaml:"publickey"`
 	Weight          uint
-	Key             currency.Key `yaml:"-"`
+	Key             currency.BaseAccountKey `yaml:"-"`
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
@@ -42,7 +42,7 @@ func (kd *KeyDesign) IsValid([]byte) error {
 
 	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
 		return err
-	} else if k, err := currency.NewKey(pub, kd.Weight); err != nil {
+	} else if k, err := currency.NewBaseAccountKey(pub, kd.Weight); err != nil {
 		return err
 	} else {
 		kd.Key = k
@@ -53,13 +53,13 @@ func (kd *KeyDesign) IsValid([]byte) error {
 
 type AccountKeysDesign struct {
 	Threshold  uint
-	KeysDesign []*KeyDesign     `yaml:"keys"`
-	Keys       currency.Keys    `yaml:"-"`
-	Address    currency.Address `yaml:"-"`
+	KeysDesign []*KeyDesign             `yaml:"keys"`
+	Keys       currency.BaseAccountKeys `yaml:"-"`
+	Address    currency.Address         `yaml:"-"`
 }
 
 func (akd *AccountKeysDesign) IsValid([]byte) error {
-	ks := make([]currency.Key, len(akd.KeysDesign))
+	ks := make([]currency.AccountKey, len(akd.KeysDesign))
 	for i := range akd.KeysDesign {
 		kd := akd.KeysDesign[i]
 
@@ -70,7 +70,7 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 		ks[i] = kd.Key
 	}
 
-	keys, err := currency.NewKeys(ks, akd.Threshold)
+	keys, err := currency.NewBaseAccountKeys(ks, akd.Threshold)
 	if err != nil {
 		return err
 	}

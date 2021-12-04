@@ -5,13 +5,21 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 func (fa NilFeeer) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.NewHintedDoc(fa.Hint()))
 }
 
-func (*NilFeeer) UnmarsahlBSON() error {
+func (fa *NilFeeer) UnmarsahlBSON(b []byte) error {
+	var ht bsonenc.HintedHead
+	if err := bsonenc.Unmarshal(b, &ht); err != nil {
+		return err
+	}
+
+	fa.BaseHinter = hint.NewBaseHinter(ht.H)
+
 	return nil
 }
 
@@ -26,6 +34,7 @@ func (fa FixedFeeer) MarshalBSON() ([]byte, error) {
 }
 
 type FixedFeeerBSONUnpacker struct {
+	HT hint.Hint           `bson:"_hint"`
 	RC base.AddressDecoder `bson:"receiver"`
 	AM Big                 `bson:"amount"`
 }
@@ -36,7 +45,7 @@ func (fa *FixedFeeer) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return fa.unpack(enc, ufa.RC, ufa.AM)
+	return fa.unpack(enc, ufa.HT, ufa.RC, ufa.AM)
 }
 
 func (fa RatioFeeer) MarshalBSON() ([]byte, error) {
@@ -52,6 +61,7 @@ func (fa RatioFeeer) MarshalBSON() ([]byte, error) {
 }
 
 type RatioFeeerBSONUnpacker struct {
+	HT hint.Hint           `bson:"_hint"`
 	RC base.AddressDecoder `bson:"receiver"`
 	RA float64             `bson:"ratio"`
 	MI Big                 `bson:"min"`
@@ -64,5 +74,5 @@ func (fa *RatioFeeer) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return fa.unpack(enc, ufa.RC, ufa.RA, ufa.MI, ufa.MA)
+	return fa.unpack(enc, ufa.HT, ufa.RC, ufa.RA, ufa.MI, ufa.MA)
 }

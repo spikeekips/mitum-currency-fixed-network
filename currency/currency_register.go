@@ -11,14 +11,16 @@ import (
 )
 
 var (
-	CurrencyRegisterFactType = hint.Type("mitum-currency-currency-register-operation-fact")
-	CurrencyRegisterFactHint = hint.NewHint(CurrencyRegisterFactType, "v0.0.1")
-	CurrencyRegisterType     = hint.Type("mitum-currency-currency-register-operation")
-	CurrencyRegisterHint     = hint.NewHint(CurrencyRegisterType, "v0.0.1")
-	CurrencyRegisterHinter   = CurrencyRegister{BaseOperation: operationHinter(CurrencyRegisterHint)}
+	CurrencyRegisterFactType   = hint.Type("mitum-currency-currency-register-operation-fact")
+	CurrencyRegisterFactHint   = hint.NewHint(CurrencyRegisterFactType, "v0.0.1")
+	CurrencyRegisterFactHinter = CurrencyRegisterFact{BaseHinter: hint.NewBaseHinter(CurrencyRegisterFactHint)}
+	CurrencyRegisterType       = hint.Type("mitum-currency-currency-register-operation")
+	CurrencyRegisterHint       = hint.NewHint(CurrencyRegisterType, "v0.0.1")
+	CurrencyRegisterHinter     = CurrencyRegister{BaseOperation: operationHinter(CurrencyRegisterHint)}
 )
 
 type CurrencyRegisterFact struct {
+	hint.BaseHinter
 	h        valuehash.Hash
 	token    []byte
 	currency CurrencyDesign
@@ -26,17 +28,14 @@ type CurrencyRegisterFact struct {
 
 func NewCurrencyRegisterFact(token []byte, de CurrencyDesign) CurrencyRegisterFact {
 	fact := CurrencyRegisterFact{
-		token:    token,
-		currency: de,
+		BaseHinter: hint.NewBaseHinter(CurrencyRegisterFactHint),
+		token:      token,
+		currency:   de,
 	}
 
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (CurrencyRegisterFact) Hint() hint.Hint {
-	return CurrencyRegisterFactHint
 }
 
 func (fact CurrencyRegisterFact) Hash() valuehash.Hash {
@@ -52,9 +51,7 @@ func (fact CurrencyRegisterFact) IsValid(b []byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.currency,
-	}, nil, false); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{fact.currency}, nil, false); err != nil {
 		return errors.Wrap(err, "invalid fact")
 	}
 

@@ -25,7 +25,7 @@ func NewAddress(name string) (Address, error) {
 	return ca, ca.IsValid(nil)
 }
 
-func NewAddressFromKeys(keys Keys) (Address, error) {
+func NewAddressFromKeys(keys AccountKeys) (Address, error) {
 	if err := keys.IsValid(nil); err != nil {
 		return EmptyAddress, err
 	}

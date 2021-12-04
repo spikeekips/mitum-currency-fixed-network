@@ -18,7 +18,7 @@ type KeyUpdaterCommand struct {
 	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Keys      []KeyFlag      `name:"key" help:"key for account (ex: \"<public key>,<weight>\")" sep:"@"`
 	target    base.Address
-	keys      currency.Keys
+	keys      currency.BaseAccountKeys
 }
 
 func NewKeyUpdaterCommand() KeyUpdaterCommand {
@@ -70,12 +70,12 @@ func (cmd *KeyUpdaterCommand) parseFlags() error {
 	cmd.target = a
 
 	{
-		ks := make([]currency.Key, len(cmd.Keys))
+		ks := make([]currency.AccountKey, len(cmd.Keys))
 		for i := range cmd.Keys {
 			ks[i] = cmd.Keys[i].Key
 		}
 
-		if kys, err := currency.NewKeys(ks, cmd.Threshold); err != nil {
+		if kys, err := currency.NewBaseAccountKeys(ks, cmd.Threshold); err != nil {
 			return err
 		} else if err := kys.IsValid(nil); err != nil {
 			return err

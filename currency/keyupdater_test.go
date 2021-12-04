@@ -20,17 +20,17 @@ type testKeyUpdater struct {
 
 func (t *testKeyUpdater) TestNew() {
 	spk := key.MustNewBTCPrivatekey()
-	skey, err := NewKey(spk.Publickey(), 100)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 100)
 	t.NoError(err)
-	skeys, err := NewKeys([]Key{skey}, 100)
+	skeys, err := NewBaseAccountKeys([]AccountKey{skey}, 100)
 	t.NoError(err)
 	sender, err := NewAddressFromKeys(skeys)
 	t.NoError(err)
 
 	npk := key.MustNewBTCPrivatekey()
-	nkey, err := NewKey(npk.Publickey(), 100)
+	nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 	t.NoError(err)
-	nkeys, err := NewKeys([]Key{nkey}, 100)
+	nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 	t.NoError(err)
 
 	token := util.UUID().Bytes()
@@ -59,17 +59,17 @@ func testKeyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 	t.enc = enc
 	t.newObject = func() interface{} {
 		spk := key.MustNewBTCPrivatekey()
-		skey, err := NewKey(spk.Publickey(), 100)
+		skey, err := NewBaseAccountKey(spk.Publickey(), 100)
 		t.NoError(err)
-		skeys, err := NewKeys([]Key{skey}, 100)
+		skeys, err := NewBaseAccountKeys([]AccountKey{skey}, 100)
 		t.NoError(err)
 		sender, err := NewAddressFromKeys(skeys)
 		t.NoError(err)
 
 		npk := key.MustNewBTCPrivatekey()
-		nkey, err := NewKey(npk.Publickey(), 100)
+		nkey, err := NewBaseAccountKey(npk.Publickey(), 100)
 		t.NoError(err)
-		nkeys, err := NewKeys([]Key{nkey}, 100)
+		nkeys, err := NewBaseAccountKeys([]AccountKey{nkey}, 100)
 		t.NoError(err)
 
 		token := util.UUID().Bytes()

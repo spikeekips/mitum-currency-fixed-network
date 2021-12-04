@@ -364,7 +364,7 @@ func (t *testHandlerAccount) TestAccounts() {
 	st, _ := t.Database()
 
 	priv := key.MustNewBTCPrivatekey()
-	k, err := currency.NewKey(priv.Publickey(), 100)
+	k, err := currency.NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 
 	var topHeight base.Height
@@ -378,7 +378,7 @@ func (t *testHandlerAccount) TestAccounts() {
 		var vas []AccountValue
 		for i := 0; i < 3; i++ {
 			ac := t.newAccount()
-			keys, err := currency.NewKeys([]currency.Key{k}, 100)
+			keys, err := currency.NewBaseAccountKeys([]currency.AccountKey{k}, 100)
 			t.NoError(err)
 			ac, err = ac.SetKeys(keys)
 			t.NoError(err)
@@ -404,7 +404,7 @@ func (t *testHandlerAccount) TestAccounts() {
 	sames := make([]AccountValue, len(oldsHigher)-2)
 
 	newpriv := key.MustNewBTCPrivatekey()
-	newkey, err := currency.NewKey(newpriv.Publickey(), 100)
+	newkey, err := currency.NewBaseAccountKey(newpriv.Publickey(), 100)
 	t.NoError(err)
 
 	for i := range oldsHigher {
@@ -412,7 +412,7 @@ func (t *testHandlerAccount) TestAccounts() {
 
 		if i > len(oldsHigher)-3 {
 			// NOTE remove pubkey from account
-			keys, err := currency.NewKeys([]currency.Key{newkey}, 100)
+			keys, err := currency.NewBaseAccountKeys([]currency.AccountKey{newkey}, 100)
 			t.NoError(err)
 			ac, err := ova.ac.SetKeys(keys)
 			t.NoError(err)
@@ -490,7 +490,7 @@ func (t *testHandlerAccount) TestAccounts() {
 
 		if i > len(sames)-3 {
 			// NOTE remove pubkey from account
-			keys, err := currency.NewKeys([]currency.Key{newkey}, 100)
+			keys, err := currency.NewBaseAccountKeys([]currency.AccountKey{newkey}, 100)
 			t.NoError(err)
 			ac, err := ova.ac.SetKeys(keys)
 			t.NoError(err)

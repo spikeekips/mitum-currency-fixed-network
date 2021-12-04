@@ -10,17 +10,19 @@ import (
 )
 
 var (
-	AmountType = hint.Type("mitum-currency-amount")
-	AmountHint = hint.NewHint(AmountType, "v0.0.1")
+	AmountType   = hint.Type("mitum-currency-amount")
+	AmountHint   = hint.NewHint(AmountType, "v0.0.1")
+	AmountHinter = Amount{BaseHinter: hint.NewBaseHinter(AmountHint)}
 )
 
 type Amount struct {
+	hint.BaseHinter
 	big Big
 	cid CurrencyID
 }
 
 func NewAmount(big Big, cid CurrencyID) Amount {
-	am := Amount{big: big, cid: cid}
+	am := Amount{BaseHinter: hint.NewBaseHinter(AmountHint), big: big, cid: cid}
 
 	return am
 }
@@ -36,10 +38,6 @@ func MustNewAmount(big Big, cid CurrencyID) Amount {
 	}
 
 	return am
-}
-
-func (Amount) Hint() hint.Hint {
-	return AmountHint
 }
 
 func (am Amount) Bytes() []byte {
@@ -63,6 +61,7 @@ func (am Amount) IsEmpty() bool {
 
 func (am Amount) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		am.BaseHinter,
 		am.cid,
 		am.big,
 	}, nil, false); err != nil {

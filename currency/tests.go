@@ -17,15 +17,15 @@ import (
 type account struct { // nolint: unused
 	Address base.Address
 	Priv    key.Privatekey
-	Key     Key
+	Key     BaseAccountKey
 }
 
 func (ac *account) Privs() []key.Privatekey {
 	return []key.Privatekey{ac.Priv}
 }
 
-func (ac *account) Keys() Keys {
-	keys, _ := NewKeys([]Key{ac.Key}, 100)
+func (ac *account) Keys() AccountKeys {
+	keys, _ := NewBaseAccountKeys([]AccountKey{ac.Key}, 100)
 
 	return keys
 }
@@ -33,12 +33,12 @@ func (ac *account) Keys() Keys {
 func generateAccount() *account { // nolint: unused
 	priv := key.MustNewBTCPrivatekey()
 
-	key, err := NewKey(priv.Publickey(), 100)
+	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	if err != nil {
 		panic(err)
 	}
 
-	keys, err := NewKeys([]Key{key}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 	if err != nil {
 		panic(err)
 	}
@@ -59,21 +59,21 @@ func (t *baseTest) SetupSuite() {
 
 	_ = t.Encs.TestAddHinter(key.BTCPublickey{})
 	_ = t.Encs.TestAddHinter(base.BaseFactSign{})
-	_ = t.Encs.TestAddHinter(Key{})
-	_ = t.Encs.TestAddHinter(Keys{})
+	_ = t.Encs.TestAddHinter(AccountKeyHinter)
+	_ = t.Encs.TestAddHinter(AccountKeysHinter)
 	_ = t.Encs.TestAddHinter(Address(""))
 	_ = t.Encs.TestAddHinter(CreateAccountsHinter)
 	_ = t.Encs.TestAddHinter(TransfersHinter)
-	_ = t.Encs.TestAddHinter(KeyUpdaterFact{})
+	_ = t.Encs.TestAddHinter(KeyUpdaterFactHinter)
 	_ = t.Encs.TestAddHinter(KeyUpdaterHinter)
-	_ = t.Encs.TestAddHinter(FeeOperationFact{})
-	_ = t.Encs.TestAddHinter(FeeOperation{})
-	_ = t.Encs.TestAddHinter(Account{})
-	_ = t.Encs.TestAddHinter(CurrencyDesign{})
-	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdaterFact{})
+	_ = t.Encs.TestAddHinter(FeeOperationFactHinter)
+	_ = t.Encs.TestAddHinter(FeeOperationHinter)
+	_ = t.Encs.TestAddHinter(AccountHinter)
+	_ = t.Encs.TestAddHinter(CurrencyDesignHinter)
+	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdaterFactHinter)
 	_ = t.Encs.TestAddHinter(CurrencyPolicyUpdaterHinter)
-	_ = t.Encs.TestAddHinter(CurrencyPolicy{})
-	_ = t.Encs.TestAddHinter(SuffrageInflationFact{})
+	_ = t.Encs.TestAddHinter(CurrencyPolicyHinter)
+	_ = t.Encs.TestAddHinter(SuffrageInflationFactHinter)
 	_ = t.Encs.TestAddHinter(SuffrageInflationHinter)
 
 	t.cid = CurrencyID("SEEME")
@@ -115,7 +115,7 @@ func (t *baseTestOperationProcessor) statepool(s ...[]state.State) (*storage.Sta
 	return pool, opr
 }
 
-func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) state.State {
+func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys AccountKeys) state.State {
 	key := StateKeyAccount(a)
 
 	ac, err := NewAccount(a, keys)
@@ -128,8 +128,8 @@ func (t *baseTestOperationProcessor) newStateKeys(a base.Address, keys Keys) sta
 	return su
 }
 
-func (t *baseTestOperationProcessor) newKey(pub key.Publickey, w uint) Key {
-	k, err := NewKey(pub, w)
+func (t *baseTestOperationProcessor) newKey(pub key.Publickey, w uint) BaseAccountKey {
+	k, err := NewBaseAccountKey(pub, w)
 	if err != nil {
 		panic(err)
 	}
@@ -185,12 +185,12 @@ func (t *baseTestOperationProcessor) newCurrencyDesignState(cid CurrencyID, big 
 }
 
 func NewTestAddress() base.Address {
-	k, err := NewKey(key.MustNewBTCPrivatekey().Publickey(), 100)
+	k, err := NewBaseAccountKey(key.MustNewBTCPrivatekey().Publickey(), 100)
 	if err != nil {
 		panic(err)
 	}
 
-	keys, err := NewKeys([]Key{k}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{k}, 100)
 	if err != nil {
 		panic(err)
 	}

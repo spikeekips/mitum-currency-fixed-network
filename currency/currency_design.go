@@ -8,11 +8,13 @@ import (
 )
 
 var (
-	CurrencyDesignType = hint.Type("mitum-currency-currency-design")
-	CurrencyDesignHint = hint.NewHint(CurrencyDesignType, "v0.0.1")
+	CurrencyDesignType   = hint.Type("mitum-currency-currency-design")
+	CurrencyDesignHint   = hint.NewHint(CurrencyDesignType, "v0.0.1")
+	CurrencyDesignHinter = CurrencyDesign{BaseHinter: hint.NewBaseHinter(CurrencyDesignHint)}
 )
 
 type CurrencyDesign struct {
+	hint.BaseHinter
 	Amount
 	genesisAccount base.Address
 	policy         CurrencyPolicy
@@ -20,11 +22,18 @@ type CurrencyDesign struct {
 }
 
 func NewCurrencyDesign(amount Amount, genesisAccount base.Address, po CurrencyPolicy) CurrencyDesign {
-	return CurrencyDesign{Amount: amount, genesisAccount: genesisAccount, policy: po, aggregate: amount.Big()}
+	return CurrencyDesign{
+		BaseHinter:     hint.NewBaseHinter(CurrencyDesignHint),
+		Amount:         amount,
+		genesisAccount: genesisAccount,
+		policy:         po,
+		aggregate:      amount.Big(),
+	}
 }
 
 func (de CurrencyDesign) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		de.BaseHinter,
 		de.Amount,
 		de.aggregate,
 	}, nil, false); err != nil {
@@ -49,10 +58,6 @@ func (de CurrencyDesign) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (CurrencyDesign) Hint() hint.Hint {
-	return CurrencyDesignHint
 }
 
 func (de CurrencyDesign) GenesisAccount() base.Address {

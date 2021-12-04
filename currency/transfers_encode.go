@@ -4,18 +4,14 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (it *BaseTransfersItem) unpack(
 	enc encoder.Encoder,
-	ht hint.Hint,
 	bReceiver base.AddressDecoder,
 	bam []byte,
 ) error {
-	it.hint = ht
-
 	a, err := bReceiver.Encode(enc)
 	if err != nil {
 		return err

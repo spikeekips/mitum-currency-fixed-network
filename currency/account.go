@@ -8,31 +8,35 @@ import (
 )
 
 var (
-	AccountType = hint.Type("mitum-currency-account")
-	AccountHint = hint.NewHint(AccountType, "v0.0.1")
+	AccountType   = hint.Type("mitum-currency-account")
+	AccountHint   = hint.NewHint(AccountType, "v0.0.1")
+	AccountHinter = Account{BaseHinter: hint.NewBaseHinter(AccountHint)}
 )
 
 type Account struct {
+	hint.BaseHinter
 	h       valuehash.Hash
 	address base.Address
-	keys    Keys
+	keys    AccountKeys
 }
 
-func NewAccount(address base.Address, keys Keys) (Account, error) {
+func NewAccount(address base.Address, keys AccountKeys) (Account, error) {
 	if err := address.IsValid(nil); err != nil {
 		return Account{}, err
 	}
-	if err := keys.IsValid(nil); err != nil {
-		return Account{}, err
+	if keys != nil {
+		if err := keys.IsValid(nil); err != nil {
+			return Account{}, err
+		}
 	}
 
-	ac := Account{address: address, keys: keys}
+	ac := Account{BaseHinter: hint.NewBaseHinter(AccountHint), address: address, keys: keys}
 	ac.h = ac.GenerateHash()
 
 	return ac, nil
 }
 
-func NewAccountFromKeys(keys Keys) (Account, error) {
+func NewAccountFromKeys(keys AccountKeys) (Account, error) {
 	if a, err := NewAddressFromKeys(keys); err != nil {
 		return Account{}, err
 	} else if ac, err := NewAccount(a, keys); err != nil {
@@ -42,15 +46,15 @@ func NewAccountFromKeys(keys Keys) (Account, error) {
 	}
 }
 
-func (Account) Hint() hint.Hint {
-	return AccountHint
-}
-
 func (ac Account) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		ac.address.Bytes(),
-		ac.keys.Bytes(),
-	)
+	bs := make([][]byte, 2)
+	bs[0] = ac.address.Bytes()
+
+	if ac.keys != nil {
+		bs[1] = ac.keys.Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
 }
 
 func (ac Account) Hash() valuehash.Hash {
@@ -65,11 +69,11 @@ func (ac Account) Address() base.Address {
 	return ac.address
 }
 
-func (ac Account) Keys() Keys {
+func (ac Account) Keys() AccountKeys {
 	return ac.keys
 }
 
-func (ac Account) SetKeys(keys Keys) (Account, error) {
+func (ac Account) SetKeys(keys AccountKeys) (Account, error) {
 	if err := keys.IsValid(nil); err != nil {
 		return Account{}, err
 	}
@@ -83,9 +87,6 @@ func (ac Account) IsEmpty() bool {
 	return ac.h == nil || ac.h.IsEmpty()
 }
 
-func ZeroAccount(cid CurrencyID) Account {
-	ac := Account{address: ZeroAddress(cid)}
-	ac.h = ac.GenerateHash()
-
-	return ac
+func ZeroAccount(cid CurrencyID) (Account, error) {
+	return NewAccount(ZeroAddress(cid), nil)
 }

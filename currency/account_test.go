@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testAccount struct {
@@ -18,9 +19,9 @@ type testAccount struct {
 
 func (t *testAccount) TestNew() {
 	priv := key.MustNewBTCPrivatekey()
-	key, err := NewKey(priv.Publickey(), 100)
+	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
-	keys, err := NewKeys([]Key{key}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 	t.NoError(err)
 
 	address, err := NewAddress(util.UUID().String())
@@ -35,9 +36,9 @@ func (t *testAccount) TestNew() {
 
 func (t *testAccount) TestNewFromKeys() {
 	priv := key.MustNewBTCPrivatekey()
-	key, err := NewKey(priv.Publickey(), 100)
+	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
-	keys, err := NewKeys([]Key{key}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 	t.NoError(err)
 
 	ac, err := NewAccountFromKeys(keys)
@@ -52,7 +53,9 @@ func (t *testAccount) TestNewFromKeys() {
 
 func (t *testAccount) TestZeroAccount() {
 	cid := CurrencyID("XYZ")
-	ac := ZeroAccount(cid)
+	ac, err := ZeroAccount(cid)
+	t.NoError(err)
+	t.NoError(ac.IsValid(nil))
 	t.True(IsZeroAddress(cid, ac.Address()))
 }
 
@@ -66,13 +69,14 @@ func testAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 	t.enc = enc
 	t.newObject = func() interface{} {
 		priv := key.MustNewBTCPrivatekey()
-		key, err := NewKey(priv.Publickey(), 100)
+		key, err := NewBaseAccountKey(priv.Publickey(), 100)
 		t.NoError(err)
-		keys, err := NewKeys([]Key{key}, 100)
+		keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 		t.NoError(err)
 
 		ac, err := NewAccountFromKeys(keys)
 		t.NoError(err)
+		ac.BaseHinter = hint.NewBaseHinter(hint.NewHint(AccountType, "v0.0.9"))
 
 		return ac
 	}
@@ -81,6 +85,7 @@ func testAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 		ca := a.(Account)
 		cb := b.(Account)
 
+		t.True(ca.Hint().Equal(cb.Hint()))
 		t.True(ca.Address().Equal(cb.Address()))
 		t.True(ca.Keys().Equal(cb.Keys()))
 	}
@@ -93,16 +98,21 @@ func testAccountEncodeZero(enc encoder.Encoder) suite.TestingSuite {
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		return ZeroAccount(CurrencyID("SHOWME"))
+		ac, err := ZeroAccount(CurrencyID("SHOWME"))
+		t.NoError(err)
+		ac.BaseHinter = hint.NewBaseHinter(hint.NewHint(AccountType, "v0.0.9"))
+
+		return ac
 	}
 
 	t.compare = func(a, b interface{}) {
 		ca := a.(Account)
 		cb := b.(Account)
 
+		t.True(ca.Hint().Equal(cb.Hint()))
 		t.True(ca.Address().Equal(cb.Address()))
-		t.True(ca.Keys().Equal(cb.Keys()))
-		t.Equal(0, len(cb.Keys().Keys()))
+		t.Nil(ca.Keys())
+		t.Nil(cb.Keys())
 	}
 
 	return t
