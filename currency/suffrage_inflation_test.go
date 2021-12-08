@@ -67,9 +67,9 @@ func (t *testSuffrageInflation) TestNew() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -105,9 +105,9 @@ func (t *testSuffrageInflation) TestDuplicatedItem() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -143,9 +143,9 @@ func testSuffrageInflationEncode(enc encoder.Encoder) suite.TestingSuite {
 		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
 			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)

@@ -69,7 +69,7 @@ func (fact FeeOperationFact) IsValid([]byte) error {
 		return errors.Errorf("empty token for FeeOperationFact")
 	}
 
-	if err := fact.h.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, fact.h); err != nil {
 		return err
 	}
 
@@ -116,10 +116,7 @@ func (FeeOperation) Signs() []base.FactSign {
 }
 
 func (op FeeOperation) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		op.BaseHinter,
-		op.h,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, op.BaseHinter, op.h); err != nil {
 		return err
 	}
 

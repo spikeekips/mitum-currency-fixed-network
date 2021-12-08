@@ -106,8 +106,8 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 
 	t.Equal(self.String(), hal.Links()["self"].Href())
 
-	newSender := currency.Address("new-Mother")
-	newReceiver := currency.Address("new-Father")
+	newSender := currency.NewAddress("new-Mother")
+	newReceiver := currency.NewAddress("new-Father")
 	newBig := currency.NewBig(99)
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
@@ -185,7 +185,7 @@ func (t *testOperationBuildHandler) TestPOSTFact() {
 	usigBase := base.NewBytesForFactSignature(uf, t.networkID)
 	t.Equal(usigBase, sigBase)
 
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	sig, err := priv.Sign(sigBase)
 	t.NoError(err)
 

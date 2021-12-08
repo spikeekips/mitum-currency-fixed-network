@@ -86,18 +86,18 @@ func (fact TransfersFact) IsValid(b []byte) error {
 		return errors.Errorf("items, %d over max, %d", n, MaxTransferItems)
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{fact.sender}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.sender); err != nil {
 		return err
 	}
 
 	foundReceivers := map[string]struct{}{}
 	for i := range fact.items {
 		it := fact.items[i]
-		if err := it.IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, it); err != nil {
 			return errors.Wrap(err, "invalid item found")
 		}
 
-		k := TypedString(it.Receiver(), it.Receiver().Raw())
+		k := it.Receiver().String()
 		switch _, found := foundReceivers[k]; {
 		case found:
 			return errors.Errorf("duplicated receiver found, %s", it.Receiver())

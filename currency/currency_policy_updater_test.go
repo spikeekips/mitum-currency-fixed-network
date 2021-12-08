@@ -27,9 +27,9 @@ func (t *testCurrencyPolicyUpdater) TestNew() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -60,9 +60,9 @@ func (t *testCurrencyPolicyUpdater) TestWithInvalidPolicy() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -96,9 +96,9 @@ func testCurrencyPolicyUpdaterEncode(enc encoder.Encoder) suite.TestingSuite {
 		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
 			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)

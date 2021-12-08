@@ -45,7 +45,7 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(OperationValue{})
 	_ = t.Encs.TestAddHinter(Problem{})
 	_ = t.Encs.TestAddHinter(currency.AccountHinter)
-	_ = t.Encs.TestAddHinter(currency.Address(""))
+	_ = t.Encs.TestAddHinter(currency.AddressHinter)
 	_ = t.Encs.TestAddHinter(currency.AmountHinter)
 	_ = t.Encs.TestAddHinter(currency.CreateAccountsFactHinter)
 	_ = t.Encs.TestAddHinter(currency.CreateAccountsItemMultiAmountsHinter)
@@ -99,7 +99,7 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 	)}
 	fact := currency.NewTransfersFact(token, sender, items)
 
-	pk := key.MustNewEtherPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, t.networkID)
 	t.NoError(err)
 
@@ -114,7 +114,7 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 }
 
 func (t *baseTest) newAccount() currency.Account {
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	k, err := currency.NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 

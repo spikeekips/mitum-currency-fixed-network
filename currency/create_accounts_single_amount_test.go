@@ -20,8 +20,8 @@ type testCreateAccountsSingleAmount struct {
 }
 
 func (t *testCreateAccountsSingleAmount) TestNew() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -64,8 +64,8 @@ func (t *testCreateAccountsSingleAmount) TestNew() {
 }
 
 func (t *testCreateAccountsSingleAmount) TestZeroBig() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -105,8 +105,8 @@ func (t *testCreateAccountsSingleAmount) TestZeroBig() {
 }
 
 func (t *testCreateAccountsSingleAmount) TestEmptyAmounts() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -147,8 +147,8 @@ func (t *testCreateAccountsSingleAmount) TestEmptyAmounts() {
 }
 
 func (t *testCreateAccountsSingleAmount) TestTooManyAmounts() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -201,8 +201,8 @@ func testCreateAccountsSingleAmountEncode(enc encoder.Encoder) suite.TestingSuit
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		spk := key.MustNewBTCPrivatekey()
-		rpk := key.MustNewBTCPrivatekey()
+		spk := key.NewBasePrivatekey()
+		rpk := key.NewBasePrivatekey()
 
 		skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 		t.NoError(err)

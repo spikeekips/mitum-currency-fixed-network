@@ -56,14 +56,14 @@ func (cmd *VerifyKeyCommand) Run(version util.Version) error {
 	if cmd.JSON {
 		m := map[string]interface{}{
 			"publickey": map[string]interface{}{
-				"hint": pub.Hint(),
+				"hint": pub.Hint().Type(),
 				"key":  pub.String(),
 			},
 		}
 
 		if priv != nil {
 			m["privtekey"] = map[string]interface{}{
-				"hint": priv.Hint(),
+				"hint": priv.Hint().Type(),
 				"key":  priv.String(),
 			}
 		}
@@ -74,11 +74,11 @@ func (cmd *VerifyKeyCommand) Run(version util.Version) error {
 	}
 
 	if priv != nil {
-		cmd.print("privatekey hint: %s", priv.Hint())
+		cmd.print("privatekey hint: %s", priv.Hint().Type())
 		cmd.print("     privatekey: %s", priv.String())
 	}
 
-	cmd.print(" publickey hint: %s", pub.Hint())
+	cmd.print(" publickey hint: %s", pub.Hint().Type())
 	cmd.print("      publickey: %s", pub.String())
 
 	return nil

@@ -3,6 +3,7 @@ package currency
 import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -32,11 +33,11 @@ func NewCurrencyDesign(amount Amount, genesisAccount base.Address, po CurrencyPo
 }
 
 func (de CurrencyDesign) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(nil, false,
 		de.BaseHinter,
 		de.Amount,
 		de.aggregate,
-	}, nil, false); err != nil {
+	); err != nil {
 		return errors.Wrap(err, "invalid currency balance")
 	}
 
@@ -58,6 +59,20 @@ func (de CurrencyDesign) IsValid([]byte) error {
 	}
 
 	return nil
+}
+
+func (de CurrencyDesign) Bytes() []byte {
+	var gb []byte
+	if de.genesisAccount != nil {
+		gb = de.genesisAccount.Bytes()
+	}
+
+	return util.ConcatBytesSlice(
+		de.Amount.Bytes(),
+		gb,
+		de.policy.Bytes(),
+		de.aggregate.Bytes(),
+	)
 }
 
 func (de CurrencyDesign) GenesisAccount() base.Address {

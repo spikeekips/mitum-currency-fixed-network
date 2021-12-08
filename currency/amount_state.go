@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -40,7 +41,7 @@ func (AmountState) Hint() hint.Hint {
 }
 
 func (st AmountState) IsValid(b []byte) error {
-	if err := st.State.IsValid(b); err != nil {
+	if err := isvalid.Check(b, false, st.State); err != nil {
 		return err
 	}
 

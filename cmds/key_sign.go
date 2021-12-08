@@ -65,7 +65,7 @@ func (cmd *SignKeyCommand) Run(version util.Version) error {
 func loadKey(b []byte) (key.Key, error) {
 	s := strings.TrimSpace(string(b))
 
-	if pk, err := key.DecodeKey(jenc, s); err != nil {
+	if pk, err := key.DecodeKeyFromString(s, jenc); err != nil {
 		return nil, err
 	} else if err := pk.IsValid(nil); err != nil {
 		return nil, err

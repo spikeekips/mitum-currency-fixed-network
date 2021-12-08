@@ -25,9 +25,9 @@ func (t *baseTestEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	t.encs.AddEncoder(t.enc)
 
-	t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	t.encs.TestAddHinter(base.StringAddress(""))
-	t.encs.TestAddHinter(Address(""))
+	t.encs.TestAddHinter(key.BasePublickey{})
+	t.encs.TestAddHinter(base.StringAddressHinter)
+	t.encs.TestAddHinter(AddressHinter)
 	t.encs.TestAddHinter(base.BaseFactSignHinter)
 	t.encs.TestAddHinter(AccountKeyHinter)
 	t.encs.TestAddHinter(AccountKeysHinter)

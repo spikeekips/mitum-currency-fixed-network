@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -14,7 +15,7 @@ type testAddress struct {
 }
 
 func (t *testAddress) newKey(weight uint) BaseAccountKey {
-	k, err := NewBaseAccountKey(key.MustNewBTCPrivatekey().Publickey(), weight)
+	k, err := NewBaseAccountKey(key.NewBasePrivatekey().Publickey(), weight)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +39,7 @@ func (t *testAddress) TestSingleKey() {
 
 func (t *testAddress) TestWrongKey() {
 	keys := BaseAccountKeys{
-		keys:      []AccountKey{BaseAccountKey{k: key.MustNewBTCPrivatekey().Publickey(), w: 101}},
+		keys:      []AccountKey{BaseAccountKey{k: key.NewBasePrivatekey().Publickey(), w: 101}},
 		threshold: 100,
 		h:         valuehash.RandomSHA256(),
 	}
@@ -91,12 +92,16 @@ func (t *testAddress) TestMultipleKeyOrder() {
 	t.Equal(a, b)
 }
 
+func isZeroAddress(cid CurrencyID, address base.Address) bool {
+	return cid.String()+ZeroAddressSuffix+AddressType.String() == address.String()
+}
+
 func (t *testAddress) TestZeroAddress() {
 	cid := CurrencyID("XYZ")
 	ad := ZeroAddress(cid)
-	t.Equal("XYZ-X", ad.Raw())
+	t.Equal("XYZ-X"+AddressType.String(), ad.String())
 
-	t.True(IsZeroAddress(cid, ad))
+	t.True(isZeroAddress(cid, ad))
 }
 
 func TestAddress(t *testing.T) {

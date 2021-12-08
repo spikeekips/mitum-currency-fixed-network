@@ -26,9 +26,9 @@ func (t *testCurrencyRegister) TestNew() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -55,9 +55,9 @@ func (t *testCurrencyRegister) TestZeroAmount() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -80,9 +80,9 @@ func (t *testCurrencyRegister) TestInvalidCurrencyID() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -115,9 +115,9 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
 			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)

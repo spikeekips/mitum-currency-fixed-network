@@ -141,8 +141,8 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newPub := key.MustNewBTCPrivatekey().Publickey()
-	newSender := currency.Address("new-mother")
+	newPub := key.NewBasePrivatekey().Publickey()
+	newSender := currency.NewAddress("new-mother")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -191,8 +191,8 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newPub := key.MustNewBTCPrivatekey().Publickey()
-	newSender := currency.Address("new-mother")
+	newPub := key.NewBasePrivatekey().Publickey()
+	newSender := currency.NewAddress("new-mother")
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
 	newCurrencyID := currency.CurrencyID("XXX")
@@ -236,8 +236,8 @@ func (t *testBuilder) TestBuildFactTransfers() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -297,8 +297,8 @@ func (t *testBuilder) TestBuildFactCurrencyRegister() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -345,8 +345,8 @@ func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -380,7 +380,7 @@ func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 }
 
 func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operation.Operation {
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	sig, err := priv.Sign(sb)
 	t.NoError(err)
 
@@ -398,7 +398,7 @@ func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operatio
 		[]byte(base58.Encode(sig)),
 	)
 
-	npriv := key.MustNewBTCPrivatekey()
+	npriv := key.NewBasePrivatekey()
 	nsig, err := npriv.Sign(sb)
 	var nfs base.FactSign
 	{ // add new FactSign

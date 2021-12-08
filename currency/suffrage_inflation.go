@@ -39,10 +39,7 @@ func (item SuffrageInflationItem) Bytes() []byte {
 }
 
 func (item SuffrageInflationItem) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		item.receiver,
-		item.amount,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, item.receiver, item.amount); err != nil {
 		return isvalid.InvalidError.Errorf("invalid SuffrageInflationItem: %w", err)
 	}
 
@@ -103,7 +100,7 @@ func (fact SuffrageInflationFact) IsValid(b []byte) error {
 			return isvalid.InvalidError.Errorf("invalid SuffrageInflationFact: %w", err)
 		}
 
-		k := TypedString(item.receiver, item.receiver.Raw()) + "-" + item.amount.Currency().String()
+		k := item.receiver.String() + "-" + item.amount.Currency().String()
 		if _, found := founds[k]; found {
 			return isvalid.InvalidError.Errorf("duplicated item found in SuffrageInflationFact")
 		}

@@ -53,7 +53,7 @@ var types = []hint.Type{
 
 var hinters = []hint.Hinter{
 	currency.AccountHinter,
-	currency.Address(""),
+	currency.AddressHinter,
 	currency.AmountHinter,
 	currency.CreateAccountsFactHinter,
 	currency.CreateAccountsItemMultiAmountsHinter,

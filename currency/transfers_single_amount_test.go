@@ -29,9 +29,9 @@ func (t *testTransfersItemSingleAmount) TestNew() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -61,7 +61,7 @@ func (t *testTransfersItemSingleAmount) TestZeroBig() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
@@ -95,7 +95,7 @@ func (t *testTransfersItemSingleAmount) TestOverMaxAmounts() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
@@ -123,7 +123,7 @@ func (t *testTransfersItemSingleAmount) TestEmptyAmounts() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
@@ -158,9 +158,9 @@ func testTransfersItemSingleAmountEncode(enc encoder.Encoder) suite.TestingSuite
 		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
 			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)

@@ -36,7 +36,7 @@ func (t *testCurrencyID) TestFromString() {
 		{name: "!", s: "A!BC"},
 		{name: "$", s: "A$BC"},
 		{name: "*", s: "A*BC"},
-		{name: "+", s: "A+BC"},
+		{name: "+", s: "A+BC", err: "wrong currency id"},
 		{name: "@", s: "A@BC"},
 	}
 

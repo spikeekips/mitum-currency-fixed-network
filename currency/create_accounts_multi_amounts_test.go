@@ -21,8 +21,8 @@ type testCreateAccountsMultiAmounts struct {
 }
 
 func (t *testCreateAccountsMultiAmounts) TestNew() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -68,8 +68,8 @@ func (t *testCreateAccountsMultiAmounts) TestNew() {
 }
 
 func (t *testCreateAccountsMultiAmounts) TestZeroBig() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -112,8 +112,8 @@ func (t *testCreateAccountsMultiAmounts) TestZeroBig() {
 }
 
 func (t *testCreateAccountsMultiAmounts) TestEmptyAmounts() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -151,8 +151,8 @@ func (t *testCreateAccountsMultiAmounts) TestEmptyAmounts() {
 }
 
 func (t *testCreateAccountsMultiAmounts) TestOverMaxAmounts() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -195,8 +195,8 @@ func (t *testCreateAccountsMultiAmounts) TestOverMaxAmounts() {
 }
 
 func (t *testCreateAccountsMultiAmounts) TestDuplicatedCurrency() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -247,8 +247,8 @@ func testCreateAccountsMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuit
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		spk := key.MustNewBTCPrivatekey()
-		rpk := key.MustNewBTCPrivatekey()
+		spk := key.NewBasePrivatekey()
+		rpk := key.NewBasePrivatekey()
 
 		skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 		t.NoError(err)

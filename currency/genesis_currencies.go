@@ -75,10 +75,7 @@ func (fact GenesisCurrenciesFact) IsValid(b []byte) error {
 		return errors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.genesisNodeKey,
-		fact.keys,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.genesisNodeKey, fact.keys); err != nil {
 		return errors.Wrap(err, "invalid fact")
 	}
 

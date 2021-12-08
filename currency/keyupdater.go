@@ -61,11 +61,11 @@ func (fact KeyUpdaterFact) IsValid(b []byte) error {
 		return err
 	}
 
-	return isvalid.Check([]isvalid.IsValider{
+	return isvalid.Check(nil, false,
 		fact.target,
 		fact.keys,
 		fact.currency,
-	}, nil, false)
+	)
 }
 
 func (fact KeyUpdaterFact) Token() []byte {

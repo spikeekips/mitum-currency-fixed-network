@@ -335,8 +335,8 @@ func (t *testTransfersOperations) TestSameSenders() {
 }
 
 func (t *testTransfersOperations) TestUnderThreshold() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey := t.newKey(spk.Publickey(), 50)
 	rkey := t.newKey(rpk.Publickey(), 50)
@@ -390,7 +390,7 @@ func (t *testTransfersOperations) TestUnknownKey() {
 
 	items := []TransfersItem{t.newTransfersItem(ra.Address, NewBig(1))}
 
-	tf := t.newTransfer(sa.Address, []key.Privatekey{sa.Priv, key.MustNewBTCPrivatekey()}, items)
+	tf := t.newTransfer(sa.Address, []key.Privatekey{sa.Priv, key.NewBasePrivatekey()}, items)
 
 	err := opr.Process(tf)
 

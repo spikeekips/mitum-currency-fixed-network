@@ -51,7 +51,7 @@ func (fact CurrencyRegisterFact) IsValid(b []byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{fact.currency}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.currency); err != nil {
 		return errors.Wrap(err, "invalid fact")
 	}
 

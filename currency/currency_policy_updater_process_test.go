@@ -44,7 +44,7 @@ func (t *testCurrencyPolicyUpdaterOperations) newOperation(keys []key.Privatekey
 func (t *testCurrencyPolicyUpdaterOperations) processor(n int) ([]key.Privatekey, *OperationProcessor) {
 	privs := make([]key.Privatekey, n)
 	for i := 0; i < n; i++ {
-		privs[i] = key.MustNewBTCPrivatekey()
+		privs[i] = key.NewBasePrivatekey()
 	}
 
 	pubs := make([]key.Publickey, len(privs))

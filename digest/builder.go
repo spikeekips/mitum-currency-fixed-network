@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	templatePrivateKeyString = "Kzxb3TcaxHCp9iq6ekyaNjaeRSdqzvv9JrazTV8cVsZq9U2FQSSG"
+	templatePrivateKeyString = "KzFERQKNQbPA8cdsX5tCiCZvR4KgBou41cgtPk69XueFbaEjrczbmpr"
 	templatePublickey        key.Publickey
 	templateCurrencyID       = currency.CurrencyID("xXx")
-	templateSender           = currency.Address("mother")
-	templateReceiver         = currency.Address("father")
+	templateSender           = currency.NewAddress("mother")
+	templateReceiver         = currency.NewAddress("father")
 	templateToken            = []byte("raised by")
 	templateSignature        = key.Signature([]byte("wolves"))
 	templateBig              = currency.NewBig(-333)
@@ -28,7 +28,7 @@ var (
 )
 
 func init() {
-	if priv, err := key.NewBTCPrivatekeyFromString(templatePrivateKeyString); err != nil {
+	if priv, err := key.ParseBasePrivatekey(templatePrivateKeyString); err != nil {
 		panic(err)
 	} else {
 		templatePublickey = priv.Publickey()

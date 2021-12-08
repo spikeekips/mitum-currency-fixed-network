@@ -21,15 +21,15 @@ type testGenesisCurrencies struct {
 
 func (t *testGenesisCurrencies) TestLoad() {
 	encs := encoder.NewEncoders()
-	encs.TestAddHinter(key.BTCPrivatekeyHinter)
-	encs.TestAddHinter(key.BTCPublickeyHinter)
+	encs.TestAddHinter(key.BasePrivatekey{})
+	encs.TestAddHinter(key.BasePublickey{})
 
 	enc := jsonenc.NewEncoder()
 	encs.AddEncoder(enc)
 
 	conf := config.NewBaseLocalNode(enc, nil)
 
-	pub := key.MustNewBTCPrivatekey().Publickey()
+	pub := key.NewBasePrivatekey().Publickey()
 
 	k, err := currency.NewBaseAccountKey(pub, 99)
 	t.NoError(err)
@@ -39,7 +39,7 @@ func (t *testGenesisCurrencies) TestLoad() {
 	genesisAccount, err := currency.NewAddressFromKeys(ks)
 	t.NoError(err)
 
-	t.NoError(conf.SetPrivatekey(key.MustNewBTCPrivatekey().String()))
+	t.NoError(conf.SetPrivatekey(key.NewBasePrivatekey().String()))
 	t.NoError(conf.SetNetworkID("Fri 29 Jan 2001 12:00:02 AM KST"))
 
 	ctx := context.WithValue(context.Background(), config.ContextValueConfig, conf)

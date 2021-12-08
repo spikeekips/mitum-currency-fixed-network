@@ -17,8 +17,8 @@ type testCreateAccounts struct {
 }
 
 func (t *testCreateAccounts) TestNew() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
@@ -63,7 +63,7 @@ func (t *testCreateAccounts) TestNew() {
 func (t *testCreateAccounts) TestDuplicatedKeys() {
 	var items []CreateAccountsItem
 	{
-		pk := key.MustNewBTCPrivatekey()
+		pk := key.NewBasePrivatekey()
 		key, err := NewBaseAccountKey(pk.Publickey(), 100)
 		t.NoError(err)
 		keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
@@ -74,7 +74,7 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 	}
 
 	token := util.UUID().Bytes()
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	key, err := NewBaseAccountKey(pk.Publickey(), 100)
 	t.NoError(err)
 
@@ -94,7 +94,7 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 }
 
 func (t *testCreateAccounts) TestSameWithSender() {
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	key, err := NewBaseAccountKey(pk.Publickey(), 100)
 	t.NoError(err)
 	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
@@ -119,8 +119,8 @@ func (t *testCreateAccounts) TestSameWithSender() {
 }
 
 func (t *testCreateAccounts) TestOverSizeMemo() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
 	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)

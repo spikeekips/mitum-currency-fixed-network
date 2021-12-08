@@ -60,11 +60,11 @@ func (am Amount) IsEmpty() bool {
 }
 
 func (am Amount) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(nil, false,
 		am.BaseHinter,
 		am.cid,
 		am.big,
-	}, nil, false); err != nil {
+	); err != nil {
 		return isvalid.InvalidError.Errorf("invalid Balance: %w", err)
 	}
 

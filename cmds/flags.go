@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -36,7 +35,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	}
 
 	var pk key.Publickey
-	if k, err := key.DecodeKey(jenc, l[0]); err != nil {
+	if k, err := key.DecodeKeyFromString(l[0], jenc); err != nil {
 		return errors.Wrapf(err, "invalid public key, %q for --key", l[0])
 	} else if priv, ok := k.(key.Privatekey); ok {
 		pk = priv.Publickey()
@@ -98,7 +97,7 @@ func (v PrivatekeyFlag) Empty() bool {
 }
 
 func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
-	if k, err := key.DecodePrivatekey(jenc, string(b)); err != nil {
+	if k, err := key.DecodePrivatekeyFromString(string(b), jenc); err != nil {
 		return errors.Wrapf(err, "invalid private key, %q", string(b))
 	} else if err := k.IsValid(nil); err != nil {
 		return err
@@ -112,17 +111,11 @@ func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
 }
 
 type AddressFlag struct {
-	s  string
-	ad base.AddressDecoder
+	s string
 }
 
 func (v *AddressFlag) UnmarshalText(b []byte) error {
-	hs, err := hint.ParseHintedString(string(b))
-	if err != nil {
-		return err
-	}
 	v.s = string(b)
-	v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(hs.Hint(), hs.Body())}
 
 	return nil
 }
@@ -132,7 +125,7 @@ func (v *AddressFlag) String() string {
 }
 
 func (v *AddressFlag) Encode(enc encoder.Encoder) (base.Address, error) {
-	return v.ad.Encode(enc)
+	return base.DecodeAddressFromString(v.s, enc)
 }
 
 type BigFlag struct {

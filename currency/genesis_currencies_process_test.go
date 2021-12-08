@@ -24,11 +24,11 @@ type testGenesisCurrenciesOperation struct {
 func (t *testGenesisCurrenciesOperation) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	t.Encs.TestAddHinter(key.BTCPublickey{})
+	t.Encs.TestAddHinter(key.BasePublickey{})
 	t.Encs.TestAddHinter(base.BaseFactSign{})
 	t.Encs.TestAddHinter(AccountKeyHinter)
 	t.Encs.TestAddHinter(AccountKeysHinter)
-	t.Encs.TestAddHinter(Address(""))
+	t.Encs.TestAddHinter(AddressHinter)
 	t.Encs.TestAddHinter(GenesisCurrenciesFactHinter)
 	t.Encs.TestAddHinter(GenesisCurrenciesHinter)
 	t.Encs.TestAddHinter(AccountHinter)
@@ -36,7 +36,7 @@ func (t *testGenesisCurrenciesOperation) SetupSuite() {
 	t.Encs.TestAddHinter(CurrencyDesignHinter)
 	t.Encs.TestAddHinter(CurrencyPolicyHinter)
 
-	t.pk = key.MustNewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 	t.networkID = util.UUID().Bytes()
 }
 
@@ -53,7 +53,7 @@ func (t *testGenesisCurrenciesOperation) genesisCurrency(cid string, amount int6
 }
 
 func (t *testGenesisCurrenciesOperation) TestNew() {
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	keys, _ := NewBaseAccountKeys([]AccountKey{t.newKey(pk.Publickey(), 100)}, 100)
 	cs := []CurrencyDesign{
 		t.genesisCurrency("FIND*ME", 44),

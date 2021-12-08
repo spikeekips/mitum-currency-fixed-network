@@ -18,14 +18,14 @@ type testAccount struct {
 }
 
 func (t *testAccount) TestNew() {
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 	t.NoError(err)
 
-	address, err := NewAddress(util.UUID().String())
-	t.NoError(err)
+	address := NewAddress(util.UUID().String())
+	t.NoError(address.IsValid(nil))
 
 	ac, err := NewAccount(address, keys)
 	t.NoError(err)
@@ -35,7 +35,7 @@ func (t *testAccount) TestNew() {
 }
 
 func (t *testAccount) TestNewFromKeys() {
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
@@ -56,7 +56,7 @@ func (t *testAccount) TestZeroAccount() {
 	ac, err := ZeroAccount(cid)
 	t.NoError(err)
 	t.NoError(ac.IsValid(nil))
-	t.True(IsZeroAddress(cid, ac.Address()))
+	t.True(isZeroAddress(cid, ac.Address()))
 }
 
 func TestAccount(t *testing.T) {
@@ -68,7 +68,7 @@ func testAccountEncode(enc encoder.Encoder) suite.TestingSuite {
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		priv := key.MustNewBTCPrivatekey()
+		priv := key.NewBasePrivatekey()
 		key, err := NewBaseAccountKey(priv.Publickey(), 100)
 		t.NoError(err)
 		keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)

@@ -40,7 +40,7 @@ func (kd *KeyDesign) IsValid([]byte) error {
 		return errors.Wrap(err, "json encoder needs for load design")
 	}
 
-	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
+	if pub, err := key.DecodePublickeyFromString(kd.PublickeyString, je); err != nil {
 		return err
 	} else if k, err := currency.NewBaseAccountKey(pub, kd.Weight); err != nil {
 		return err

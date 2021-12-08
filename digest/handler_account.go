@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -261,7 +260,7 @@ func (hd *Handlers) handleAccounts(w http.ResponseWriter, r *http.Request) {
 		offsetAddress = a
 	}
 
-	cachekey := CacheKey(r.URL.Path, currency.TypedString(pub, pub.Raw()), offset)
+	cachekey := CacheKey(r.URL.Path, pub.String(), offset)
 	if err := LoadFromCache(hd.cache, cachekey, w); err == nil {
 		return
 	}
@@ -347,10 +346,7 @@ func (*Handlers) buildAccountsHal(
 
 	var nextoffset string
 	if len(vas) > 0 {
-		nextoffset = buildOffsetByString(
-			topHeight,
-			currency.TypedString(lastaddress, lastaddress.Raw()),
-		)
+		nextoffset = buildOffsetByString(topHeight, lastaddress.String())
 	}
 
 	if len(nextoffset) > 0 {
@@ -371,7 +367,7 @@ func (hd *Handlers) parseAccountsQueries(s, offset string) (key.Publickey, base.
 	case len(ps) < 1:
 		return nil, base.NilHeight, "", errors.Errorf("empty query")
 	default:
-		i, err := key.DecodePublickey(hd.enc, ps)
+		i, err := key.DecodePublickeyFromString(ps, hd.enc)
 		if err == nil {
 			err = i.IsValid(nil)
 		}

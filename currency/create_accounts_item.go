@@ -39,7 +39,7 @@ func (it BaseCreateAccountsItem) IsValid([]byte) error {
 		return errors.Errorf("empty amounts")
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{it.BaseHinter, it.keys}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, it.BaseHinter, it.keys); err != nil {
 		return err
 	}
 

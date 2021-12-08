@@ -91,13 +91,13 @@ func (fact CreateAccountsFact) IsValid(b []byte) error {
 		return errors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{fact.sender}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.sender); err != nil {
 		return err
 	}
 
 	foundKeys := map[string]struct{}{}
 	for i := range fact.items {
-		if err := fact.items[i].IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, fact.items[i]); err != nil {
 			return err
 		}
 

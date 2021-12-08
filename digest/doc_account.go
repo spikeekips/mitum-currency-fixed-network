@@ -29,14 +29,14 @@ func NewAccountDoc(rs AccountValue, enc encoder.Encoder) (AccountDoc, error) {
 		pubs = make([]string, len(ks))
 		for i := range ks {
 			k := ks[i].Key()
-			pubs[i] = currency.TypedString(k, k.Raw())
+			pubs[i] = k.String()
 		}
 	}
 
 	address := rs.ac.Address()
 	return AccountDoc{
 		BaseDoc: b,
-		address: currency.TypedString(address, address.Raw()),
+		address: address.String(),
 		height:  rs.height,
 		pubs:    pubs,
 	}, nil

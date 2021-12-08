@@ -46,7 +46,7 @@ func (t *testSuffrageInflationOperations) newOperation(keys []key.Privatekey, it
 func (t *testSuffrageInflationOperations) processor(n int, pool *storage.Statepool) ([]key.Privatekey, prprocessor.OperationProcessor, *CurrencyPool) {
 	privs := make([]key.Privatekey, n)
 	for i := 0; i < n; i++ {
-		privs[i] = key.MustNewBTCPrivatekey()
+		privs[i] = key.NewBasePrivatekey()
 	}
 
 	pubs := make([]key.Publickey, len(privs))

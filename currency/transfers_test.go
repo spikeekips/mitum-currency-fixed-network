@@ -28,9 +28,9 @@ func (t *testTransfers) TestNew() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
@@ -61,7 +61,7 @@ func (t *testTransfers) TestDuplicatedReceivers() {
 	}
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
@@ -87,7 +87,7 @@ func (t *testTransfers) TestSameWithSender() {
 	}
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
+	pk := key.NewBasePrivatekey()
 	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
@@ -112,9 +112,9 @@ func (t *testTransfers) TestOverSizeMemo() {
 	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
 		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)

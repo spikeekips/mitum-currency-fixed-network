@@ -35,10 +35,7 @@ func (po CurrencyPolicy) IsValid([]byte) error {
 		return errors.Errorf("NewAccountMinBalance under zero")
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		po.BaseHinter,
-		po.feeer,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, po.BaseHinter, po.feeer); err != nil {
 		return errors.Wrap(err, "invalid currency policy")
 	}
 

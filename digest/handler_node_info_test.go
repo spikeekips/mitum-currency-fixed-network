@@ -25,10 +25,10 @@ type testHandlerNodeInfo struct {
 }
 
 func (t *testHandlerNodeInfo) newNode(name string) (base.Node, network.ConnInfo) {
-	addr, err := base.NewStringAddress(name)
-	t.NoError(err)
+	addr := base.NewStringAddress(name)
+	t.NoError(addr.IsValid(nil))
 
-	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
+	no := node.NewBaseV0(addr, key.NewBasePrivatekey().Publickey())
 	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
 	connInfo := network.NewHTTPConnInfo(u, true)
 

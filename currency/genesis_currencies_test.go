@@ -18,8 +18,8 @@ type testGenesisCurrencies struct {
 }
 
 func (t *testGenesisCurrencies) TestNew() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
 	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
@@ -48,8 +48,8 @@ func (t *testGenesisCurrencies) TestNew() {
 }
 
 func (t *testGenesisCurrencies) TestDuplicatedCurrencyID() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
 	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
@@ -68,8 +68,8 @@ func (t *testGenesisCurrencies) TestDuplicatedCurrencyID() {
 }
 
 func (t *testGenesisCurrencies) TestEmptyGenesisCurrencies() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
 	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
@@ -91,8 +91,8 @@ func testGenesisCurrenciesEncode(enc encoder.Encoder) suite.TestingSuite {
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		nodeKey := key.MustNewBTCPrivatekey()
-		rpk := key.MustNewBTCPrivatekey()
+		nodeKey := key.NewBasePrivatekey()
+		rpk := key.NewBasePrivatekey()
 		rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 		t.NoError(err)
 		keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)

@@ -59,10 +59,7 @@ func (fact CurrencyPolicyUpdaterFact) IsValid(b []byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.cid,
-		fact.policy,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.cid, fact.policy); err != nil {
 		return errors.Wrap(err, "invalid fact")
 	}
 

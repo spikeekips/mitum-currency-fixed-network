@@ -62,7 +62,7 @@ func (ky BaseAccountKey) IsValid([]byte) error {
 		return errors.Errorf("invalid key weight, 1 <= weight <= 100")
 	}
 
-	return ky.k.IsValid(nil)
+	return isvalid.Check(nil, false, ky.k)
 }
 
 func (ky BaseAccountKey) Weight() uint {
@@ -74,10 +74,7 @@ func (ky BaseAccountKey) Key() key.Publickey {
 }
 
 func (ky BaseAccountKey) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		[]byte(TypedString(ky.k, ky.k.Raw())),
-		util.UintToBytes(ky.w),
-	)
+	return util.ConcatBytesSlice(ky.k.Bytes(), util.UintToBytes(ky.w))
 }
 
 func (ky BaseAccountKey) Equal(b AccountKey) bool {
@@ -143,11 +140,7 @@ func (ks BaseAccountKeys) IsValid([]byte) error {
 		return errors.Errorf("invalid threshold, %d, should be 1 <= threshold <= 100", ks.threshold)
 	}
 
-	if ks.h == nil {
-		return isvalid.InvalidError.Errorf("empty hash")
-	}
-
-	if err := ks.h.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, ks.h); err != nil {
 		return err
 	}
 
@@ -160,13 +153,15 @@ func (ks BaseAccountKeys) IsValid([]byte) error {
 	m := map[string]struct{}{}
 	for i := range ks.keys {
 		k := ks.keys[i]
-		if err := k.IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, k); err != nil {
 			return err
-		} else if _, found := m[k.Key().String()]; found {
-			return errors.Errorf("duplicated keys found")
-		} else {
-			m[k.Key().String()] = struct{}{}
 		}
+
+		if _, found := m[k.Key().String()]; found {
+			return errors.Errorf("duplicated keys found")
+		}
+
+		m[k.Key().String()] = struct{}{}
 	}
 
 	var totalWeight uint

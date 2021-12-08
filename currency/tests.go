@@ -31,7 +31,7 @@ func (ac *account) Keys() AccountKeys {
 }
 
 func generateAccount() *account { // nolint: unused
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 
 	key, err := NewBaseAccountKey(priv.Publickey(), 100)
 	if err != nil {
@@ -57,11 +57,11 @@ type baseTest struct { // nolint: unused
 func (t *baseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	_ = t.Encs.TestAddHinter(key.BTCPublickey{})
+	_ = t.Encs.TestAddHinter(key.BasePublickey{})
 	_ = t.Encs.TestAddHinter(base.BaseFactSign{})
 	_ = t.Encs.TestAddHinter(AccountKeyHinter)
 	_ = t.Encs.TestAddHinter(AccountKeysHinter)
-	_ = t.Encs.TestAddHinter(Address(""))
+	_ = t.Encs.TestAddHinter(AddressHinter)
 	_ = t.Encs.TestAddHinter(CreateAccountsHinter)
 	_ = t.Encs.TestAddHinter(TransfersHinter)
 	_ = t.Encs.TestAddHinter(KeyUpdaterFactHinter)
@@ -185,7 +185,7 @@ func (t *baseTestOperationProcessor) newCurrencyDesignState(cid CurrencyID, big 
 }
 
 func NewTestAddress() base.Address {
-	k, err := NewBaseAccountKey(key.MustNewBTCPrivatekey().Publickey(), 100)
+	k, err := NewBaseAccountKey(key.NewBasePrivatekey().Publickey(), 100)
 	if err != nil {
 		panic(err)
 	}

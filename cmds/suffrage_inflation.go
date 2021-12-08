@@ -54,11 +54,7 @@ func (v *SuffrageInflationItemFlag) UnmarshalText(b []byte) error {
 }
 
 func (v *SuffrageInflationItemFlag) IsValid([]byte) error {
-	if err := v.receiver.IsValid(nil); err != nil {
-		return err
-	}
-
-	if err := v.amount.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, v.receiver, v.amount); err != nil {
 		return err
 	}
 

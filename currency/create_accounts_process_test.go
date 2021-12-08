@@ -423,7 +423,7 @@ func (t *testCreateAccountsOperation) TestEmptyCurrency() {
 }
 
 func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
-	spk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
 
 	skey := t.newKey(spk.Publickey(), 100)
 	skeys, _ := NewBaseAccountKeys([]AccountKey{skey}, 100)
@@ -591,7 +591,7 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 	{
 		na, _ := t.newAccount(false, nil)
 		items := []CreateAccountsItem{NewCreateAccountsItemMultiAmounts(na.Keys(), []Amount{NewAmount(NewBig(1), cid)})}
-		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.MustNewBTCPrivatekey()})
+		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.NewBasePrivatekey()})
 		err := opr.Process(ca)
 
 		var oper operation.ReasonError

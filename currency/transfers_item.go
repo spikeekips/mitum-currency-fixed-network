@@ -5,6 +5,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type BaseTransfersItem struct {
@@ -33,7 +34,7 @@ func (it BaseTransfersItem) Bytes() []byte {
 }
 
 func (it BaseTransfersItem) IsValid([]byte) error {
-	if err := it.receiver.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, it.receiver); err != nil {
 		return err
 	}
 

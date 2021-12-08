@@ -1,6 +1,10 @@
 package cmds
 
-import "github.com/spikeekips/mitum/base/key"
+import (
+	"fmt"
+
+	"github.com/spikeekips/mitum/base/key"
+)
 
 const (
 	btc     = "btc"
@@ -33,15 +37,13 @@ func IsValidKeyType(s string) bool {
 	}
 }
 
-func GenerateKey(s string) key.Privatekey {
-	switch s {
-	case btc:
-		return key.MustNewBTCPrivatekey()
-	case ether:
-		return key.MustNewEtherPrivatekey()
-	case stellar:
-		return key.MustNewStellarPrivatekey()
+func GenerateKey(seed string) (key.Privatekey, error) {
+	switch l := len(seed); {
+	case l < 1:
+		return key.NewBasePrivatekey(), nil
+	case l < key.MinSeedSize:
+		return nil, fmt.Errorf("seed should be over %d < %d", l, key.MinSeedSize)
 	default:
-		return nil
+		return key.NewBasePrivatekeyFromSeed(seed)
 	}
 }

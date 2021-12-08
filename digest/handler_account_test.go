@@ -69,8 +69,8 @@ func (t *testHandlerAccount) TestAccountNotFound() {
 
 	handlers := t.handlers(st, DummyCache{})
 
-	unknown, err := currency.NewAddress(util.UUID().String())
-	t.NoError(err)
+	unknown := currency.NewAddress(util.UUID().String())
+	t.NoError(unknown.IsValid(nil))
 
 	self, err := handlers.router.Get(HandlerPathAccount).URLPath("address", unknown.String())
 	t.NoError(err)
@@ -363,7 +363,7 @@ func (t *testHandlerAccount) TestAccountOperationsReverseCache() {
 func (t *testHandlerAccount) TestAccounts() {
 	st, _ := t.Database()
 
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	k, err := currency.NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 
@@ -403,7 +403,7 @@ func (t *testHandlerAccount) TestAccounts() {
 
 	sames := make([]AccountValue, len(oldsHigher)-2)
 
-	newpriv := key.MustNewBTCPrivatekey()
+	newpriv := key.NewBasePrivatekey()
 	newkey, err := currency.NewBaseAccountKey(newpriv.Publickey(), 100)
 	t.NoError(err)
 

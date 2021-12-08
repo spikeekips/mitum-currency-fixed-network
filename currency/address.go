@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
@@ -12,71 +10,40 @@ import (
 var (
 	AddressType       = hint.Type("mca")
 	AddressHint       = hint.NewHint(AddressType, "v0.0.1")
+	AddressHinter     = Address{StringAddress: base.NewStringAddressWithHint(AddressHint, "")}
 	ZeroAddressSuffix = "-X"
 )
 
-var EmptyAddress = Address("")
+type Address struct {
+	base.StringAddress
+}
 
-type Address string
+func NewAddress(s string) Address {
+	ca := Address{StringAddress: base.NewStringAddressWithHint(AddressHint, s)}
 
-func NewAddress(name string) (Address, error) {
-	ca := Address(name)
-
-	return ca, ca.IsValid(nil)
+	return ca
 }
 
 func NewAddressFromKeys(keys AccountKeys) (Address, error) {
 	if err := keys.IsValid(nil); err != nil {
-		return EmptyAddress, err
+		return Address{}, err
 	}
 
-	return NewAddress(keys.Hash().String())
-}
-
-func (ca Address) Raw() string {
-	return string(ca)
-}
-
-func (ca Address) String() string {
-	return hint.NewHintedString(ca.Hint(), string(ca)).String()
-}
-
-func (Address) Hint() hint.Hint {
-	return AddressHint
+	return NewAddress(keys.Hash().String()), nil
 }
 
 func (ca Address) IsValid([]byte) error {
-	if s := strings.TrimSpace(ca.String()); len(s) < 1 {
-		return errors.Errorf("empty address")
+	if err := ca.StringAddress.IsValid(nil); err != nil {
+		return errors.Wrap(err, "invalid mitum currency address")
 	}
 
 	return nil
 }
 
-func (ca Address) Equal(a base.Address) bool {
-	if ca.Hint().Type() != a.Hint().Type() {
-		return false
-	}
+func (ca Address) SetHint(ht hint.Hint) hint.Hinter {
+	ca.StringAddress = ca.StringAddress.SetHint(ht).(base.StringAddress)
 
-	return ca == a.(Address)
-}
-
-func (ca Address) Bytes() []byte {
-	return []byte(ca.String())
-}
-
-func (ca Address) MarshalText() ([]byte, error) {
-	return []byte(ca.String()), nil
-}
-
-func (ca *Address) UnmarshalText(b []byte) error {
-	a, err := NewAddress(string(b))
-	if err != nil {
-		return err
-	}
-	*ca = a
-
-	return nil
+	return ca
 }
 
 type Addresses interface {
@@ -84,9 +51,5 @@ type Addresses interface {
 }
 
 func ZeroAddress(cid CurrencyID) Address {
-	return Address(cid.String() + ZeroAddressSuffix)
-}
-
-func IsZeroAddress(cid CurrencyID, address base.Address) bool {
-	return cid.String()+ZeroAddressSuffix == address.Raw()
+	return NewAddress(cid.String() + ZeroAddressSuffix)
 }

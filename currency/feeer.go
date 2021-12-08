@@ -117,7 +117,7 @@ func (fa FixedFeeer) IsValid([]byte) error {
 		return err
 	}
 
-	if err := fa.receiver.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, fa.receiver); err != nil {
 		return errors.Wrap(err, "invalid receiver for fixed feeer")
 	}
 
@@ -193,7 +193,7 @@ func (fa RatioFeeer) IsValid([]byte) error {
 		return err
 	}
 
-	if err := fa.receiver.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, fa.receiver); err != nil {
 		return errors.Wrap(err, "invalid receiver for ratio feeer")
 	}
 
