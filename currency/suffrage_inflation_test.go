@@ -29,6 +29,22 @@ func (t *testSuffrageInflationFact) TestNew() {
 	t.Implements((*base.Fact)(nil), fact)
 }
 
+func (t *testSuffrageInflationFact) TestTooManyItems() {
+	token := util.UUID().Bytes()
+
+	items := make([]SuffrageInflationItem, maxSuffrageInflationItem+1)
+	for i := int64(0); i < int64(maxSuffrageInflationItem+1); i++ {
+		item := NewSuffrageInflationItem(base.RandomStringAddress(), NewAmount(NewBig(i+1), CurrencyID("SHOWME")))
+
+		items[i] = item
+	}
+	fact := NewSuffrageInflationFact(token, items)
+
+	err := fact.IsValid(nil)
+	t.True(errors.Is(err, isvalid.InvalidError))
+	t.Contains(err.Error(), "too many items")
+}
+
 func (t *testSuffrageInflationFact) TestWrongReceiver() {
 	token := util.UUID().Bytes()
 	item := NewSuffrageInflationItem(nil, NewAmount(NewBig(33), CurrencyID("SHOWME")))

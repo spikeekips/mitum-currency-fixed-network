@@ -1,11 +1,25 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var transfersItemProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(TransfersItemProcessor)
+	},
+}
+
+var transfersProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(TransfersProcessor)
+	},
+}
 
 func (Transfers) Process(
 	func(key string) (state.State, bool, error),
@@ -67,6 +81,17 @@ func (opp *TransfersItemProcessor) Process(
 	return sts, nil
 }
 
+func (opp *TransfersItemProcessor) Close() error {
+	opp.cp = nil
+	opp.h = nil
+	opp.item = nil
+	opp.rb = nil
+
+	transfersItemProcessorPool.Put(opp)
+
+	return nil
+}
+
 type TransfersProcessor struct {
 	cp *CurrencyPool
 	Transfers
@@ -81,10 +106,16 @@ func NewTransfersProcessor(cp *CurrencyPool) GetNewProcessor {
 		if !ok {
 			return nil, errors.Errorf("not Transfers, %T", op)
 		}
-		return &TransfersProcessor{
-			cp:        cp,
-			Transfers: i,
-		}, nil
+
+		opp := transfersProcessorPool.Get().(*TransfersProcessor)
+
+		opp.cp = cp
+		opp.Transfers = i
+		opp.sb = nil
+		opp.rb = nil
+		opp.required = nil
+
+		return opp, nil
 	}
 }
 
@@ -109,7 +140,11 @@ func (opp *TransfersProcessor) PreProcess(
 
 	rb := make([]*TransfersItemProcessor, len(fact.items))
 	for i := range fact.items {
-		c := &TransfersItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
+		c := transfersItemProcessorPool.Get().(*TransfersItemProcessor)
+		c.cp = opp.cp
+		c.h = opp.Hash()
+		c.item = fact.items[i]
+
 		if err := c.PreProcess(getState, setState); err != nil {
 			return nil, operation.NewBaseReasonErrorFromError(err)
 		}
@@ -147,6 +182,22 @@ func (opp *TransfersProcessor) Process( // nolint:dupl
 	}
 
 	return setState(fact.Hash(), sts...)
+}
+
+func (opp *TransfersProcessor) Close() error {
+	for i := range opp.rb {
+		_ = opp.rb[i].Close()
+	}
+
+	opp.cp = nil
+	opp.Transfers = Transfers{}
+	opp.sb = nil
+	opp.rb = nil
+	opp.required = nil
+
+	transfersProcessorPool.Put(opp)
+
+	return nil
 }
 
 func (opp *TransfersProcessor) calculateItemsFee() (map[CurrencyID][2]Big, error) {

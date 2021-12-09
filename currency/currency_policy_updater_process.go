@@ -1,6 +1,8 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
@@ -9,6 +11,12 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var currencyUpdaterProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CurrencyPolicyUpdaterProcessor)
+	},
+}
 
 func (CurrencyPolicyUpdater) Process(
 	func(string) (state.State, bool, error),
@@ -37,12 +45,15 @@ func NewCurrencyPolicyUpdaterProcessor(
 		if !ok {
 			return nil, errors.Errorf("not CurrencyPolicyUpdater, %T", op)
 		}
-		return &CurrencyPolicyUpdaterProcessor{
-			CurrencyPolicyUpdater: i,
-			cp:                    cp,
-			pubs:                  pubs,
-			threshold:             threshold,
-		}, nil
+
+		opp := currencyUpdaterProcessorPool.Get().(*CurrencyPolicyUpdaterProcessor)
+
+		opp.cp = cp
+		opp.CurrencyPolicyUpdater = i
+		opp.pubs = pubs
+		opp.threshold = threshold
+
+		return opp, nil
 	}
 }
 
@@ -87,4 +98,15 @@ func (opp *CurrencyPolicyUpdaterProcessor) Process(
 		return err
 	}
 	return setState(fact.Hash(), i)
+}
+
+func (opp *CurrencyPolicyUpdaterProcessor) Close() error {
+	opp.cp = nil
+	opp.CurrencyPolicyUpdater = CurrencyPolicyUpdater{}
+	opp.pubs = nil
+	opp.threshold = base.Threshold{}
+
+	currencyUpdaterProcessorPool.Put(opp)
+
+	return nil
 }

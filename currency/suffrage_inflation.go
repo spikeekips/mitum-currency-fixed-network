@@ -17,6 +17,8 @@ var (
 	SuffrageInflationHinter     = SuffrageInflation{BaseOperation: operationHinter(SuffrageInflationHint)}
 )
 
+var maxSuffrageInflationItem = 10
+
 type SuffrageInflationItem struct {
 	receiver base.Address
 	amount   Amount
@@ -89,8 +91,11 @@ func (fact SuffrageInflationFact) IsValid(b []byte) error {
 		return err
 	}
 
-	if len(fact.items) < 1 {
+	switch l := len(fact.items); {
+	case l < 1:
 		return isvalid.InvalidError.Errorf("empty items for SuffrageInflationFact")
+	case l > maxSuffrageInflationItem:
+		return isvalid.InvalidError.Errorf("too many items; %d > %d", l, maxSuffrageInflationItem)
 	}
 
 	founds := map[string]struct{}{}

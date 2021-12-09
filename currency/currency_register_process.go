@@ -1,6 +1,8 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
@@ -9,6 +11,12 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var currencyRegisterProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CurrencyRegisterProcessor)
+	},
+}
 
 func (CurrencyRegister) Process(
 	func(string) (state.State, bool, error),
@@ -33,12 +41,17 @@ func NewCurrencyRegisterProcessor(cp *CurrencyPool, pubs []key.Publickey, thresh
 		if !ok {
 			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		}
-		return &CurrencyRegisterProcessor{
-			CurrencyRegister: i,
-			cp:               cp,
-			pubs:             pubs,
-			threshold:        threshold,
-		}, nil
+
+		opp := currencyRegisterProcessorPool.Get().(*CurrencyRegisterProcessor)
+
+		opp.cp = cp
+		opp.CurrencyRegister = i
+		opp.pubs = pubs
+		opp.threshold = threshold
+		opp.ga = AmountState{}
+		opp.de = nil
+
+		return opp, nil
 	}
 }
 
@@ -147,4 +160,16 @@ func createZeroAccount(
 	sts[1] = amst
 
 	return sts, nil
+}
+
+func (opp *CurrencyRegisterProcessor) Close() error {
+	opp.cp = nil
+	opp.pubs = nil
+	opp.threshold = base.Threshold{}
+	opp.ga = AmountState{}
+	opp.de = nil
+
+	currencyRegisterProcessorPool.Put(opp)
+
+	return nil
 }

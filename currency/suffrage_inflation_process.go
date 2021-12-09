@@ -1,6 +1,8 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
@@ -9,6 +11,12 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var suffrageInflationProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(SuffrageInflationProcessor)
+	},
+}
 
 func (SuffrageInflation) Process(
 	func(string) (state.State, bool, error),
@@ -35,12 +43,14 @@ func NewSuffrageInflationProcessor(cp *CurrencyPool, pubs []key.Publickey, thres
 			return nil, errors.Errorf("not SuffrageInflation, %T", op)
 		}
 
-		return &SuffrageInflationProcessor{
-			SuffrageInflation: i,
-			cp:                cp,
-			pubs:              pubs,
-			threshold:         threshold,
-		}, nil
+		opp := suffrageInflationProcessorPool.Get().(*SuffrageInflationProcessor)
+
+		opp.cp = cp
+		opp.SuffrageInflation = i
+		opp.pubs = pubs
+		opp.threshold = threshold
+
+		return opp, nil
 	}
 }
 
@@ -130,4 +140,15 @@ func (opp *SuffrageInflationProcessor) Process(
 	}
 
 	return setState(opp.Fact().Hash(), sts...)
+}
+
+func (opp *SuffrageInflationProcessor) Close() error {
+	opp.cp = nil
+	opp.SuffrageInflation = SuffrageInflation{}
+	opp.pubs = nil
+	opp.threshold = base.Threshold{}
+
+	suffrageInflationProcessorPool.Put(opp)
+
+	return nil
 }

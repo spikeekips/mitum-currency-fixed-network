@@ -1,12 +1,26 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var createAccountsItemProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CreateAccountsItemProcessor)
+	},
+}
+
+var createAccountsProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CreateAccountsProcessor)
+	},
+}
 
 func (CreateAccounts) Process(
 	func(key string) (state.State, bool, error),
@@ -95,6 +109,18 @@ func (opp *CreateAccountsItemProcessor) Process(
 	return sts, nil
 }
 
+func (opp *CreateAccountsItemProcessor) Close() error {
+	opp.cp = nil
+	opp.h = nil
+	opp.item = nil
+	opp.ns = nil
+	opp.nb = nil
+
+	createAccountsItemProcessorPool.Put(opp)
+
+	return nil
+}
+
 type CreateAccountsProcessor struct {
 	cp *CurrencyPool
 	CreateAccounts
@@ -109,10 +135,16 @@ func NewCreateAccountsProcessor(cp *CurrencyPool) GetNewProcessor {
 		if !ok {
 			return nil, errors.Errorf("not CreateAccounts, %T", op)
 		}
-		return &CreateAccountsProcessor{
-			cp:             cp,
-			CreateAccounts: i,
-		}, nil
+
+		opp := createAccountsProcessorPool.Get().(*CreateAccountsProcessor)
+
+		opp.cp = cp
+		opp.CreateAccounts = i
+		opp.sb = nil
+		opp.ns = nil
+		opp.required = nil
+
+		return opp, nil
 	}
 }
 
@@ -137,7 +169,11 @@ func (opp *CreateAccountsProcessor) PreProcess(
 
 	ns := make([]*CreateAccountsItemProcessor, len(fact.items))
 	for i := range fact.items {
-		c := &CreateAccountsItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
+		c := createAccountsItemProcessorPool.Get().(*CreateAccountsItemProcessor)
+		c.cp = opp.cp
+		c.h = opp.Hash()
+		c.item = fact.items[i]
+
 		if err := c.PreProcess(getState, setState); err != nil {
 			return nil, err
 		}
@@ -175,6 +211,19 @@ func (opp *CreateAccountsProcessor) Process( // nolint:dupl
 	}
 
 	return setState(fact.Hash(), sts...)
+}
+
+func (opp *CreateAccountsProcessor) Close() error {
+	for i := range opp.ns {
+		_ = opp.ns[i].Close()
+	}
+
+	opp.cp = nil
+	opp.CreateAccounts = CreateAccounts{}
+
+	createAccountsProcessorPool.Put(opp)
+
+	return nil
 }
 
 func (opp *CreateAccountsProcessor) calculateItemsFee() (map[CurrencyID][2]Big, error) {

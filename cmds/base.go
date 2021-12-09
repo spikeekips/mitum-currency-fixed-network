@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum-currency/digest"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/state"
@@ -26,9 +28,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
-
-	"github.com/spikeekips/mitum-currency/currency"
-	"github.com/spikeekips/mitum-currency/digest"
 )
 
 const localhost = "localhost"
@@ -136,6 +135,9 @@ func HookInitializeProposalProcessor(ctx context.Context) (context.Context, erro
 	if err != nil {
 		return ctx, err
 	}
+
+	_ = opr.SetLogging(log)
+
 	return InitializeProposalProcessor(ctx, opr)
 }
 
