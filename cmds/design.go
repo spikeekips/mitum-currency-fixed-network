@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/isvalid"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -37,13 +38,13 @@ type KeyDesign struct {
 func (kd *KeyDesign) IsValid([]byte) error {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
-		return errors.Wrap(err, "json encoder needs for load design")
+		return isvalid.InvalidError.Errorf("json encoder needs for load design: %w", err)
 	}
 
 	if pub, err := key.DecodePublickeyFromString(kd.PublickeyString, je); err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	} else if k, err := currency.NewBaseAccountKey(pub, kd.Weight); err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	} else {
 		kd.Key = k
 	}
@@ -72,13 +73,13 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 
 	keys, err := currency.NewBaseAccountKeys(ks, akd.Threshold)
 	if err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	}
 	akd.Keys = keys
 
 	a, err := currency.NewAddressFromKeys(akd.Keys)
 	if err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	}
 	akd.Address = a
 
@@ -130,7 +131,7 @@ func (de *CurrencyDesign) IsValid([]byte) error {
 	if de.BalanceString != nil {
 		b, err := currency.NewBigFromString(*de.BalanceString)
 		if err != nil {
-			return err
+			return isvalid.InvalidError.Wrap(err)
 		}
 		de.Balance = currency.NewAmount(b, cid)
 		if err := de.Balance.IsValid(nil); err != nil {
@@ -143,7 +144,7 @@ func (de *CurrencyDesign) IsValid([]byte) error {
 	} else {
 		b, err := currency.NewBigFromString(*de.NewAccountMinBalanceString)
 		if err != nil {
-			return err
+			return isvalid.InvalidError.Wrap(err)
 		}
 		de.NewAccountMinBalance = b
 	}

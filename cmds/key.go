@@ -6,12 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 )
 
-const (
-	btc     = "btc"
-	ether   = "ether"
-	stellar = "stellar"
-)
-
 type KeyCommand struct {
 	New     GenerateKeyCommand `cmd:"" help:"new keypair"`
 	Verify  VerifyKeyCommand   `cmd:"" help:"verify key"`
@@ -25,15 +19,6 @@ func NewKeyCommand() KeyCommand {
 		Verify:  NewVerifyKeyCommand(),
 		Address: NewKeyAddressCommand(),
 		Sign:    NewSignKeyCommand(),
-	}
-}
-
-func IsValidKeyType(s string) bool {
-	switch s {
-	case btc, ether, stellar:
-		return true
-	default:
-		return false
 	}
 }
 

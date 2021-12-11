@@ -12,6 +12,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -135,12 +136,10 @@ func (t *testHandlerManifest) TestByHashNotFound() {
 
 func (t *testHandlerManifest) getManifests(handlers *Handlers, limit int, self *url.URL) []block.Manifest {
 	l := t.getItems(handlers, limit, self, func(b []byte) (interface{}, error) {
-		m, err := block.DecodeManifest(b, t.JSONEnc)
-		if err != nil {
-			return "", err
-		}
+		var m block.Manifest
+		err := encoder.Decode(b, t.JSONEnc, &m)
 
-		return m, nil
+		return m, err
 	})
 
 	ms := make([]block.Manifest, len(l))

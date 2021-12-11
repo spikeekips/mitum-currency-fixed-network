@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -36,7 +34,7 @@ func (it BaseCreateAccountsItem) Bytes() []byte {
 
 func (it BaseCreateAccountsItem) IsValid([]byte) error {
 	if n := len(it.amounts); n == 0 {
-		return errors.Errorf("empty amounts")
+		return isvalid.InvalidError.Errorf("empty amounts")
 	}
 
 	if err := isvalid.Check(nil, false, it.BaseHinter, it.keys); err != nil {
@@ -47,14 +45,14 @@ func (it BaseCreateAccountsItem) IsValid([]byte) error {
 	for i := range it.amounts {
 		am := it.amounts[i]
 		if _, found := founds[am.Currency()]; found {
-			return errors.Errorf("duplicated currency found, %q", am.Currency())
+			return isvalid.InvalidError.Errorf("duplicated currency found, %q", am.Currency())
 		}
 		founds[am.Currency()] = struct{}{}
 
 		if err := am.IsValid(nil); err != nil {
 			return err
 		} else if !am.Big().OverZero() {
-			return errors.Errorf("amount should be over zero")
+			return isvalid.InvalidError.Errorf("amount should be over zero")
 		}
 	}
 

@@ -3,9 +3,8 @@ package digest
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -39,19 +38,13 @@ func (va *OperationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	if hinter, err := enc.Decode(uva.OP); err != nil {
+	if err := encoder.Decode(uva.OP, enc, &va.op); err != nil {
 		return err
-	} else if op, ok := hinter.(operation.Operation); !ok {
-		return errors.Errorf("not operation.Operation: %T", hinter)
-	} else {
-		va.op = op
 	}
 
-	i, err := operation.DecodeReasonError(uva.RS, enc)
-	if err != nil {
+	if err := encoder.Decode(uva.RS, enc, &va.reason); err != nil {
 		return err
 	}
-	va.reason = i
 
 	va.height = uva.HT
 	va.confirmedAt = uva.CT

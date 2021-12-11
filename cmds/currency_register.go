@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type CurrencyFixedFeeerFlags struct {
@@ -21,9 +22,9 @@ func (fl *CurrencyFixedFeeerFlags) IsValid([]byte) error {
 
 	var receiver base.Address
 	if a, err := fl.Receiver.Encode(jenc); err != nil {
-		return errors.Wrapf(err, "invalid receiver format, %q", fl.Receiver.String())
+		return isvalid.InvalidError.Errorf("invalid receiver format, %q: %w", fl.Receiver.String(), err)
 	} else if err := a.IsValid(nil); err != nil {
-		return errors.Wrapf(err, "invalid receiver address, %q", fl.Receiver.String())
+		return isvalid.InvalidError.Errorf("invalid receiver address, %q: %w", fl.Receiver.String(), err)
 	} else {
 		receiver = a
 	}
@@ -47,9 +48,9 @@ func (fl *CurrencyRatioFeeerFlags) IsValid([]byte) error {
 
 	var receiver base.Address
 	if a, err := fl.Receiver.Encode(jenc); err != nil {
-		return errors.Wrapf(err, "invalid receiver format, %q", fl.Receiver.String())
+		return isvalid.InvalidError.Errorf("invalid receiver format, %q: %w", fl.Receiver.String(), err)
 	} else if err := a.IsValid(nil); err != nil {
-		return errors.Wrapf(err, "invalid receiver address, %q", fl.Receiver.String())
+		return isvalid.InvalidError.Errorf("invalid receiver address, %q: %w", fl.Receiver.String(), err)
 	} else {
 		receiver = a
 	}
@@ -95,11 +96,11 @@ func (fl *CurrencyDesignFlags) IsValid([]byte) error {
 	case currency.FeeerRatio:
 		feeer = fl.CurrencyRatioFeeerFlags.feeer
 	default:
-		return errors.Errorf("unknown feeer type, %q", t)
+		return isvalid.InvalidError.Errorf("unknown feeer type, %q", t)
 	}
 
 	if feeer == nil {
-		return errors.Errorf("empty feeer flags")
+		return isvalid.InvalidError.Errorf("empty feeer flags")
 	} else if err := feeer.IsValid(nil); err != nil {
 		return err
 	}
@@ -111,9 +112,9 @@ func (fl *CurrencyDesignFlags) IsValid([]byte) error {
 
 	var genesisAccount base.Address
 	if a, err := fl.GenesisAccount.Encode(jenc); err != nil {
-		return errors.Wrapf(err, "invalid genesis-account format, %q", fl.GenesisAccount.String())
+		return isvalid.InvalidError.Errorf("invalid genesis-account format, %q: %w", fl.GenesisAccount.String(), err)
 	} else if err := a.IsValid(nil); err != nil {
-		return errors.Wrapf(err, "invalid genesis-account address, %q", fl.GenesisAccount.String())
+		return isvalid.InvalidError.Errorf("invalid genesis-account address, %q: %w", fl.GenesisAccount.String(), err)
 	} else {
 		genesisAccount = a
 	}

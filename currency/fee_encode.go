@@ -1,9 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -39,12 +36,8 @@ func (fact *FeeOperationFact) unpack(
 }
 
 func (op *FeeOperation) unpack(enc encoder.Encoder, h valuehash.Hash, bfact []byte) error {
-	if hinter, err := base.DecodeFact(bfact, enc); err != nil {
+	if err := encoder.Decode(bfact, enc, &op.fact); err != nil {
 		return err
-	} else if fact, ok := hinter.(FeeOperationFact); !ok {
-		return errors.Errorf("not FeeOperationFact, %T", hinter)
-	} else {
-		op.fact = fact
 	}
 
 	op.h = h

@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -52,11 +50,11 @@ func (fact CurrencyRegisterFact) IsValid(b []byte) error {
 	}
 
 	if err := isvalid.Check(nil, false, fact.currency); err != nil {
-		return errors.Wrap(err, "invalid fact")
+		return isvalid.InvalidError.Errorf("invalid fact: %w", err)
 	}
 
 	if fact.currency.GenesisAccount() == nil {
-		return errors.Errorf("empty genesis account")
+		return isvalid.InvalidError.Errorf("empty genesis account")
 	}
 
 	return nil

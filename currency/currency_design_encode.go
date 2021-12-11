@@ -14,11 +14,10 @@ func (de *CurrencyDesign) unpack(enc encoder.Encoder, am Amount, ga base.Address
 	}
 	de.genesisAccount = a
 
-	j, err := DecodeCurrencyPolicy(bpo, enc)
-	if err != nil {
+	if err := encoder.Decode(bpo, enc, &de.policy); err != nil {
 		return err
 	}
-	de.policy = j
+
 	de.aggregate = ag
 
 	return nil

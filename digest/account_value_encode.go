@@ -8,12 +8,8 @@ import (
 )
 
 func (va *AccountValue) unpack(enc encoder.Encoder, bac []byte, bl []byte, height, previousHeight base.Height) error {
-	if bac != nil {
-		i, err := currency.DecodeAccount(bac, enc)
-		if err != nil {
-			return err
-		}
-		va.ac = i
+	if err := encoder.Decode(bac, enc, &va.ac); err != nil {
+		return err
 	}
 
 	hbl, err := enc.DecodeSlice(bl)

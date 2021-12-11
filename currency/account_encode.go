@@ -13,13 +13,8 @@ func (ac *Account) unpack(enc encoder.Encoder, h valuehash.Hash, bad base.Addres
 	}
 	ac.address = a
 
-	if len(bks) > 0 {
-		i, err := DecodeAccountKeys(bks, enc)
-		if err != nil {
-			return err
-		}
-
-		ac.keys = i
+	if err := encoder.Decode(bks, enc, &ac.keys); err != nil {
+		return err
 	}
 
 	ac.h = h

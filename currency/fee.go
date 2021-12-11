@@ -66,7 +66,7 @@ func (fact FeeOperationFact) Bytes() []byte {
 
 func (fact FeeOperationFact) IsValid([]byte) error {
 	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for FeeOperationFact")
+		return isvalid.InvalidError.Errorf("empty token for FeeOperationFact")
 	}
 
 	if err := isvalid.Check(nil, false, fact.h); err != nil {

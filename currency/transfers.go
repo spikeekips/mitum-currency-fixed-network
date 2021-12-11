@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -81,9 +79,9 @@ func (fact TransfersFact) IsValid(b []byte) error {
 	}
 
 	if n := len(fact.items); n < 1 {
-		return errors.Errorf("empty items")
+		return isvalid.InvalidError.Errorf("empty items")
 	} else if n > int(MaxTransferItems) {
-		return errors.Errorf("items, %d over max, %d", n, MaxTransferItems)
+		return isvalid.InvalidError.Errorf("items, %d over max, %d", n, MaxTransferItems)
 	}
 
 	if err := isvalid.Check(nil, false, fact.sender); err != nil {
@@ -94,15 +92,15 @@ func (fact TransfersFact) IsValid(b []byte) error {
 	for i := range fact.items {
 		it := fact.items[i]
 		if err := isvalid.Check(nil, false, it); err != nil {
-			return errors.Wrap(err, "invalid item found")
+			return isvalid.InvalidError.Errorf("invalid item found: %w", err)
 		}
 
 		k := it.Receiver().String()
 		switch _, found := foundReceivers[k]; {
 		case found:
-			return errors.Errorf("duplicated receiver found, %s", it.Receiver())
+			return isvalid.InvalidError.Errorf("duplicated receiver found, %s", it.Receiver())
 		case fact.sender.Equal(it.Receiver()):
-			return errors.Errorf("receiver is same with sender, %q", fact.sender)
+			return isvalid.InvalidError.Errorf("receiver is same with sender, %q", fact.sender)
 		default:
 			foundReceivers[k] = struct{}{}
 		}

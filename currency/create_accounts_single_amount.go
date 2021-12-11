@@ -1,9 +1,8 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
@@ -32,7 +31,7 @@ func (it CreateAccountsItemSingleAmount) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n != 1 {
-		return errors.Errorf("only one amount allowed; %d", n)
+		return isvalid.InvalidError.Errorf("only one amount allowed; %d", n)
 	}
 
 	return nil

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -49,17 +50,13 @@ func (va *OperationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	op, err := operation.DecodeOperation(uva.OP, enc)
-	if err != nil {
+	if err := encoder.Decode(uva.OP, enc, &va.op); err != nil {
 		return err
 	}
-	va.op = op
 
-	i, err := operation.DecodeReasonError(uva.RS, enc)
-	if err != nil {
+	if err := encoder.Decode(uva.RS, enc, &va.reason); err != nil {
 		return err
 	}
-	va.reason = i
 
 	va.height = uva.HT
 	va.confirmedAt = uva.CF.Time

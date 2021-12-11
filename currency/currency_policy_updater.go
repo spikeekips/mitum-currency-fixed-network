@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -60,7 +58,7 @@ func (fact CurrencyPolicyUpdaterFact) IsValid(b []byte) error {
 	}
 
 	if err := isvalid.Check(nil, false, fact.cid, fact.policy); err != nil {
-		return errors.Wrap(err, "invalid fact")
+		return isvalid.InvalidError.Errorf("invalid fact: %w", err)
 	}
 
 	return nil

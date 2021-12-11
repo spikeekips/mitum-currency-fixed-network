@@ -1,9 +1,8 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var maxCurenciesCreateAccountsItemMultiAmounts = 10
@@ -34,7 +33,7 @@ func (it CreateAccountsItemMultiAmounts) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n > maxCurenciesCreateAccountsItemMultiAmounts {
-		return errors.Errorf("amounts over allowed; %d > %d", n, maxCurenciesCreateAccountsItemMultiAmounts)
+		return isvalid.InvalidError.Errorf("amounts over allowed; %d > %d", n, maxCurenciesCreateAccountsItemMultiAmounts)
 	}
 
 	return nil

@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
@@ -83,8 +84,8 @@ func (t *testHandlerNodeInfo) TestBasic() {
 
 	hal := t.loadHal(b)
 
-	uni, err := network.DecodeNodeInfo(hal.RawInterface(), t.JSONEnc)
-	t.NoError(err)
+	var uni NodeInfo
+	t.NoError(encoder.Decode(hal.RawInterface(), t.JSONEnc, &uni))
 
 	t.compareNodeInfo(ni, uni)
 }

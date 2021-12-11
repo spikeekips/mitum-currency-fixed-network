@@ -1,7 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -32,11 +31,11 @@ func (po CurrencyPolicy) Bytes() []byte {
 
 func (po CurrencyPolicy) IsValid([]byte) error {
 	if !po.newAccountMinBalance.OverNil() {
-		return errors.Errorf("NewAccountMinBalance under zero")
+		return isvalid.InvalidError.Errorf("NewAccountMinBalance under zero")
 	}
 
 	if err := isvalid.Check(nil, false, po.BaseHinter, po.feeer); err != nil {
-		return errors.Wrap(err, "invalid currency policy")
+		return isvalid.InvalidError.Errorf("invalid currency policy: %w", err)
 	}
 
 	return nil

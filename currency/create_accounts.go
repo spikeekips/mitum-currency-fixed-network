@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -86,9 +84,9 @@ func (fact CreateAccountsFact) IsValid(b []byte) error {
 	}
 
 	if n := len(fact.items); n < 1 {
-		return errors.Errorf("empty items")
+		return isvalid.InvalidError.Errorf("empty items")
 	} else if n > int(MaxCreateAccountsItems) {
-		return errors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
+		return isvalid.InvalidError.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
 	}
 
 	if err := isvalid.Check(nil, false, fact.sender); err != nil {
@@ -104,14 +102,14 @@ func (fact CreateAccountsFact) IsValid(b []byte) error {
 		it := fact.items[i]
 		k := it.Keys().Hash().String()
 		if _, found := foundKeys[k]; found {
-			return errors.Errorf("duplicated acocunt Keys found, %s", k)
+			return isvalid.InvalidError.Errorf("duplicated acocunt Keys found, %s", k)
 		}
 
 		switch a, err := it.Address(); {
 		case err != nil:
 			return err
 		case fact.sender.Equal(a):
-			return errors.Errorf("target address is same with sender, %q", fact.sender)
+			return isvalid.InvalidError.Errorf("target address is same with sender, %q", fact.sender)
 		default:
 			foundKeys[k] = struct{}{}
 		}

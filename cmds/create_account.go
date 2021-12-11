@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type CreateAccountCommand struct {
@@ -148,13 +149,16 @@ func LoadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 		return nil, errors.Errorf("empty input")
 	}
 
-	if sl, err := seal.DecodeSeal(b, jenc); err != nil {
+	var sl seal.Seal
+	if err := encoder.Decode(b, jenc, &sl); err != nil {
 		return nil, err
-	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, errors.Wrap(err, "invalid seal")
-	} else {
-		return sl, nil
 	}
+
+	if err := sl.IsValid(networkID); err != nil {
+		return nil, errors.Wrap(err, "invalid seal")
+	}
+
+	return sl, nil
 }
 
 func LoadSealAndAddOperation(

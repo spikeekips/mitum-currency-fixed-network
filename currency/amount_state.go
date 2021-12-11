@@ -46,7 +46,7 @@ func (st AmountState) IsValid(b []byte) error {
 	}
 
 	if !st.fee.OverNil() {
-		return errors.Errorf("invalid fee; under zero, %v", st.fee)
+		return isvalid.InvalidError.Errorf("invalid fee; under zero, %v", st.fee)
 	}
 
 	return nil

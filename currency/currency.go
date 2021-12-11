@@ -3,7 +3,7 @@ package currency
 import (
 	"regexp"
 
-	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
@@ -24,10 +24,10 @@ func (cid CurrencyID) String() string {
 
 func (cid CurrencyID) IsValid([]byte) error {
 	if l := len(cid); l < MinLengthCurrencyID || l > MaxLengthCurrencyID {
-		return errors.Errorf(
+		return isvalid.InvalidError.Errorf(
 			"invalid length of currency id, %d <= %d <= %d", MinLengthCurrencyID, l, MaxLengthCurrencyID)
 	} else if !ReValidCurrencyID.Match([]byte(cid)) {
-		return errors.Errorf("wrong currency id, %q", cid)
+		return isvalid.InvalidError.Errorf("wrong currency id, %q", cid)
 	}
 
 	return nil

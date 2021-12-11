@@ -1,10 +1,9 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
@@ -34,7 +33,7 @@ func NewAddressFromKeys(keys AccountKeys) (Address, error) {
 
 func (ca Address) IsValid([]byte) error {
 	if err := ca.StringAddress.IsValid(nil); err != nil {
-		return errors.Wrap(err, "invalid mitum currency address")
+		return isvalid.InvalidError.Errorf("invalid mitum currency address: %w", err)
 	}
 
 	return nil

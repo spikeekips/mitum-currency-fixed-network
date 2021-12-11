@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -72,11 +70,11 @@ func (fact GenesisCurrenciesFact) IsValid(b []byte) error {
 	}
 
 	if len(fact.cs) < 1 {
-		return errors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
+		return isvalid.InvalidError.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
 	}
 
 	if err := isvalid.Check(nil, false, fact.genesisNodeKey, fact.keys); err != nil {
-		return errors.Wrap(err, "invalid fact")
+		return isvalid.InvalidError.Errorf("invalid fact: %w", err)
 	}
 
 	founds := map[CurrencyID]struct{}{}
@@ -85,7 +83,7 @@ func (fact GenesisCurrenciesFact) IsValid(b []byte) error {
 		if err := c.IsValid(nil); err != nil {
 			return err
 		} else if _, found := founds[c.Currency()]; found {
-			return errors.Errorf("duplicated currency id found, %q", c.Currency())
+			return isvalid.InvalidError.Errorf("duplicated currency id found, %q", c.Currency())
 		} else {
 			founds[c.Currency()] = struct{}{}
 		}
@@ -149,12 +147,12 @@ func (op GenesisCurrencies) IsValid(networkID []byte) error {
 	}
 
 	if len(op.Signs()) != 1 {
-		return errors.Errorf("genesis currencies should be signed only by genesis node key")
+		return isvalid.InvalidError.Errorf("genesis currencies should be signed only by genesis node key")
 	}
 
 	fact := op.Fact().(GenesisCurrenciesFact)
 	if !fact.genesisNodeKey.Equal(op.Signs()[0].Signer()) {
-		return errors.Errorf("not signed by genesis node key")
+		return isvalid.InvalidError.Errorf("not signed by genesis node key")
 	}
 
 	return nil
