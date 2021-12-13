@@ -138,30 +138,9 @@ func NewSendHandler(
 	connInfo network.ConnInfo,
 ) func(interface{}) (seal.Seal, error) {
 	return func(v interface{}) (seal.Seal, error) {
-		var sl seal.Seal
-		switch t := v.(type) {
-		case operation.Seal, seal.Seal:
-			if s, err := SignSeal(v.(seal.Seal), priv, networkID); err != nil {
-				return nil, err
-			} else if err := s.IsValid(networkID); err != nil {
-				return nil, err
-			} else {
-				sl = s
-			}
-		case operation.Operation:
-			if bs, err := operation.NewBaseSeal(
-				priv,
-				[]operation.Operation{t},
-				networkID,
-			); err != nil {
-				return nil, errors.Wrap(err, "failed to create operation.Seal")
-			} else if err := bs.IsValid(networkID); err != nil {
-				return nil, err
-			} else {
-				sl = bs
-			}
-		default:
-			return nil, errors.Errorf("unsupported message type, %T", t)
+		sl, err := makeSendingSeal(priv, networkID, v)
+		if err != nil {
+			return nil, err
 		}
 
 		chs, err := chans()
@@ -194,15 +173,21 @@ func NewSendHandler(
 		wg.Wait()
 		close(errchan)
 
+		var success bool
+		var failed error
 		for err := range errchan {
-			if err == nil {
-				continue
+			if !success && err == nil {
+				success = true
+			} else {
+				failed = err
 			}
-
-			return sl, err
 		}
 
-		return sl, nil
+		if success {
+			return sl, nil
+		}
+
+		return sl, failed
 	}
 }
 
@@ -245,4 +230,33 @@ func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
 	}
 
 	return ctx, nil
+}
+
+func makeSendingSeal(priv key.Privatekey, networkID base.NetworkID, v interface{}) (seal.Seal, error) {
+	switch t := v.(type) {
+	case operation.Seal, seal.Seal:
+		s, err := SignSeal(v.(seal.Seal), priv, networkID)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := s.IsValid(networkID); err != nil {
+			return nil, err
+		}
+
+		return s, nil
+	case operation.Operation:
+		bs, err := operation.NewBaseSeal(priv, []operation.Operation{t}, networkID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create operation.Seal")
+		}
+
+		if err := bs.IsValid(networkID); err != nil {
+			return nil, err
+		}
+
+		return bs, nil
+	default:
+		return nil, errors.Errorf("unsupported message type, %T", t)
+	}
 }
