@@ -93,8 +93,11 @@ func (opr *OperationProcessor) SetProcessor(
 	newProcessor GetNewProcessor,
 ) (prprocessor.OperationProcessor, error) {
 	if err := opr.processorHintSet.Add(hinter, newProcessor); err != nil {
-		return nil, err
+		if !errors.Is(err, util.FoundError) {
+			return nil, err
+		}
 	}
+
 	return opr, nil
 }
 
