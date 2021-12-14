@@ -317,8 +317,8 @@ github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPx
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d/go.mod h1:UdhH50NIW0fCiwBSr0co2m7BnFLdv4fQTgdqdJTHFeE=
 github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e/go.mod h1:HuIsMU8RRBOtsCgI77wP899iHVBQpCmg4ErYMZB+2IA=
-github.com/spikeekips/mitum v0.0.0-20211213065711-66f54d55d50e h1:caNrqbEXoXhJCVCgIZW20NQPBhx5TJRkW/E7PDXehxM=
-github.com/spikeekips/mitum v0.0.0-20211213065711-66f54d55d50e/go.mod h1:pyP+AHGWNX6CaW7LL3DCTXcfz6KXrNZRKDVWaaa/+aY=
+github.com/spikeekips/mitum v0.0.0-20211214071108-15df0de5411d h1:fp1sLavaruA5RhI/NWv66THewf3Bk/xvM3oRI/Rnv/I=
+github.com/spikeekips/mitum v0.0.0-20211214071108-15df0de5411d/go.mod h1:pyP+AHGWNX6CaW7LL3DCTXcfz6KXrNZRKDVWaaa/+aY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=

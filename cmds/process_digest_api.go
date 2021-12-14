@@ -211,7 +211,7 @@ func HookSetLocalChannel(ctx context.Context) (context.Context, error) {
 	}
 	conf := ln.Network()
 
-	var local *node.Local
+	var local node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}
