@@ -12,6 +12,11 @@ var (
 )
 
 func init() {
+	// NOTE mitum internal version should be 'v0.0.1-stable'
+	if mitumcmds.InternalVersion != "v0.0.1-stable" {
+		panic("mitum should be v0.0.1-stable")
+	}
+
 	cmd := mitumcmds.NewBaseCommand("")
 	if i, err := cmd.LoadEncoders(Types, Hinters); err != nil {
 		panic(err)
