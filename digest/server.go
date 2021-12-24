@@ -176,9 +176,9 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 		}
 		var d time.Duration
 		switch cs {
-		case http.StateNew, http.StateIdle:
+		case http.StateIdle:
 			d = sv.idleTimeout
-		case http.StateActive:
+		case http.StateNew, http.StateActive:
 			d = sv.activeTimeout
 		default:
 			return
@@ -190,9 +190,7 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 				Msg("closing idle conn after timeout")
 
 			go func() {
-				if err := c.Close(); err != nil {
-					sv.Log().Debug().Err(err).Msg("failed to close")
-				}
+				_ = c.Close()
 			}()
 		})
 	}

@@ -127,7 +127,11 @@ func (di *Digester) digest(ctx context.Context, blk block.Block) error {
 	di.Lock()
 	defer di.Unlock()
 
-	return DigestBlock(ctx, di.database, blk)
+	if err := DigestBlock(ctx, di.database, blk); err != nil {
+		return err
+	}
+
+	return di.database.SetLastBlock(blk.Height())
 }
 
 func DigestBlock(ctx context.Context, st *Database, blk block.Block) error {
@@ -141,9 +145,7 @@ func DigestBlock(ctx context.Context, st *Database, blk block.Block) error {
 
 	if err := bs.Prepare(); err != nil {
 		return err
-	} else if err := bs.Commit(ctx); err != nil {
-		return err
-	} else {
-		return st.SetLastBlock(blk.Height())
 	}
+
+	return bs.Commit(ctx)
 }
