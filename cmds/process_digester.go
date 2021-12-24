@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -138,16 +137,9 @@ func digestFollowup(ctx context.Context, height base.Height) error {
 		return err
 	}
 
-	var blockData *localfs.BlockData
-	{
-		var bd blockdata.BlockData
-		if err := process.LoadBlockDataContextValue(ctx, &bd); err != nil {
-			return err
-		} else if i, ok := bd.(*localfs.BlockData); !ok {
-			return errors.Errorf("other block data, %T not yet supported", bd)
-		} else {
-			blockData = i
-		}
+	var bd *localfs.Blockdata
+	if err := util.LoadFromContextValue(ctx, process.ContextValueBlockdata, &bd); err != nil {
+		return err
 	}
 
 	var cp *currency.CurrencyPool
@@ -165,9 +157,16 @@ func digestFollowup(ctx context.Context, height base.Height) error {
 	}
 
 	for i := lastBlock; i <= height; i++ {
-		if _, blk, err := localfs.LoadBlock(blockData, i); err != nil {
+		_, blk, err := localfs.LoadBlock(bd, i)
+		if err != nil {
 			return err
-		} else if err := digest.DigestBlock(ctx, st, blk); err != nil {
+		}
+
+		if err := digest.DigestBlock(ctx, st, blk); err != nil {
+			return err
+		}
+
+		if err := st.SetLastBlock(blk.Height()); err != nil {
 			return err
 		}
 	}

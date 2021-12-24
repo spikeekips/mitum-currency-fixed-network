@@ -288,9 +288,9 @@ func (t *baseTest) newBlock(height base.Height, st storage.Database) block.Block
 	avp := base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT)
 	blk = blk.SetINITVoteproof(ivp).SetACCEPTVoteproof(avp)
 
-	bd := block.NewBaseBlockDataMap(block.BaseBlockDataMapHint, blk.Height())
-	for _, dataType := range block.BlockData {
-		bd, err = bd.SetItem(block.NewBaseBlockDataMapItem(dataType, util.UUID().String(), "file:///"+util.UUID().String()))
+	bd := block.NewBaseBlockdataMap(block.BaseBlockdataMapHint, blk.Height())
+	for _, dataType := range block.Blockdata {
+		bd, err = bd.SetItem(block.NewBaseBlockdataMapItem(dataType, util.UUID().String(), "file:///"+util.UUID().String()))
 		t.NoError(err)
 	}
 	bd = bd.SetBlock(blk.Hash())

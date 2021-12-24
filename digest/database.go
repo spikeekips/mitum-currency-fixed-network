@@ -35,6 +35,12 @@ var (
 	defaultColNameOperation = "digest_op"
 )
 
+var AllCollections = []string{
+	defaultColNameAccount,
+	defaultColNameBalance,
+	defaultColNameOperation,
+}
+
 var DigestStorageLastBlockKey = "digest_last_block"
 
 type Database struct {
@@ -262,7 +268,7 @@ func (st *Database) Manifests(
 		}
 	}
 
-	return st.mitum.Manifests(
+	return st.mitum.ManifestsByFilter(
 		filter,
 		load,
 		reverse,

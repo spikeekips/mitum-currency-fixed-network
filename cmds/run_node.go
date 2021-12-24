@@ -25,8 +25,6 @@ import (
 	"github.com/ulule/limiter/v3"
 )
 
-var RunCommandProcesses []pm.Process
-
 var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameDatabase,
@@ -43,16 +41,6 @@ var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 			HookNameDigesterFollowUp, HookDigesterFollowUp).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPre, ProcessNameDigestAPI,
 			HookNameSetLocalChannel, HookSetLocalChannel).SetOverride(true),
-	}
-}
-
-func init() {
-	RunCommandProcesses = []pm.Process{
-		ProcessorDigestDatabase,
-		ProcessorDigester,
-		ProcessorDigestAPI,
-		ProcessorStartDigestAPI,
-		ProcessorStartDigester,
 	}
 }
 
@@ -73,8 +61,16 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 		return cmd, err
 	}
 
-	for i := range RunCommandProcesses {
-		if err := ps.AddProcess(RunCommandProcesses[i], true); err != nil {
+	runCommandProcesses := []pm.Process{
+		ProcessorDigestDatabase,
+		ProcessorDigester,
+		ProcessorDigestAPI,
+		ProcessorStartDigestAPI,
+		ProcessorStartDigester,
+	}
+
+	for i := range runCommandProcesses {
+		if err := ps.AddProcess(runCommandProcesses[i], true); err != nil {
 			return cmd, err
 		}
 	}
