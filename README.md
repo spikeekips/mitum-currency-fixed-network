@@ -5,6 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/spikeekips/mitum-currency?tab=overview)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum-currency)](https://goreportcard.com/report/github.com/spikeekips/mitum-currency)
 [![codecov](https://codecov.io/gh/spikeekips/mitum-currency/branch/master/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum-currency)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum-currency.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum-currency?ref=badge_shield)
 [![](https://tokei.rs/b1/github/spikeekips/mitum-currency?category=lines)](https://github.com/spikeekips/mitum-currency)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/spikeekips/mitum-currency.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/spikeekips/mitum-currency/alerts/)
 
@@ -56,3 +57,7 @@ $ ./mc node run ./standalone.yml
 ```sh
 $ go clean -testcache; time go test -race -tags 'test' -v -timeout 20m ./... -run .
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum-currency.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum-currency?ref=badge_large)
