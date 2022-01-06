@@ -8,8 +8,8 @@ import (
 
 type CreateAccountsItemJSONPacker struct {
 	jsonenc.HintedHead
-	KS Keys     `json:"keys"`
-	AS []Amount `json:"amounts"`
+	KS AccountKeys `json:"keys"`
+	AS []Amount    `json:"amounts"`
 }
 
 func (it BaseCreateAccountsItem) MarshalJSON() ([]byte, error) {
@@ -26,15 +26,10 @@ type CreateAccountsItemJSONUnpacker struct {
 }
 
 func (it *BaseCreateAccountsItem) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ht jsonenc.HintedHead
-	if err := enc.Unmarshal(b, &ht); err != nil {
-		return err
-	}
-
 	var uca CreateAccountsItemJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &uca); err != nil {
 		return err
 	}
 
-	return it.unpack(enc, ht.H, uca.KS, uca.AM)
+	return it.unpack(enc, uca.KS, uca.AM)
 }

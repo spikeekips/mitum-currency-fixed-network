@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -14,7 +13,7 @@ type KeyUpdaterFactJSONPacker struct {
 	H  valuehash.Hash `json:"hash"`
 	TK []byte         `json:"token"`
 	TG base.Address   `json:"target"`
-	KS Keys           `json:"keys"`
+	KS AccountKeys    `json:"keys"`
 	CR CurrencyID     `json:"currency"`
 }
 
@@ -46,26 +45,13 @@ func (fact *KeyUpdaterFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.TG, ufact.KS, ufact.CR)
 }
 
-func (op KeyUpdater) MarshalJSON() ([]byte, error) {
-	m := op.BaseOperation.JSONM()
-	m["memo"] = op.Memo
-
-	return jsonenc.Marshal(m)
-}
-
 func (op *KeyUpdater) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ubo operation.BaseOperation
+	var ubo BaseOperation
 	if err := ubo.UnpackJSON(b, enc); err != nil {
 		return err
 	}
 
-	*op = KeyUpdater{BaseOperation: ubo}
-
-	var um MemoJSONUnpacker
-	if err := enc.Unmarshal(b, &um); err != nil {
-		return err
-	}
-	op.Memo = um.Memo
+	op.BaseOperation = ubo
 
 	return nil
 }

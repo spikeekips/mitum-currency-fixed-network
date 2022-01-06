@@ -1,11 +1,19 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var keyUpdaterProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(KeyUpdaterProcessor)
+	},
+}
 
 func (KeyUpdater) Process(
 	func(key string) (state.State, bool, error),
@@ -28,26 +36,32 @@ func NewKeyUpdaterProcessor(cp *CurrencyPool) GetNewProcessor {
 		if !ok {
 			return nil, errors.Errorf("not KeyUpdater, %T", op)
 		}
-		return &KeyUpdaterProcessor{
-			cp:         cp,
-			KeyUpdater: i,
-		}, nil
+
+		opp := keyUpdaterProcessorPool.Get().(*KeyUpdaterProcessor)
+
+		opp.cp = cp
+		opp.KeyUpdater = i
+		opp.sa = nil
+		opp.sb = AmountState{}
+		opp.fee = ZeroBig
+
+		return opp, nil
 	}
 }
 
-func (op *KeyUpdaterProcessor) PreProcess(
+func (opp *KeyUpdaterProcessor) PreProcess(
 	getState func(string) (state.State, bool, error),
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
-	fact := op.Fact().(KeyUpdaterFact)
+	fact := opp.Fact().(KeyUpdaterFact)
 
 	st, err := existsState(StateKeyAccount(fact.target), "target keys", getState)
 	if err != nil {
 		return nil, err
 	}
-	op.sa = st
+	opp.sa = st
 
-	if ks, e := StateKeysValue(op.sa); err != nil {
+	if ks, e := StateKeysValue(opp.sa); err != nil {
 		return nil, operation.NewBaseReasonErrorFromError(e)
 	} else if ks.Equal(fact.Keys()) {
 		return nil, operation.NewBaseReasonError("same Keys with the existing")
@@ -57,13 +71,13 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	if err != nil {
 		return nil, err
 	}
-	op.sb = NewAmountState(st, fact.currency)
+	opp.sb = NewAmountState(st, fact.currency)
 
-	if err = checkFactSignsByState(fact.target, op.Signs(), getState); err != nil {
-		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
+	if err = checkFactSignsByState(fact.target, opp.Signs(), getState); err != nil {
+		return nil, errors.Wrap(err, "invalid signing")
 	}
 
-	feeer, found := op.cp.Feeer(fact.currency)
+	feeer, found := opp.cp.Feeer(fact.currency)
 	if !found {
 		return nil, operation.NewBaseReasonError("currency, %q not found of KeyUpdater", fact.currency)
 	}
@@ -72,28 +86,40 @@ func (op *KeyUpdaterProcessor) PreProcess(
 	if err != nil {
 		return nil, operation.NewBaseReasonErrorFromError(err)
 	}
-	switch b, err := StateBalanceValue(op.sb); {
+	switch b, err := StateBalanceValue(opp.sb); {
 	case err != nil:
 		return nil, operation.NewBaseReasonErrorFromError(err)
 	case b.Big().Compare(fee) < 0:
 		return nil, operation.NewBaseReasonError("insufficient balance with fee")
 	default:
-		op.fee = fee
+		opp.fee = fee
 	}
 
-	return op, nil
+	return opp, nil
 }
 
-func (op *KeyUpdaterProcessor) Process(
+func (opp *KeyUpdaterProcessor) Process(
 	_ func(key string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
-	fact := op.Fact().(KeyUpdaterFact)
+	fact := opp.Fact().(KeyUpdaterFact)
 
-	op.sb = op.sb.Sub(op.fee).AddFee(op.fee)
-	st, err := SetStateKeysValue(op.sa, fact.keys)
+	opp.sb = opp.sb.Sub(opp.fee).AddFee(opp.fee)
+	st, err := SetStateKeysValue(opp.sa, fact.keys)
 	if err != nil {
-		return err
+		return operation.NewBaseReasonErrorFromError(err)
 	}
-	return setState(fact.Hash(), st, op.sb)
+	return setState(fact.Hash(), st, opp.sb)
+}
+
+func (opp *KeyUpdaterProcessor) Close() error {
+	opp.cp = nil
+	opp.KeyUpdater = KeyUpdater{}
+	opp.sa = nil
+	opp.sb = AmountState{}
+	opp.fee = ZeroBig
+
+	keyUpdaterProcessorPool.Put(opp)
+
+	return nil
 }

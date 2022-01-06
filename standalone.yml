@@ -1,5 +1,5 @@
-address: mc-node:sa-v0.0.1
-privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8w:btc-priv-v0.0.1
+address: mc-nodesas
+privatekey: KxaTHDAQnmFeWWik5MqWXBYkhvp5EpWbsZzXeHDdTDb5NE1dVw8wmpr
 storage:
     database:
         uri: mongodb://127.0.0.1:27017/mc
@@ -7,15 +7,15 @@ storage:
         path: ./mc-blockfs
 network-id: mc; Tue 08 Dec 2020 07:22:18 AM KST
 network:
-    bind: quic://0.0.0.0:54321
-    url: quic://127.0.0.1:54321
+    bind: https://0.0.0.0:54321
+    url: https://127.0.0.1:54321
 
 genesis-operations:
     - type: genesis-currencies
       account-keys:
         keys:
-            - publickey: 04b96826d72457a38aa9a2298c3f435f655c28a7d8e94b4e3adf772ac11e3101cbecf9e755312f8a61bd565c182f0d9d67d24f1590ddd2fef1d0af126b5bdfa5a7:ether-pub-v0.0.1
-              # privatekey: c741259e1444ce46e08c2489f3112fb8f0b9f85cb11c84ced9d948cef259ce74:ether-priv-v0.0.1
+            - publickey: zzeo6WAS4uqwCss4eRibtLnYHqJM21zhzPbKWQVPttxWmpu
+              # privatekey: KzFERQKNQbPA8cdsX5tCiCZvR4KgBou41cgtPk69XueFbaEjrczbmpr
               weight: 100
         threshold: 100
       currencies:
@@ -40,7 +40,7 @@ policy:
 
 suffrage:
     nodes:
-        - mc-node0:sa-v0.0.1
+        - mc-node0sas
 
 nodes:
 

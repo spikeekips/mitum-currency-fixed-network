@@ -10,7 +10,9 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/isvalid"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
@@ -30,19 +32,19 @@ func init() {
 type KeyDesign struct {
 	PublickeyString string `yaml:"publickey"`
 	Weight          uint
-	Key             currency.Key `yaml:"-"`
+	Key             currency.BaseAccountKey `yaml:"-"`
 }
 
 func (kd *KeyDesign) IsValid([]byte) error {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
-		return errors.Wrap(err, "json encoder needs for load design")
+		return isvalid.InvalidError.Errorf("json encoder needs for load design: %w", err)
 	}
 
-	if pub, err := key.DecodePublickey(je, kd.PublickeyString); err != nil {
-		return err
-	} else if k, err := currency.NewKey(pub, kd.Weight); err != nil {
-		return err
+	if pub, err := key.DecodePublickeyFromString(kd.PublickeyString, je); err != nil {
+		return isvalid.InvalidError.Wrap(err)
+	} else if k, err := currency.NewBaseAccountKey(pub, kd.Weight); err != nil {
+		return isvalid.InvalidError.Wrap(err)
 	} else {
 		kd.Key = k
 	}
@@ -52,13 +54,13 @@ func (kd *KeyDesign) IsValid([]byte) error {
 
 type AccountKeysDesign struct {
 	Threshold  uint
-	KeysDesign []*KeyDesign     `yaml:"keys"`
-	Keys       currency.Keys    `yaml:"-"`
-	Address    currency.Address `yaml:"-"`
+	KeysDesign []*KeyDesign             `yaml:"keys"`
+	Keys       currency.BaseAccountKeys `yaml:"-"`
+	Address    currency.Address         `yaml:"-"`
 }
 
 func (akd *AccountKeysDesign) IsValid([]byte) error {
-	ks := make([]currency.Key, len(akd.KeysDesign))
+	ks := make([]currency.AccountKey, len(akd.KeysDesign))
 	for i := range akd.KeysDesign {
 		kd := akd.KeysDesign[i]
 
@@ -69,15 +71,15 @@ func (akd *AccountKeysDesign) IsValid([]byte) error {
 		ks[i] = kd.Key
 	}
 
-	keys, err := currency.NewKeys(ks, akd.Threshold)
+	keys, err := currency.NewBaseAccountKeys(ks, akd.Threshold)
 	if err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	}
 	akd.Keys = keys
 
 	a, err := currency.NewAddressFromKeys(akd.Keys)
 	if err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	}
 	akd.Address = a
 
@@ -129,7 +131,7 @@ func (de *CurrencyDesign) IsValid([]byte) error {
 	if de.BalanceString != nil {
 		b, err := currency.NewBigFromString(*de.BalanceString)
 		if err != nil {
-			return err
+			return isvalid.InvalidError.Wrap(err)
 		}
 		de.Balance = currency.NewAmount(b, cid)
 		if err := de.Balance.IsValid(nil); err != nil {
@@ -142,7 +144,7 @@ func (de *CurrencyDesign) IsValid([]byte) error {
 	} else {
 		b, err := currency.NewBigFromString(*de.NewAccountMinBalanceString)
 		if err != nil {
-			return err
+			return isvalid.InvalidError.Wrap(err)
 		}
 		de.NewAccountMinBalance = b
 	}
@@ -258,6 +260,27 @@ func (no *DigestDesign) Set(ctx context.Context) (context.Context, error) {
 	if no.network.ConnInfo() == nil {
 		connInfo, _ := network.NewHTTPConnInfoFromString(DefaultDigestURL, lconf.Network().ConnInfo().Insecure())
 		_ = no.network.SetConnInfo(connInfo)
+	}
+
+	if certs := no.network.Certs(); len(certs) < 1 {
+		priv, err := util.GenerateED25519Privatekey()
+		if err != nil {
+			return ctx, err
+		}
+
+		host := "localhost"
+		if no.network.ConnInfo() != nil {
+			host = no.network.ConnInfo().URL().Hostname()
+		}
+
+		ct, err := util.GenerateTLSCerts(host, priv)
+		if err != nil {
+			return ctx, err
+		}
+
+		if err := no.network.SetCerts(ct); err != nil {
+			return ctx, err
+		}
 	}
 
 	if no.CacheYAML == nil {

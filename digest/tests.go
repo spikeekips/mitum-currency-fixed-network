@@ -1,3 +1,4 @@
+//go:build test || mongodb
 // +build test mongodb
 
 package digest
@@ -10,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch"
@@ -44,34 +44,35 @@ func (t *baseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(NodeInfo{})
 	_ = t.Encs.TestAddHinter(OperationValue{})
 	_ = t.Encs.TestAddHinter(Problem{})
-	_ = t.Encs.TestAddHinter(currency.Account{})
-	_ = t.Encs.TestAddHinter(currency.Address(""))
-	_ = t.Encs.TestAddHinter(currency.Amount{})
-	_ = t.Encs.TestAddHinter(currency.CreateAccountsFact{})
+	_ = t.Encs.TestAddHinter(currency.AccountHinter)
+	_ = t.Encs.TestAddHinter(currency.AddressHinter)
+	_ = t.Encs.TestAddHinter(currency.AmountHinter)
+	_ = t.Encs.TestAddHinter(currency.CreateAccountsFactHinter)
 	_ = t.Encs.TestAddHinter(currency.CreateAccountsItemMultiAmountsHinter)
 	_ = t.Encs.TestAddHinter(currency.CreateAccountsItemSingleAmountHinter)
-	_ = t.Encs.TestAddHinter(currency.CreateAccounts{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyDesign{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdaterFact{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdater{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyRegisterFact{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyRegister{})
-	_ = t.Encs.TestAddHinter(currency.FeeOperationFact{})
-	_ = t.Encs.TestAddHinter(currency.FeeOperation{})
-	_ = t.Encs.TestAddHinter(currency.FixedFeeer{})
-	_ = t.Encs.TestAddHinter(currency.GenesisCurrenciesFact{})
-	_ = t.Encs.TestAddHinter(currency.GenesisCurrencies{})
-	_ = t.Encs.TestAddHinter(currency.KeyUpdaterFact{})
-	_ = t.Encs.TestAddHinter(currency.KeyUpdater{})
-	_ = t.Encs.TestAddHinter(currency.Keys{})
-	_ = t.Encs.TestAddHinter(currency.Key{})
-	_ = t.Encs.TestAddHinter(currency.NilFeeer{})
-	_ = t.Encs.TestAddHinter(currency.RatioFeeer{})
-	_ = t.Encs.TestAddHinter(currency.TransfersFact{})
+	_ = t.Encs.TestAddHinter(currency.CreateAccountsHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyDesignHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdaterFactHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyUpdaterHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyRegisterFactHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyRegisterHinter)
+	_ = t.Encs.TestAddHinter(currency.FeeOperationFactHinter)
+	_ = t.Encs.TestAddHinter(currency.FeeOperationHinter)
+	_ = t.Encs.TestAddHinter(currency.FixedFeeerHinter)
+	_ = t.Encs.TestAddHinter(currency.GenesisCurrenciesFactHinter)
+	_ = t.Encs.TestAddHinter(currency.GenesisCurrenciesHinter)
+	_ = t.Encs.TestAddHinter(currency.KeyUpdaterFactHinter)
+	_ = t.Encs.TestAddHinter(currency.KeyUpdaterHinter)
+	_ = t.Encs.TestAddHinter(currency.AccountKeysHinter)
+	_ = t.Encs.TestAddHinter(currency.AccountKeyHinter)
+	_ = t.Encs.TestAddHinter(currency.NilFeeerHinter)
+	_ = t.Encs.TestAddHinter(currency.RatioFeeerHinter)
+	_ = t.Encs.TestAddHinter(currency.TransfersFactHinter)
 	_ = t.Encs.TestAddHinter(currency.TransfersItemMultiAmountsHinter)
 	_ = t.Encs.TestAddHinter(currency.TransfersItemSingleAmountHinter)
-	_ = t.Encs.TestAddHinter(currency.Transfers{})
-	_ = t.Encs.TestAddHinter(currency.CurrencyPolicy{})
+	_ = t.Encs.TestAddHinter(currency.TransfersHinter)
+	_ = t.Encs.TestAddHinter(currency.CurrencyPolicyHinter)
+	_ = t.Encs.TestAddHinter(currency.SuffrageInflationHinter)
 
 	t.networkID = util.UUID().Bytes()
 
@@ -98,13 +99,13 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 	)}
 	fact := currency.NewTransfersFact(token, sender, items)
 
-	pk := key.MustNewEtherPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, t.networkID)
+	pk := key.NewBasePrivatekey()
+	sig, err := base.NewFactSignature(pk, fact, t.networkID)
 	t.NoError(err)
 
 	tf, err := currency.NewTransfers(
 		fact,
-		[]operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)},
+		[]base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)},
 		util.UUID().String(),
 	)
 	t.NoError(err)
@@ -113,11 +114,11 @@ func (t *baseTest) newTransfer(sender, receiver base.Address) currency.Transfers
 }
 
 func (t *baseTest) newAccount() currency.Account {
-	priv := key.MustNewBTCPrivatekey()
-	k, err := currency.NewKey(priv.Publickey(), 100)
+	priv := key.NewBasePrivatekey()
+	k, err := currency.NewBaseAccountKey(priv.Publickey(), 100)
 	t.NoError(err)
 
-	keys, err := currency.NewKeys([]currency.Key{k}, 100)
+	keys, err := currency.NewBaseAccountKeys([]currency.AccountKey{k}, 100)
 	t.NoError(err)
 
 	ac, err := currency.NewAccountFromKeys(keys)
@@ -287,9 +288,9 @@ func (t *baseTest) newBlock(height base.Height, st storage.Database) block.Block
 	avp := base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT)
 	blk = blk.SetINITVoteproof(ivp).SetACCEPTVoteproof(avp)
 
-	bd := block.NewBaseBlockDataMap(block.BaseBlockDataMapHint, blk.Height())
-	for _, dataType := range block.BlockData {
-		bd, err = bd.SetItem(block.NewBaseBlockDataMapItem(dataType, util.UUID().String(), "file:///"+util.UUID().String()))
+	bd := block.NewBaseBlockdataMap(block.BaseBlockdataMapHint, blk.Height())
+	for _, dataType := range block.Blockdata {
+		bd, err = bd.SetItem(block.NewBaseBlockdataMapItem(dataType, util.UUID().String(), "file:///"+util.UUID().String()))
 		t.NoError(err)
 	}
 	bd = bd.SetBlock(blk.Hash())

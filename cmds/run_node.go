@@ -25,8 +25,6 @@ import (
 	"github.com/ulule/limiter/v3"
 )
 
-var RunCommandProcesses []pm.Process
-
 var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 	return []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameDatabase,
@@ -43,16 +41,6 @@ var RunCommandHooks = func(cmd *RunCommand) []pm.Hook {
 			HookNameDigesterFollowUp, HookDigesterFollowUp).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPre, ProcessNameDigestAPI,
 			HookNameSetLocalChannel, HookSetLocalChannel).SetOverride(true),
-	}
-}
-
-func init() {
-	RunCommandProcesses = []pm.Process{
-		ProcessorDigestDatabase,
-		ProcessorDigester,
-		ProcessorDigestAPI,
-		ProcessorStartDigestAPI,
-		ProcessorStartDigester,
 	}
 }
 
@@ -73,8 +61,16 @@ func NewRunCommand(dryrun bool) (RunCommand, error) {
 		return cmd, err
 	}
 
-	for i := range RunCommandProcesses {
-		if err := ps.AddProcess(RunCommandProcesses[i], true); err != nil {
+	runCommandProcesses := []pm.Process{
+		ProcessorDigestDatabase,
+		ProcessorDigester,
+		ProcessorDigestAPI,
+		ProcessorStartDigestAPI,
+		ProcessorStartDigester,
+	}
+
+	for i := range runCommandProcesses {
+		if err := ps.AddProcess(runCommandProcesses[i], true); err != nil {
 			return cmd, err
 		}
 	}
@@ -342,25 +338,29 @@ func (cmd *RunCommand) setDigestSendHandler(
 		return nil, err
 	}
 
-	handlers = handlers.SetSend(NewSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) {
-		remotes := suffrage.Nodes()
+	handlers = handlers.SetSend(
+		NewSendHandler(conf.Privatekey(), conf.NetworkID(), func() ([]network.Channel, error) { // nolint:contextcheck
+			remotes := suffrage.Nodes()
 
-		var chs []network.Channel
-		for i := range remotes {
-			s := remotes[i]
-			_, ch, found := nodepool.Node(s)
-			switch {
-			case !found:
-				return nil, errors.Errorf("suffrage node, %q not found in nodepool", s)
-			case ch == nil:
-				continue
-			default:
-				chs = append(chs, ch)
+			var chs []network.Channel
+			for i := range remotes {
+				s := remotes[i]
+				_, ch, found := nodepool.Node(s)
+				switch {
+				case !found:
+					return nil, errors.Errorf("suffrage node, %q not found in nodepool", s)
+				case ch == nil:
+					continue
+				default:
+					chs = append(chs, ch)
+				}
 			}
-		}
 
-		return chs, nil
-	}))
+			return chs, nil
+		},
+			conf.Network().ConnInfo(),
+		),
+	)
 
 	cmd.Log().Debug().Msg("send handler attached")
 

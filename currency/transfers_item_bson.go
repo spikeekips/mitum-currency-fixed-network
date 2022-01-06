@@ -23,15 +23,10 @@ type BaseTransfersItemBSONUnpacker struct {
 }
 
 func (it *BaseTransfersItem) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var ht bsonenc.HintedHead
-	if err := enc.Unmarshal(b, &ht); err != nil {
-		return err
-	}
-
 	var uit BaseTransfersItemBSONUnpacker
 	if err := enc.Unmarshal(b, &uit); err != nil {
 		return err
 	}
 
-	return it.unpack(enc, ht.H, uit.RC, uit.AM)
+	return it.unpack(enc, uit.RC, uit.AM)
 }

@@ -27,17 +27,17 @@ func (t *testTransfersItemMultiAmounts) TestNew() {
 	items := []TransfersItem{NewTransfersItemMultiAmounts(r, ams)}
 	fact := NewTransfersFact(token, s, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	tf, err := NewTransfers(fact, fs, "")
@@ -62,11 +62,11 @@ func (t *testTransfersItemMultiAmounts) TestZeroBig() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	pk := key.NewBasePrivatekey()
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
@@ -93,11 +93,11 @@ func (t *testTransfersItemMultiAmounts) TestOverMaxAmounts() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	pk := key.NewBasePrivatekey()
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
@@ -124,11 +124,11 @@ func (t *testTransfersItemMultiAmounts) TestDuplicatedCurrency() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	pk := key.NewBasePrivatekey()
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
@@ -149,11 +149,11 @@ func (t *testTransfersItemMultiAmounts) TestEmptyAmounts() {
 
 	fact := NewTransfersFact(token, s, items)
 
-	pk := key.MustNewBTCPrivatekey()
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	pk := key.NewBasePrivatekey()
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
 
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	tf, err := NewTransfers(fact, fs, "")
 	t.NoError(err)
@@ -181,17 +181,17 @@ func testTransfersItemMultiAmountsEncode(enc encoder.Encoder) suite.TestingSuite
 		}
 		fact := NewTransfersFact(token, s, items)
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		tf, err := NewTransfers(fact, fs, util.UUID().String())

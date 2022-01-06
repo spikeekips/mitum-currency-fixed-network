@@ -5,26 +5,26 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
-
-	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type CreateAccountCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender    AddressFlag    `arg:"" name:"sender" help:"sender address" required:"true"`
-	Currency  CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big       BigFlag        `arg:"" name:"big" help:"big to send" required:"true"`
-	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
-	Keys      []KeyFlag      `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
-	Seal      FileLoad       `help:"seal" optional:""`
+	Sender    AddressFlag          `arg:"" name:"sender" help:"sender address" required:"true"`
+	Threshold uint                 `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
+	Keys      []KeyFlag            `name:"key" help:"key for new account (ex: \"<public key>,<weight>\")" sep:"@"`
+	Seal      mitumcmds.FileLoad   `help:"seal" optional:""`
+	Amounts   []CurrencyAmountFlag `arg:"" name:"currency-amount" help:"amount (ex: \"<currency>,<amount>\")"`
 	sender    base.Address
-	keys      currency.Keys
+	keys      currency.BaseAccountKeys
 }
 
 func NewCreateAccountCommand() CreateAccountCommand {
@@ -76,13 +76,17 @@ func (cmd *CreateAccountCommand) parseFlags() error {
 		return errors.Errorf("--key must be given at least one")
 	}
 
+	if len(cmd.Amounts) < 1 {
+		return errors.Errorf("empty currency-amount, must be given at least one")
+	}
+
 	{
-		ks := make([]currency.Key, len(cmd.Keys))
+		ks := make([]currency.AccountKey, len(cmd.Keys))
 		for i := range cmd.Keys {
 			ks[i] = cmd.Keys[i].Key
 		}
 
-		if kys, err := currency.NewKeys(ks, cmd.Threshold); err != nil {
+		if kys, err := currency.NewBaseAccountKeys(ks, cmd.Threshold); err != nil {
 			return err
 		} else if err := kys.IsValid(nil); err != nil {
 			return err
@@ -106,12 +110,18 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 		}
 	}
 
-	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
-	if err = am.IsValid(nil); err != nil {
-		return nil, err
+	ams := make([]currency.Amount, len(cmd.Amounts))
+	for i := range cmd.Amounts {
+		a := cmd.Amounts[i]
+		am := currency.NewAmount(a.Big, a.CID)
+		if err = am.IsValid(nil); err != nil {
+			return nil, err
+		}
+
+		ams[i] = am
 	}
 
-	item := currency.NewCreateAccountsItemSingleAmount(cmd.keys, am)
+	item := currency.NewCreateAccountsItemMultiAmounts(cmd.keys, ams)
 	if err = item.IsValid(nil); err != nil {
 		return nil, err
 	}
@@ -119,12 +129,12 @@ func (cmd *CreateAccountCommand) createOperation() (operation.Operation, error) 
 
 	fact := currency.NewCreateAccountsFact([]byte(cmd.Token), cmd.sender, items)
 
-	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	sig, err := base.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return nil, err
 	}
-	fs := []operation.FactSign{
-		operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig),
+	fs := []base.FactSign{
+		base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig),
 	}
 
 	op, err := currency.NewCreateAccounts(fact, fs, cmd.Memo)
@@ -139,13 +149,16 @@ func LoadSeal(b []byte, networkID base.NetworkID) (seal.Seal, error) {
 		return nil, errors.Errorf("empty input")
 	}
 
-	if sl, err := seal.DecodeSeal(b, jenc); err != nil {
+	var sl seal.Seal
+	if err := encoder.Decode(b, jenc, &sl); err != nil {
 		return nil, err
-	} else if err := sl.IsValid(networkID); err != nil {
-		return nil, errors.Wrap(err, "invalid seal")
-	} else {
-		return sl, nil
 	}
+
+	if err := sl.IsValid(networkID); err != nil {
+		return nil, errors.Wrap(err, "invalid seal")
+	}
+
+	return sl, nil
 }
 
 func LoadSealAndAddOperation(

@@ -1,9 +1,7 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -11,13 +9,18 @@ import (
 )
 
 var (
-	CurrencyPolicyUpdaterFactType = hint.Type("mitum-currency-currency-policy-updater-operation-fact")
-	CurrencyPolicyUpdaterFactHint = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
-	CurrencyPolicyUpdaterType     = hint.Type("mitum-currency-currency-policy-updater-operation")
-	CurrencyPolicyUpdaterHint     = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
+	CurrencyPolicyUpdaterFactType   = hint.Type("mitum-currency-currency-policy-updater-operation-fact")
+	CurrencyPolicyUpdaterFactHint   = hint.NewHint(CurrencyPolicyUpdaterFactType, "v0.0.1")
+	CurrencyPolicyUpdaterFactHinter = CurrencyPolicyUpdaterFact{
+		BaseHinter: hint.NewBaseHinter(CurrencyPolicyUpdaterFactHint),
+	}
+	CurrencyPolicyUpdaterType   = hint.Type("mitum-currency-currency-policy-updater-operation")
+	CurrencyPolicyUpdaterHint   = hint.NewHint(CurrencyPolicyUpdaterType, "v0.0.1")
+	CurrencyPolicyUpdaterHinter = CurrencyPolicyUpdater{BaseOperation: operationHinter(CurrencyPolicyUpdaterHint)}
 )
 
 type CurrencyPolicyUpdaterFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	cid    CurrencyID
@@ -26,18 +29,15 @@ type CurrencyPolicyUpdaterFact struct {
 
 func NewCurrencyPolicyUpdaterFact(token []byte, cid CurrencyID, policy CurrencyPolicy) CurrencyPolicyUpdaterFact {
 	fact := CurrencyPolicyUpdaterFact{
-		token:  token,
-		cid:    cid,
-		policy: policy,
+		BaseHinter: hint.NewBaseHinter(CurrencyPolicyUpdaterFactHint),
+		token:      token,
+		cid:        cid,
+		policy:     policy,
 	}
 
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (CurrencyPolicyUpdaterFact) Hint() hint.Hint {
-	return CurrencyPolicyUpdaterFactHint
 }
 
 func (fact CurrencyPolicyUpdaterFact) Hash() valuehash.Hash {
@@ -52,21 +52,13 @@ func (fact CurrencyPolicyUpdaterFact) Bytes() []byte {
 	)
 }
 
-func (fact CurrencyPolicyUpdaterFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for CurrencyPolicyUpdaterFact")
+func (fact CurrencyPolicyUpdaterFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
-		fact.cid,
-		fact.policy,
-	}, nil, false); err != nil {
-		return errors.Wrap(err, "invalid fact")
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
+	if err := isvalid.Check(nil, false, fact.cid, fact.policy); err != nil {
+		return isvalid.InvalidError.Errorf("invalid fact: %w", err)
 	}
 
 	return nil
@@ -89,34 +81,18 @@ func (fact CurrencyPolicyUpdaterFact) Policy() CurrencyPolicy {
 }
 
 type CurrencyPolicyUpdater struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewCurrencyPolicyUpdater(
 	fact CurrencyPolicyUpdaterFact,
-	fs []operation.FactSign,
+	fs []base.FactSign,
 	memo string,
 ) (CurrencyPolicyUpdater, error) {
-	bo, err := operation.NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(CurrencyPolicyUpdaterHint, fact, fs, memo)
 	if err != nil {
 		return CurrencyPolicyUpdater{}, err
 	}
-	op := CurrencyPolicyUpdater{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (CurrencyPolicyUpdater) Hint() hint.Hint {
-	return CurrencyPolicyUpdaterHint
-}
-
-func (op CurrencyPolicyUpdater) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
+	return CurrencyPolicyUpdater{BaseOperation: bo}, nil
 }

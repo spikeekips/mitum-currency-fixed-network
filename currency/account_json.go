@@ -12,7 +12,7 @@ type AccountPackerJSON struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
 	AD base.Address   `json:"address"`
-	KS Keys           `json:"keys"`
+	KS AccountKeys    `json:"keys"`
 }
 
 func (ac Account) PackerJSON() AccountPackerJSON {

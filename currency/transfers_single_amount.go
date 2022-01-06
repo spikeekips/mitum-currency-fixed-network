@@ -1,15 +1,17 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
 	TransfersItemSingleAmountType   = hint.Type("mitum-currency-transfers-item-single-amount")
 	TransfersItemSingleAmountHint   = hint.NewHint(TransfersItemSingleAmountType, "v0.0.1")
-	TransfersItemSingleAmountHinter = BaseTransfersItem{hint: TransfersItemSingleAmountHint}
+	TransfersItemSingleAmountHinter = TransfersItemSingleAmount{
+		BaseTransfersItem: BaseTransfersItem{BaseHinter: hint.NewBaseHinter(TransfersItemSingleAmountHint)},
+	}
 )
 
 type TransfersItemSingleAmount struct {
@@ -28,7 +30,7 @@ func (it TransfersItemSingleAmount) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n != 1 {
-		return errors.Errorf("only one amount allowed; %d", n)
+		return isvalid.InvalidError.Errorf("only one amount allowed; %d", n)
 	}
 
 	return nil

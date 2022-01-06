@@ -18,7 +18,7 @@ type KeyUpdaterCommand struct {
 	Threshold uint           `help:"threshold for keys (default: ${create_account_threshold})" default:"${create_account_threshold}"` // nolint
 	Keys      []KeyFlag      `name:"key" help:"key for account (ex: \"<public key>,<weight>\")" sep:"@"`
 	target    base.Address
-	keys      currency.Keys
+	keys      currency.BaseAccountKeys
 }
 
 func NewKeyUpdaterCommand() KeyUpdaterCommand {
@@ -70,12 +70,12 @@ func (cmd *KeyUpdaterCommand) parseFlags() error {
 	cmd.target = a
 
 	{
-		ks := make([]currency.Key, len(cmd.Keys))
+		ks := make([]currency.AccountKey, len(cmd.Keys))
 		for i := range cmd.Keys {
 			ks[i] = cmd.Keys[i].Key
 		}
 
-		if kys, err := currency.NewKeys(ks, cmd.Threshold); err != nil {
+		if kys, err := currency.NewBaseAccountKeys(ks, cmd.Threshold); err != nil {
 			return err
 		} else if err := kys.IsValid(nil); err != nil {
 			return err
@@ -95,12 +95,12 @@ func (cmd *KeyUpdaterCommand) createOperation() (operation.Operation, error) {
 		cmd.Currency.CID,
 	)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return nil, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 
 	op, err := currency.NewKeyUpdater(fact, fs, cmd.Memo)
 	if err != nil {

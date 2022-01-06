@@ -1,10 +1,7 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -12,10 +9,12 @@ import (
 )
 
 var (
-	TransfersFactType = hint.Type("mitum-currency-transfers-operation-fact")
-	TransfersFactHint = hint.NewHint(TransfersFactType, "v0.0.1")
-	TransfersType     = hint.Type("mitum-currency-transfers-operation")
-	TransfersHint     = hint.NewHint(TransfersType, "v0.0.1")
+	TransfersFactType   = hint.Type("mitum-currency-transfers-operation-fact")
+	TransfersFactHint   = hint.NewHint(TransfersFactType, "v0.0.1")
+	TransfersFactHinter = TransfersFact{BaseHinter: hint.NewBaseHinter(TransfersFactHint)}
+	TransfersType       = hint.Type("mitum-currency-transfers-operation")
+	TransfersHint       = hint.NewHint(TransfersType, "v0.0.1")
+	TransfersHinter     = Transfers{BaseOperation: operationHinter(TransfersHint)}
 )
 
 var MaxTransferItems uint = 10
@@ -30,6 +29,7 @@ type TransfersItem interface {
 }
 
 type TransfersFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	sender base.Address
@@ -38,17 +38,14 @@ type TransfersFact struct {
 
 func NewTransfersFact(token []byte, sender base.Address, items []TransfersItem) TransfersFact {
 	fact := TransfersFact{
-		token:  token,
-		sender: sender,
-		items:  items,
+		BaseHinter: hint.NewBaseHinter(TransfersFactHint),
+		token:      token,
+		sender:     sender,
+		items:      items,
 	}
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (TransfersFact) Hint() hint.Hint {
-	return TransfersFactHint
 }
 
 func (fact TransfersFact) Hash() valuehash.Hash {
@@ -76,39 +73,37 @@ func (fact TransfersFact) Bytes() []byte {
 	)
 }
 
-func (fact TransfersFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for TransferFact")
-	} else if n := len(fact.items); n < 1 {
-		return errors.Errorf("empty items")
-	} else if n > int(MaxTransferItems) {
-		return errors.Errorf("items, %d over max, %d", n, MaxTransferItems)
+func (fact TransfersFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{fact.h, fact.sender}, nil, false); err != nil {
+	if n := len(fact.items); n < 1 {
+		return isvalid.InvalidError.Errorf("empty items")
+	} else if n > int(MaxTransferItems) {
+		return isvalid.InvalidError.Errorf("items, %d over max, %d", n, MaxTransferItems)
+	}
+
+	if err := isvalid.Check(nil, false, fact.sender); err != nil {
 		return err
 	}
 
 	foundReceivers := map[string]struct{}{}
 	for i := range fact.items {
 		it := fact.items[i]
-		if err := it.IsValid(nil); err != nil {
-			return errors.Wrap(err, "invalid item found")
+		if err := isvalid.Check(nil, false, it); err != nil {
+			return isvalid.InvalidError.Errorf("invalid item found: %w", err)
 		}
 
-		k := StateAddressKeyPrefix(it.Receiver())
+		k := it.Receiver().String()
 		switch _, found := foundReceivers[k]; {
 		case found:
-			return errors.Errorf("duplicated receiver found, %s", it.Receiver())
+			return isvalid.InvalidError.Errorf("duplicated receiver found, %s", it.Receiver())
 		case fact.sender.Equal(it.Receiver()):
-			return errors.Errorf("receiver is same with sender, %q", fact.sender)
+			return isvalid.InvalidError.Errorf("receiver is same with sender, %q", fact.sender)
 		default:
 			foundReceivers[k] = struct{}{}
 		}
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -147,59 +142,17 @@ func (fact TransfersFact) Addresses() ([]base.Address, error) {
 }
 
 type Transfers struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
 func NewTransfers(
 	fact TransfersFact,
-	fs []operation.FactSign,
+	fs []base.FactSign,
 	memo string,
 ) (Transfers, error) {
-	bo, err := operation.NewBaseOperationFromFact(TransfersHint, fact, fs)
+	bo, err := NewBaseOperationFromFact(TransfersHint, fact, fs, memo)
 	if err != nil {
 		return Transfers{}, err
 	}
-	op := Transfers{BaseOperation: bo, Memo: memo}
-
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (Transfers) Hint() hint.Hint {
-	return TransfersHint
-}
-
-func (op Transfers) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
-}
-
-func (op Transfers) GenerateHash() valuehash.Hash {
-	bs := make([][]byte, len(op.Signs())+1)
-	for i := range op.Signs() {
-		bs[i] = op.Signs()[i].Bytes()
-	}
-
-	bs[len(bs)-1] = []byte(op.Memo)
-
-	e := util.ConcatBytesSlice(op.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
-
-	return valuehash.NewSHA256(e)
-}
-
-func (op Transfers) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	o, err := op.BaseOperation.AddFactSigns(fs...)
-	if err != nil {
-		return nil, err
-	}
-	op.BaseOperation = o.(operation.BaseOperation)
-
-	op.BaseOperation = op.SetHash(op.GenerateHash())
-
-	return op, nil
+	return Transfers{BaseOperation: bo}, nil
 }

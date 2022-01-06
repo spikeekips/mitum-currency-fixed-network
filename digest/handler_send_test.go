@@ -1,8 +1,10 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spikeekips/mitum-currency/currency"
@@ -59,6 +61,26 @@ func (t *testHandlerSend) TestSend() {
 
 	t.True(op.Hash().Equal(sent.Hash()))
 	t.True(op.Fact().Hash().Equal(sent.Fact().Hash()))
+}
+
+func (t *testHandlerSend) TestSendFailed() {
+	st, _ := t.Database()
+	handlers := t.handlers(st, DummyCache{})
+
+	handlers.SetSend(func(sl interface{}) (seal.Seal, error) {
+		return nil, fmt.Errorf("findme")
+	})
+
+	self, err := handlers.router.Get(HandlerPathSend).URL()
+	t.NoError(err)
+
+	op := t.newTransfer(currency.MustAddress(util.UUID().String()), currency.MustAddress(util.UUID().String()))
+
+	b, err := jsonenc.Marshal(op)
+	t.NoError(err)
+
+	_, problem := t.request400(handlers, "POST", self.String(), b)
+	t.Equal("findme", problem.Error())
 }
 
 func (t *testHandlerSend) TestSendOperations() {

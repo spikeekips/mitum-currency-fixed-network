@@ -1,13 +1,22 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var currencyRegisterProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CurrencyRegisterProcessor)
+	},
+}
 
 func (CurrencyRegister) Process(
 	func(string) (state.State, bool, error),
@@ -32,12 +41,17 @@ func NewCurrencyRegisterProcessor(cp *CurrencyPool, pubs []key.Publickey, thresh
 		if !ok {
 			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		}
-		return &CurrencyRegisterProcessor{
-			CurrencyRegister: i,
-			cp:               cp,
-			pubs:             pubs,
-			threshold:        threshold,
-		}, nil
+
+		opp := currencyRegisterProcessorPool.Get().(*CurrencyRegisterProcessor)
+
+		opp.cp = cp
+		opp.CurrencyRegister = i
+		opp.pubs = pubs
+		opp.threshold = threshold
+		opp.ga = AmountState{}
+		opp.de = nil
+
+		return opp, nil
 	}
 }
 
@@ -46,7 +60,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, errors.Errorf("empty publickeys for operation signs")
+		return nil, operation.NewBaseReasonError("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -55,7 +69,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 
 	if opp.cp != nil {
 		if opp.cp.Exists(item.Currency()) {
-			return nil, errors.Errorf("currency already registered, %q", item.Currency())
+			return nil, operation.NewBaseReasonError("currency already registered, %q", item.Currency())
 		}
 	}
 
@@ -73,7 +87,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, errors.Errorf("currency already registered, %q", item.Currency())
+		return nil, operation.NewBaseReasonError("currency already registered, %q", item.Currency())
 	default:
 		opp.de = st
 	}
@@ -82,7 +96,7 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 	case err != nil:
 		return nil, err
 	case found:
-		return nil, errors.Errorf("genesis account has already the currency, %q", item.Currency())
+		return nil, operation.NewBaseReasonError("genesis account has already the currency, %q", item.Currency())
 	default:
 		opp.ga = NewAmountState(st, item.Currency())
 	}
@@ -91,12 +105,12 @@ func (opp *CurrencyRegisterProcessor) PreProcess(
 }
 
 func (opp *CurrencyRegisterProcessor) Process(
-	_ func(string) (state.State, bool, error),
+	getState func(string) (state.State, bool, error),
 	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	fact := opp.Fact().(CurrencyRegisterFact)
 
-	sts := make([]state.State, 2)
+	sts := make([]state.State, 4)
 
 	sts[0] = opp.ga.Add(fact.currency.Big())
 	i, err := SetStateCurrencyDesignValue(opp.de, fact.currency)
@@ -105,5 +119,57 @@ func (opp *CurrencyRegisterProcessor) Process(
 	}
 	sts[1] = i
 
+	{
+		l, err := createZeroAccount(fact.currency.Currency(), getState)
+		if err != nil {
+			return err
+		}
+		sts[2], sts[3] = l[0], l[1]
+	}
+
 	return setState(fact.Hash(), sts...)
+}
+
+func createZeroAccount(
+	cid CurrencyID,
+	getState func(string) (state.State, bool, error),
+) ([]state.State, error) {
+	sts := make([]state.State, 2)
+
+	ac, err := ZeroAccount(cid)
+	if err != nil {
+		return nil, err
+	}
+	ast, err := notExistsState(StateKeyAccount(ac.Address()), "keys of zero account", getState)
+	if err != nil {
+		return nil, err
+	}
+
+	ast, err = SetStateAccountValue(ast, ac)
+	if err != nil {
+		return nil, err
+	}
+	sts[0] = ast
+
+	bst, _, err := getState(StateKeyBalance(ac.Address(), cid))
+	if err != nil {
+		return nil, err
+	}
+	amst := NewAmountState(bst, cid)
+
+	sts[1] = amst
+
+	return sts, nil
+}
+
+func (opp *CurrencyRegisterProcessor) Close() error {
+	opp.cp = nil
+	opp.pubs = nil
+	opp.threshold = base.Threshold{}
+	opp.ga = AmountState{}
+	opp.de = nil
+
+	currencyRegisterProcessorPool.Put(opp)
+
+	return nil
 }

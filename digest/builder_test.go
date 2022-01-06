@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -10,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
@@ -44,23 +46,23 @@ func (t *testBuilder) decodeHal(b []byte) Hal {
 func (t *testBuilder) TestUnknownFactTemplate() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	_, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	_, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	_, err = bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.Transfers{}.Hint())
+	_, err = bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 
-	_, err = bl.FactTemplate(currency.GenesisCurrencies{}.Hint())
+	_, err = bl.FactTemplate(currency.GenesisCurrenciesHinter.Hint())
 	t.Contains(err.Error(), "unknown operation")
 }
 
 func (t *testBuilder) TestFactTemplateCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	hal, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -74,7 +76,7 @@ func (t *testBuilder) TestFactTemplateCreateAccounts() {
 func (t *testBuilder) TestFactTemplateKeyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -88,7 +90,7 @@ func (t *testBuilder) TestFactTemplateKeyUpdater() {
 func (t *testBuilder) TestFactTemplateTransfers() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.Transfers{}.Hint())
+	hal, err := bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -102,7 +104,7 @@ func (t *testBuilder) TestFactTemplateTransfers() {
 func (t *testBuilder) TestFactTemplateCurrencyRegister() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyRegisterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -116,7 +118,7 @@ func (t *testBuilder) TestFactTemplateCurrencyRegister() {
 func (t *testBuilder) TestFactTemplateCurrencyPolicyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdaterHinter.Hint())
 	t.NoError(err)
 	t.NotEmpty(hal.Extras())
 
@@ -130,7 +132,7 @@ func (t *testBuilder) TestFactTemplateCurrencyPolicyUpdater() {
 func (t *testBuilder) TestBuildFactCreateAccounts() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CreateAccounts{}.Hint())
+	hal, err := bl.FactTemplate(currency.CreateAccountsHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -139,8 +141,8 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newPub := key.MustNewBTCPrivatekey().Publickey()
-	newSender := currency.Address("new-mother")
+	newPub := key.NewBasePrivatekey().Publickey()
+	newSender := currency.NewAddress("new-mother")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -180,7 +182,7 @@ func (t *testBuilder) TestBuildFactCreateAccounts() {
 func (t *testBuilder) TestBuildFactKeyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.KeyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.KeyUpdaterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -189,8 +191,8 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newPub := key.MustNewBTCPrivatekey().Publickey()
-	newSender := currency.Address("new-mother")
+	newPub := key.NewBasePrivatekey().Publickey()
+	newSender := currency.NewAddress("new-mother")
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
 	newCurrencyID := currency.CurrencyID("XXX")
@@ -225,7 +227,7 @@ func (t *testBuilder) TestBuildFactKeyUpdater() {
 func (t *testBuilder) TestBuildFactTransfers() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.Transfers{}.Hint())
+	hal, err := bl.FactTemplate(currency.TransfersHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -234,8 +236,8 @@ func (t *testBuilder) TestBuildFactTransfers() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -286,7 +288,7 @@ func (t *testBuilder) TestBuildFactTransfers() {
 func (t *testBuilder) TestBuildFactCurrencyRegister() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyRegister{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyRegisterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -295,8 +297,8 @@ func (t *testBuilder) TestBuildFactCurrencyRegister() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -334,7 +336,7 @@ func (t *testBuilder) TestBuildFactCurrencyRegister() {
 func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 	bl := NewBuilder(t.JSONEnc, t.networkID)
 
-	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdater{}.Hint())
+	hal, err := bl.FactTemplate(currency.CurrencyPolicyUpdaterHinter.Hint())
 	t.NoError(err)
 
 	b, err := t.JSONEnc.Marshal(hal)
@@ -343,8 +345,8 @@ func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 
 	templateTokenEncoded := base64.StdEncoding.EncodeToString(templateToken)
 
-	newSender := currency.Address("new-mother")
-	newReceiver := currency.Address("new-father")
+	newSender := currency.NewAddress("new-mother")
+	newReceiver := currency.NewAddress("new-father")
 	newBig := currency.NewBig(99)
 	newToken := util.UUID().Bytes()
 	newTokenEncoded := base64.StdEncoding.EncodeToString(newToken)
@@ -378,7 +380,7 @@ func (t *testBuilder) TestBuildFactCurrencyPolicyUpdater() {
 }
 
 func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operation.Operation {
-	priv := key.MustNewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	sig, err := priv.Sign(sb)
 	t.NoError(err)
 
@@ -396,12 +398,12 @@ func (t *testBuilder) buildOperation(op operation.Operation, sb []byte) operatio
 		[]byte(base58.Encode(sig)),
 	)
 
-	npriv := key.MustNewBTCPrivatekey()
+	npriv := key.NewBasePrivatekey()
 	nsig, err := npriv.Sign(sb)
-	var nfs operation.FactSign
+	var nfs base.FactSign
 	{ // add new FactSign
 		t.NoError(err)
-		nfs = operation.RawBaseFactSign(npriv.Publickey(), nsig, time.Now())
+		nfs = base.RawBaseFactSign(npriv.Publickey(), nsig, time.Now())
 
 		ib, err := jsonenc.Marshal(nfs)
 		t.NoError(err)

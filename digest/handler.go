@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -38,8 +39,9 @@ var (
 	HandlerPathOperationsByHeight         = `/block/{height:[0-9]+}/operations`
 	HandlerPathManifestByHeight           = `/block/{height:[0-9]+}/manifest`
 	HandlerPathManifestByHash             = `/block/{hash:(?i)[0-9a-z][0-9a-z]+}/manifest`
-	HandlerPathAccount                    = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}`            // revive:disable-line:line-length-limit
-	HandlerPathAccountOperations          = `/account/{address:(?i)[0-9a-z][0-9a-z\-]+:[a-z0-9][a-z0-9\-_\+]*[a-z0-9]-v[0-9\.]*}/operations` // revive:disable-line:line-length-limit
+	HandlerPathAccount                    = `/account/{address:(?i)` + base.REStringAddressString + `}`            // revive:disable-line:line-length-limit
+	HandlerPathAccountOperations          = `/account/{address:(?i)` + base.REStringAddressString + `}/operations` // revive:disable-line:line-length-limit
+	HandlerPathAccounts                   = `/accounts`
 	HandlerPathOperationBuildFactTemplate = `/builder/operation/fact/template/{fact:[\w][\w\-]*}`
 	HandlerPathOperationBuildFact         = `/builder/operation/fact`
 	HandlerPathOperationBuildSign         = `/builder/operation/sign`
@@ -61,6 +63,7 @@ var RateLimitHandlerMap = map[string]string{
 	"block-manifest-by-hash":          HandlerPathManifestByHash,
 	"account":                         HandlerPathAccount,
 	"account-operations":              HandlerPathAccountOperations,
+	"accounts":                        HandlerPathAccounts,
 	"builder-operation-fact-template": HandlerPathOperationBuildFactTemplate,
 	"builder-operation-fact":          HandlerPathOperationBuildFact,
 	"builder-operation-sign":          HandlerPathOperationBuildSign,
@@ -99,6 +102,7 @@ type Handlers struct {
 	rateLimit       map[string][]process.RateLimitRule
 	rateLimitStore  limiter.Store
 	rg              *singleflight.Group
+	expireNotFilled time.Duration
 }
 
 func NewHandlers(
@@ -113,17 +117,18 @@ func NewHandlers(
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "http2-handlers")
 		}),
-		networkID:    networkID,
-		encs:         encs,
-		enc:          enc,
-		database:     st,
-		cache:        cache,
-		cp:           cp,
-		router:       mux.NewRouter(),
-		routes:       map[string]*mux.Route{},
-		itemsLimiter: DefaultItemsLimiter,
-		rateLimit:    map[string][]process.RateLimitRule{},
-		rg:           &singleflight.Group{},
+		networkID:       networkID,
+		encs:            encs,
+		enc:             enc,
+		database:        st,
+		cache:           cache,
+		cp:              cp,
+		router:          mux.NewRouter(),
+		routes:          map[string]*mux.Route{},
+		itemsLimiter:    DefaultItemsLimiter,
+		rateLimit:       map[string][]process.RateLimitRule{},
+		rg:              &singleflight.Group{},
+		expireNotFilled: time.Second * 3,
 	}
 }
 
@@ -183,6 +188,8 @@ func (hd *Handlers) setHandlers() {
 	_ = hd.setHandler(HandlerPathAccount, hd.handleAccount, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathAccountOperations, hd.handleAccountOperations, true).
+		Methods(http.MethodOptions, "GET")
+	_ = hd.setHandler(HandlerPathAccounts, hd.handleAccounts, true).
 		Methods(http.MethodOptions, "GET")
 	_ = hd.setHandler(HandlerPathOperationBuildFactTemplate, hd.handleOperationBuildFactTemplate, true).
 		Methods(http.MethodOptions, "GET")
@@ -271,7 +278,27 @@ func CacheKeyPath(r *http.Request) string {
 }
 
 func CacheKey(key string, s ...string) string {
-	return fmt.Sprintf("%s-%s", key, strings.Join(s, ","))
+	var l []string
+	var notempty bool
+	for i := len(s) - 1; i >= 0; i-- {
+		a := s[i]
+
+		if !notempty {
+			if len(strings.TrimSpace(a)) < 1 {
+				continue
+			}
+			notempty = true
+		}
+
+		l = append(l, a)
+	}
+
+	r := make([]string, len(l))
+	for i := range l {
+		r[len(l)-1-i] = l[i]
+	}
+
+	return fmt.Sprintf("%s-%s", key, strings.Join(r, ","))
 }
 
 func DefaultItemsLimiter(string) int64 {

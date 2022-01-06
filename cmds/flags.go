@@ -2,8 +2,7 @@ package cmds
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -13,13 +12,12 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 
 	"github.com/spikeekips/mitum-currency/currency"
 )
 
 type KeyFlag struct {
-	Key currency.Key
+	Key currency.BaseAccountKey
 }
 
 func (v *KeyFlag) UnmarshalText(b []byte) error {
@@ -37,7 +35,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 	}
 
 	var pk key.Publickey
-	if k, err := key.DecodeKey(jenc, l[0]); err != nil {
+	if k, err := key.DecodeKeyFromString(l[0], jenc); err != nil {
 		return errors.Wrapf(err, "invalid public key, %q for --key", l[0])
 	} else if priv, ok := k.(key.Privatekey); ok {
 		pk = priv.Publickey()
@@ -52,7 +50,7 @@ func (v *KeyFlag) UnmarshalText(b []byte) error {
 		weight = uint(i)
 	}
 
-	if k, err := currency.NewKey(pk, weight); err != nil {
+	if k, err := currency.NewBaseAccountKey(pk, weight); err != nil {
 		return err
 	} else if err := k.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid key string")
@@ -99,7 +97,7 @@ func (v PrivatekeyFlag) Empty() bool {
 }
 
 func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
-	if k, err := key.DecodePrivatekey(jenc, string(b)); err != nil {
+	if k, err := key.DecodePrivatekeyFromString(string(b), jenc); err != nil {
 		return errors.Wrapf(err, "invalid private key, %q", string(b))
 	} else if err := k.IsValid(nil); err != nil {
 		return err
@@ -113,17 +111,11 @@ func (v *PrivatekeyFlag) UnmarshalText(b []byte) error {
 }
 
 type AddressFlag struct {
-	s  string
-	ad base.AddressDecoder
+	s string
 }
 
 func (v *AddressFlag) UnmarshalText(b []byte) error {
-	hs, err := hint.ParseHintedString(string(b))
-	if err != nil {
-		return err
-	}
 	v.s = string(b)
-	v.ad = base.AddressDecoder{HintedString: encoder.NewHintedString(hs.Hint(), hs.Body())}
 
 	return nil
 }
@@ -133,7 +125,7 @@ func (v *AddressFlag) String() string {
 }
 
 func (v *AddressFlag) Encode(enc encoder.Encoder) (base.Address, error) {
-	return v.ad.Encode(enc)
+	return base.DecodeAddressFromString(v.s, enc)
 }
 
 type BigFlag struct {
@@ -152,36 +144,6 @@ func (v *BigFlag) UnmarshalText(b []byte) error {
 	return nil
 }
 
-type FileLoad []byte
-
-func (v *FileLoad) UnmarshalText(b []byte) error {
-	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		c, err := mitumcmds.LoadFromStdInput()
-		if err != nil {
-			return err
-		}
-		*v = c
-
-		return nil
-	}
-
-	c, err := os.ReadFile(filepath.Clean(string(b)))
-	if err != nil {
-		return err
-	}
-	*v = c
-
-	return nil
-}
-
-func (v FileLoad) Bytes() []byte {
-	return []byte(v)
-}
-
-func (v FileLoad) String() string {
-	return string(v)
-}
-
 type CurrencyIDFlag struct {
 	CID currency.CurrencyID
 }
@@ -198,4 +160,38 @@ func (v *CurrencyIDFlag) UnmarshalText(b []byte) error {
 
 func (v *CurrencyIDFlag) String() string {
 	return v.CID.String()
+}
+
+type CurrencyAmountFlag struct {
+	CID currency.CurrencyID
+	Big currency.Big
+}
+
+func (v *CurrencyAmountFlag) UnmarshalText(b []byte) error {
+	l := strings.SplitN(string(b), ",", 2)
+	if len(l) != 2 {
+		return fmt.Errorf("invalid currency-amount, %q", string(b))
+	}
+
+	a, c := l[0], l[1]
+
+	cid := currency.CurrencyID(a)
+	if err := cid.IsValid(nil); err != nil {
+		return err
+	}
+	v.CID = cid
+
+	if a, err := currency.NewBigFromString(c); err != nil {
+		return errors.Wrapf(err, "invalid big string, %q", string(b))
+	} else if err := a.IsValid(nil); err != nil {
+		return err
+	} else {
+		v.Big = a
+	}
+
+	return nil
+}
+
+func (v *CurrencyAmountFlag) String() string {
+	return v.CID.String() + "," + v.Big.String()
 }

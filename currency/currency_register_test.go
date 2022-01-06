@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -22,17 +23,17 @@ func (t *testCurrencyRegister) TestNew() {
 	item := t.currencyDesign(NewBig(33), CurrencyID("SHOWME"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -51,17 +52,17 @@ func (t *testCurrencyRegister) TestZeroAmount() {
 	item := t.currencyDesign(NewBig(0), CurrencyID("SHOWME"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -76,17 +77,17 @@ func (t *testCurrencyRegister) TestInvalidCurrencyID() {
 	item := t.currencyDesign(NewBig(33), CurrencyID("showme"))
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range []key.Privatekey{
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
+		key.NewBasePrivatekey(),
 	} {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCurrencyRegister(fact, fs, "")
@@ -109,22 +110,24 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		po := NewCurrencyPolicy(ZeroBig, NewNilFeeer())
 		de := NewCurrencyDesign(NewAmount(NewBig(33), CurrencyID("SHOWME")), NewTestAddress(), po)
 		fact := NewCurrencyRegisterFact(token, de)
+		fact.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyRegisterFactType, "v0.0.9"))
 
-		var fs []operation.FactSign
+		var fs []base.FactSign
 
 		for _, pk := range []key.Privatekey{
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
-			key.MustNewBTCPrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
+			key.NewBasePrivatekey(),
 		} {
-			sig, err := operation.NewFactSignature(pk, fact, nil)
+			sig, err := base.NewFactSignature(pk, fact, nil)
 			t.NoError(err)
 
-			fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+			fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 		}
 
 		op, err := NewCurrencyRegister(fact, fs, "findme")
 		t.NoError(err)
+		op.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyRegisterType, "v0.0.9"))
 
 		t.NoError(op.IsValid(nil))
 
@@ -135,10 +138,13 @@ func testCurrencyRegisterEncode(enc encoder.Encoder) suite.TestingSuite {
 		ta := a.(CurrencyRegister)
 		tb := b.(CurrencyRegister)
 
+		t.True(ta.Hint().Equal(tb.Hint()))
 		t.Equal(ta.Memo, tb.Memo)
 
 		fact := ta.Fact().(CurrencyRegisterFact)
 		ufact := tb.Fact().(CurrencyRegisterFact)
+
+		t.True(fact.Hint().Equal(ufact.Hint()))
 
 		ac := fact.currency
 		bc := ufact.currency

@@ -19,6 +19,11 @@ var accountIndexModels = []mongo.IndexModel{
 		Options: options.Index().
 			SetName("mitum_digest_account_height"),
 	},
+	{
+		Keys: bson.D{bson.E{Key: "pubs", Value: 1}, bson.E{Key: "height", Value: 1}, bson.E{Key: "address", Value: 1}},
+		Options: options.Index().
+			SetName("mitum_digest_account_publiskeys"),
+	},
 }
 
 var balanceIndexModels = []mongo.IndexModel{

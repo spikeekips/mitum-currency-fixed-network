@@ -22,7 +22,7 @@ var ProcessorDigestDatabase pm.Process
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameDigestDatabase,
-		[]string{process.ProcessNameNetwork},
+		[]string{process.ProcessNameBlockdata},
 		ProcessDigestDatabase,
 	); err != nil {
 		panic(err)
@@ -38,7 +38,7 @@ func ProcessDigestDatabase(ctx context.Context) (context.Context, error) {
 			return ctx, nil
 		}
 
-		return nil, err
+		return ctx, err
 	}
 
 	var mst *mongodbstorage.Database

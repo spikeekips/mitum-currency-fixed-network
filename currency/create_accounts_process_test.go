@@ -22,7 +22,7 @@ type testCreateAccountsOperation struct {
 
 func (t *testCreateAccountsOperation) processor(cp *CurrencyPool, pool *storage.Statepool) prprocessor.OperationProcessor {
 	copr, err := NewOperationProcessor(nil).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(cp))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(cp))
 	t.NoError(err)
 
 	if pool == nil {
@@ -36,14 +36,14 @@ func (t *testCreateAccountsOperation) newOperation(sender base.Address, items []
 	token := util.UUID().Bytes()
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		if err != nil {
 			panic(err)
 		}
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	ca, err := NewCreateAccounts(fact, fs, "")
@@ -376,7 +376,7 @@ func (t *testCreateAccountsOperation) TestSenderKeysNotExist() {
 
 	_, opr := t.statepool()
 	copr, err := opr.(*OperationProcessor).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(cp))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(cp))
 	t.NoError(err)
 
 	ams := []Amount{NewAmount(NewBig(33), cid)}
@@ -423,12 +423,12 @@ func (t *testCreateAccountsOperation) TestEmptyCurrency() {
 }
 
 func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
-	spk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
 
 	skey := t.newKey(spk.Publickey(), 100)
-	skeys, _ := NewKeys([]Key{skey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey}, 100)
 
-	keys, err := NewKeys([]Key{skey}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{skey}, 100)
 	t.NoError(err)
 
 	sender, _ := NewAddressFromKeys(keys)
@@ -436,7 +436,7 @@ func (t *testCreateAccountsOperation) TestSenderBalanceNotExist() {
 
 	_, opr := t.statepool([]state.State{st})
 	copr, err := opr.(*OperationProcessor).
-		SetProcessor(CreateAccounts{}, NewCreateAccountsProcessor(nil))
+		SetProcessor(CreateAccountsHinter, NewCreateAccountsProcessor(nil))
 	t.NoError(err)
 
 	na, _ := t.newAccount(false, nil)
@@ -591,7 +591,7 @@ func (t *testCreateAccountsOperation) TestSameSendersWithInvalidOperation() {
 	{
 		na, _ := t.newAccount(false, nil)
 		items := []CreateAccountsItem{NewCreateAccountsItemMultiAmounts(na.Keys(), []Amount{NewAmount(NewBig(1), cid)})}
-		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.MustNewBTCPrivatekey()})
+		ca := t.newOperation(sa.Address, items, []key.Privatekey{key.NewBasePrivatekey()})
 		err := opr.Process(ca)
 
 		var oper operation.ReasonError

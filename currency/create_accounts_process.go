@@ -1,12 +1,26 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var createAccountsItemProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CreateAccountsItemProcessor)
+	},
+}
+
+var createAccountsProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CreateAccountsProcessor)
+	},
+}
 
 func (CreateAccounts) Process(
 	func(key string) (state.State, bool, error),
@@ -34,20 +48,20 @@ func (opp *CreateAccountsItemProcessor) PreProcess(
 		if opp.cp != nil {
 			i, found := opp.cp.Policy(am.Currency())
 			if !found {
-				return errors.Errorf("currency not registered, %q", am.Currency())
+				return operation.NewBaseReasonError("currency not registered, %q", am.Currency())
 			}
 			policy = i
 		}
 
 		if am.Big().Compare(policy.NewAccountMinBalance()) < 0 {
-			return errors.Errorf(
+			return operation.NewBaseReasonError(
 				"amount should be over minimum balance, %v < %v", am.Big(), policy.NewAccountMinBalance())
 		}
 	}
 
 	target, err := opp.item.Address()
 	if err != nil {
-		return err
+		return operation.NewBaseReasonErrorFromError(err)
 	}
 
 	st, err := notExistsState(StateKeyAccount(target), "keys of target", getState)
@@ -77,7 +91,7 @@ func (opp *CreateAccountsItemProcessor) Process(
 ) ([]state.State, error) {
 	nac, err := NewAccountFromKeys(opp.item.Keys())
 	if err != nil {
-		return nil, err
+		return nil, operation.NewBaseReasonErrorFromError(err)
 	}
 
 	sts := make([]state.State, len(opp.item.Amounts())+1)
@@ -95,6 +109,18 @@ func (opp *CreateAccountsItemProcessor) Process(
 	return sts, nil
 }
 
+func (opp *CreateAccountsItemProcessor) Close() error {
+	opp.cp = nil
+	opp.h = nil
+	opp.item = nil
+	opp.ns = nil
+	opp.nb = nil
+
+	createAccountsItemProcessorPool.Put(opp)
+
+	return nil
+}
+
 type CreateAccountsProcessor struct {
 	cp *CurrencyPool
 	CreateAccounts
@@ -109,10 +135,16 @@ func NewCreateAccountsProcessor(cp *CurrencyPool) GetNewProcessor {
 		if !ok {
 			return nil, errors.Errorf("not CreateAccounts, %T", op)
 		}
-		return &CreateAccountsProcessor{
-			cp:             cp,
-			CreateAccounts: i,
-		}, nil
+
+		opp := createAccountsProcessorPool.Get().(*CreateAccountsProcessor)
+
+		opp.cp = cp
+		opp.CreateAccounts = i
+		opp.sb = nil
+		opp.ns = nil
+		opp.required = nil
+
+		return opp, nil
 	}
 }
 
@@ -137,16 +169,20 @@ func (opp *CreateAccountsProcessor) PreProcess(
 
 	ns := make([]*CreateAccountsItemProcessor, len(fact.items))
 	for i := range fact.items {
-		c := &CreateAccountsItemProcessor{cp: opp.cp, h: opp.Hash(), item: fact.items[i]}
+		c := createAccountsItemProcessorPool.Get().(*CreateAccountsItemProcessor)
+		c.cp = opp.cp
+		c.h = opp.Hash()
+		c.item = fact.items[i]
+
 		if err := c.PreProcess(getState, setState); err != nil {
-			return nil, operation.NewBaseReasonErrorFromError(err)
+			return nil, err
 		}
 
 		ns[i] = c
 	}
 
 	if err := checkFactSignsByState(fact.sender, opp.Signs(), getState); err != nil {
-		return nil, operation.NewBaseReasonError("invalid signing: %w", err)
+		return nil, errors.Wrap(err, "invalid signing")
 	}
 
 	opp.ns = ns
@@ -175,6 +211,19 @@ func (opp *CreateAccountsProcessor) Process( // nolint:dupl
 	}
 
 	return setState(fact.Hash(), sts...)
+}
+
+func (opp *CreateAccountsProcessor) Close() error {
+	for i := range opp.ns {
+		_ = opp.ns[i].Close()
+	}
+
+	opp.cp = nil
+	opp.CreateAccounts = CreateAccounts{}
+
+	createAccountsProcessorPool.Put(opp)
+
+	return nil
 }
 
 func (opp *CreateAccountsProcessor) calculateItemsFee() (map[CurrencyID][2]Big, error) {

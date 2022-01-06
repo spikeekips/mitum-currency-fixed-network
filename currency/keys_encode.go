@@ -7,7 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) error {
+func (ky *BaseAccountKey) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) error {
 	ky.w = w
 
 	k, err := kd.Encode(enc)
@@ -19,7 +19,7 @@ func (ky *Key) unpack(enc encoder.Encoder, w uint, kd key.PublickeyDecoder) erro
 	return nil
 }
 
-func (ks *Keys) unpack(enc encoder.Encoder, h valuehash.Hash, bks []byte, th uint) error {
+func (ks *BaseAccountKeys) unpack(enc encoder.Encoder, h valuehash.Hash, bks []byte, th uint) error {
 	ks.h = h
 
 	hks, err := enc.DecodeSlice(bks)
@@ -27,9 +27,9 @@ func (ks *Keys) unpack(enc encoder.Encoder, h valuehash.Hash, bks []byte, th uin
 		return err
 	}
 
-	keys := make([]Key, len(hks))
+	keys := make([]AccountKey, len(hks))
 	for i := range hks {
-		j, ok := hks[i].(Key)
+		j, ok := hks[i].(BaseAccountKey)
 		if !ok {
 			return util.WrongTypeError.Errorf("expected Key, not %T", hks[i])
 		}

@@ -7,7 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 )
 
-func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs []operation.FactSign) error {
+func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs []base.FactSign) error {
 	var signed uint
 	for i := range signs {
 		for j := range pubs {
@@ -28,7 +28,7 @@ func checkFactSignsByPubs(pubs []key.Publickey, threshold base.Threshold, signs 
 
 func checkFactSignsByState(
 	address base.Address,
-	fs []operation.FactSign,
+	fs []base.FactSign,
 	getState func(string) (state.State, bool, error),
 ) error {
 	st, err := existsState(StateKeyAccount(address), "keys of account", getState)
@@ -36,8 +36,11 @@ func checkFactSignsByState(
 		return err
 	}
 	keys, err := StateKeysValue(st)
-	if err != nil {
+	switch {
+	case err != nil:
 		return operation.NewBaseReasonErrorFromError(err)
+	case keys == nil:
+		return operation.NewBaseReasonError("empty keys found")
 	}
 
 	if err := checkThreshold(fs, keys); err != nil {

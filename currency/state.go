@@ -18,16 +18,12 @@ var (
 	StateKeyCurrencyDesignPrefix = "currencydesign:"
 )
 
-func StateAddressKeyPrefix(a base.Address) string {
-	return fmt.Sprintf("%s-%s", a.Raw(), a.Hint().Type())
-}
-
 func StateBalanceKeyPrefix(a base.Address, cid CurrencyID) string {
-	return fmt.Sprintf("%s-%s", StateAddressKeyPrefix(a), cid)
+	return fmt.Sprintf("%s-%s", a.String(), cid)
 }
 
 func StateKeyAccount(a base.Address) string {
-	return fmt.Sprintf("%s%s", StateAddressKeyPrefix(a), StateKeyAccountSuffix)
+	return fmt.Sprintf("%s%s", a.String(), StateKeyAccountSuffix)
 }
 
 func IsStateAccountKey(key string) bool {
@@ -55,15 +51,15 @@ func SetStateAccountValue(st state.State, v Account) (state.State, error) {
 	return st.SetValue(uv)
 }
 
-func StateKeysValue(st state.State) (Keys, error) {
+func StateKeysValue(st state.State) (AccountKeys, error) {
 	ac, err := LoadStateAccountValue(st)
 	if err != nil {
-		return Keys{}, err
+		return nil, err
 	}
 	return ac.Keys(), nil
 }
 
-func SetStateKeysValue(st state.State, v Keys) (state.State, error) {
+func SetStateKeysValue(st state.State, v AccountKeys) (state.State, error) {
 	var ac Account
 	if a, err := LoadStateAccountValue(st); err != nil {
 		if !errors.Is(err, util.NotFoundError) {

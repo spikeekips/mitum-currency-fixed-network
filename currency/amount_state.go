@@ -7,12 +7,13 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	AmountStateType = hint.Type("mitum-currency-amount-state")
-	AmountStateHint = hint.NewHint(AmountStateType, "v0.0.1")
+	amountStateType = hint.Type("mitum-currency-amount-state")
+	amountStateHint = hint.NewHint(amountStateType, "v0.0.1")
 )
 
 type AmountState struct {
@@ -36,30 +37,19 @@ func NewAmountState(st state.State, cid CurrencyID) AmountState {
 }
 
 func (AmountState) Hint() hint.Hint {
-	return AmountStateHint
+	return amountStateHint
 }
 
 func (st AmountState) IsValid(b []byte) error {
-	if err := st.State.IsValid(b); err != nil {
+	if err := isvalid.Check(b, false, st.State); err != nil {
 		return err
 	}
 
 	if !st.fee.OverNil() {
-		return errors.Errorf("invalid fee; under zero, %v", st.fee)
+		return isvalid.InvalidError.Errorf("invalid fee; under zero, %v", st.fee)
 	}
 
 	return nil
-}
-
-func (st AmountState) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		st.State.Bytes(),
-		st.fee.Bytes(),
-	)
-}
-
-func (st AmountState) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(st.Bytes())
 }
 
 func (st AmountState) Merge(b state.State) (state.State, error) {

@@ -1,11 +1,9 @@
 package cmds
 
-import "github.com/spikeekips/mitum/base/key"
+import (
+	"fmt"
 
-const (
-	btc     = "btc"
-	ether   = "ether"
-	stellar = "stellar"
+	"github.com/spikeekips/mitum/base/key"
 )
 
 type KeyCommand struct {
@@ -24,24 +22,13 @@ func NewKeyCommand() KeyCommand {
 	}
 }
 
-func IsValidKeyType(s string) bool {
-	switch s {
-	case btc, ether, stellar:
-		return true
+func GenerateKey(seed string) (key.Privatekey, error) {
+	switch l := len(seed); {
+	case l < 1:
+		return key.NewBasePrivatekey(), nil
+	case l < key.MinSeedSize:
+		return nil, fmt.Errorf("seed should be over %d < %d", l, key.MinSeedSize)
 	default:
-		return false
-	}
-}
-
-func GenerateKey(s string) key.Privatekey {
-	switch s {
-	case btc:
-		return key.MustNewBTCPrivatekey()
-	case ether:
-		return key.MustNewEtherPrivatekey()
-	case stellar:
-		return key.MustNewStellarPrivatekey()
-	default:
-		return nil
+		return key.NewBasePrivatekeyFromSeed(seed)
 	}
 }

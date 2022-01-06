@@ -9,7 +9,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -25,23 +24,23 @@ type testGenesisCurrenciesOperation struct {
 func (t *testGenesisCurrenciesOperation) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	t.Encs.TestAddHinter(key.BTCPublickey{})
-	t.Encs.TestAddHinter(operation.BaseFactSign{})
-	t.Encs.TestAddHinter(Key{})
-	t.Encs.TestAddHinter(Keys{})
-	t.Encs.TestAddHinter(Address(""))
-	t.Encs.TestAddHinter(GenesisCurrenciesFact{})
-	t.Encs.TestAddHinter(GenesisCurrencies{})
-	t.Encs.TestAddHinter(Account{})
-	t.Encs.TestAddHinter(Amount{})
-	t.Encs.TestAddHinter(CurrencyDesign{})
-	t.Encs.TestAddHinter(CurrencyPolicy{})
+	t.Encs.TestAddHinter(key.BasePublickey{})
+	t.Encs.TestAddHinter(base.BaseFactSign{})
+	t.Encs.TestAddHinter(AccountKeyHinter)
+	t.Encs.TestAddHinter(AccountKeysHinter)
+	t.Encs.TestAddHinter(AddressHinter)
+	t.Encs.TestAddHinter(GenesisCurrenciesFactHinter)
+	t.Encs.TestAddHinter(GenesisCurrenciesHinter)
+	t.Encs.TestAddHinter(AccountHinter)
+	t.Encs.TestAddHinter(AmountHinter)
+	t.Encs.TestAddHinter(CurrencyDesignHinter)
+	t.Encs.TestAddHinter(CurrencyPolicyHinter)
 
-	t.pk = key.MustNewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 	t.networkID = util.UUID().Bytes()
 }
 
-func (t *testGenesisCurrenciesOperation) newOperaton(keys Keys, cs []CurrencyDesign) GenesisCurrencies {
+func (t *testGenesisCurrenciesOperation) newOperaton(keys AccountKeys, cs []CurrencyDesign) GenesisCurrencies {
 	gc, err := NewGenesisCurrencies(t.pk, keys, cs, t.networkID)
 	t.NoError(err)
 	t.NoError(gc.IsValid(t.networkID))
@@ -54,37 +53,60 @@ func (t *testGenesisCurrenciesOperation) genesisCurrency(cid string, amount int6
 }
 
 func (t *testGenesisCurrenciesOperation) TestNew() {
-	pk := key.MustNewBTCPrivatekey()
-	keys, _ := NewKeys([]Key{t.newKey(pk.Publickey(), 100)}, 100)
+	pk := key.NewBasePrivatekey()
+	keys, _ := NewBaseAccountKeys([]AccountKey{t.newKey(pk.Publickey(), 100)}, 100)
 	cs := []CurrencyDesign{
 		t.genesisCurrency("FIND*ME", 44),
 		t.genesisCurrency("SHOW_ME", 33),
 	}
 
 	op := t.newOperaton(keys, cs)
+	fact := op.Fact().(GenesisCurrenciesFact)
 
 	sp, err := storage.NewStatepool(t.Database(nil, nil))
 	t.NoError(err)
 
 	newAddress, err := NewAddressFromKeys(keys)
 	t.NoError(err)
+	{
+		fa, err := fact.Address()
+		t.NoError(err)
+		t.True(newAddress.Equal(fa))
+	}
 
 	err = op.Process(sp.Get, sp.Set)
 	t.NoError(err)
-	t.Equal(5, len(sp.Updates()))
+	t.Equal(9, len(sp.Updates()))
 
 	var ns state.State
 	var nb []state.State
+	zast := map[CurrencyID]state.State{}
+	zbst := map[CurrencyID]state.State{}
 	dts := map[CurrencyID]CurrencyDesign{}
 	for _, st := range sp.Updates() {
-		if key := st.Key(); key == StateKeyAccount(newAddress) {
+		key := st.Key()
+		switch {
+		case key == StateKeyAccount(newAddress):
 			ns = st.GetState()
-		} else if IsStateBalanceKey(key) {
-			nb = append(nb, st.GetState())
-		} else if IsStateCurrencyDesignKey(key) {
+		case IsStateCurrencyDesignKey(key):
 			i, err := StateCurrencyDesignValue(st.GetState())
 			t.NoError(err)
 			dts[i.Currency()] = i
+		}
+
+		for i := range cs {
+			cid := cs[i].Currency()
+			zac, err := ZeroAccount(cid)
+			t.NoError(err)
+
+			switch {
+			case key == StateKeyAccount(zac.Address()):
+				zast[cid] = st.GetState()
+			case key == StateKeyBalance(newAddress, cid):
+				nb = append(nb, st.GetState())
+			case key == StateKeyBalance(zac.Address(), cid):
+				zbst[cid] = st.GetState()
+			}
 		}
 	}
 
@@ -111,8 +133,31 @@ func (t *testGenesisCurrenciesOperation) TestNew() {
 	for _, a := range cs {
 		b, found := dts[a.Currency()]
 		t.True(found)
+		t.NotNil(b.GenesisAccount())
+		t.True(b.GenesisAccount().Equal(newAddress))
 
 		t.compareCurrencyDesign(a, b)
+	}
+
+	// NOTE zero
+	for i := range cs {
+		cid := cs[i].Currency()
+		zac, err := ZeroAccount(cid)
+		t.NoError(err)
+
+		ast, found := zast[cid]
+		t.True(found)
+		t.NotNil(ast)
+
+		bst, found := zbst[cid]
+		t.True(found)
+		t.NotNil(bst)
+
+		ac := ast.Value().Interface().(Account)
+		t.True(zac.Address().Equal(ac.Address()))
+
+		b := bst.Value().Interface().(Amount)
+		t.True(b.Big().IsZero())
 	}
 }
 

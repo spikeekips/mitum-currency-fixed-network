@@ -5,12 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func (de *CurrencyDesign) unpack(enc encoder.Encoder, bam []byte, ga base.AddressDecoder, bpo []byte) error {
-	i, err := DecodeAmount(bam, enc)
-	if err != nil {
-		return err
-	}
-	de.Amount = i
+func (de *CurrencyDesign) unpack(enc encoder.Encoder, am Amount, ga base.AddressDecoder, bpo []byte, ag Big) error {
+	de.Amount = am
 
 	a, err := ga.Encode(enc)
 	if err != nil {
@@ -18,11 +14,11 @@ func (de *CurrencyDesign) unpack(enc encoder.Encoder, bam []byte, ga base.Addres
 	}
 	de.genesisAccount = a
 
-	j, err := DecodeCurrencyPolicy(bpo, enc)
-	if err != nil {
+	if err := encoder.Decode(bpo, enc, &de.policy); err != nil {
 		return err
 	}
-	de.policy = j
+
+	de.aggregate = ag
 
 	return nil
 }

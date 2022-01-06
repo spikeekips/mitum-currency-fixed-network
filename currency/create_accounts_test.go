@@ -17,18 +17,18 @@ type testCreateAccounts struct {
 }
 
 func (t *testCreateAccounts) TestNew() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, _ := NewKeys([]Key{skey, rkey}, 100)
+	skeys, _ := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 
 	pks := []key.Privatekey{spk, rpk}
 
-	keys, _ := NewKeys([]Key{skey}, 50)
+	keys, _ := NewBaseAccountKeys([]AccountKey{skey}, 50)
 	sender, _ := NewAddressFromKeys(keys)
 
 	token := util.UUID().Bytes()
@@ -38,13 +38,13 @@ func (t *testCreateAccounts) TestNew() {
 	item := NewCreateAccountsItemSingleAmount(skeys, am)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	op, err := NewCreateAccounts(fact, fs, "")
@@ -63,10 +63,10 @@ func (t *testCreateAccounts) TestNew() {
 func (t *testCreateAccounts) TestDuplicatedKeys() {
 	var items []CreateAccountsItem
 	{
-		pk := key.MustNewBTCPrivatekey()
-		key, err := NewKey(pk.Publickey(), 100)
+		pk := key.NewBasePrivatekey()
+		key, err := NewBaseAccountKey(pk.Publickey(), 100)
 		t.NoError(err)
-		keys, err := NewKeys([]Key{key}, 100)
+		keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 		t.NoError(err)
 
 		items = append(items, NewCreateAccountsItemSingleAmount(keys, NewAmount(NewBig(11), CurrencyID("FINDME"))))
@@ -74,17 +74,17 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 	}
 
 	token := util.UUID().Bytes()
-	pk := key.MustNewBTCPrivatekey()
-	key, err := NewKey(pk.Publickey(), 100)
+	pk := key.NewBasePrivatekey()
+	key, err := NewBaseAccountKey(pk.Publickey(), 100)
 	t.NoError(err)
 
-	keys, _ := NewKeys([]Key{key}, 100)
+	keys, _ := NewBaseAccountKeys([]AccountKey{key}, 100)
 	sender, _ := NewAddressFromKeys(keys)
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	op, err := NewCreateAccounts(fact, fs, "")
 	t.NoError(err)
@@ -94,10 +94,10 @@ func (t *testCreateAccounts) TestDuplicatedKeys() {
 }
 
 func (t *testCreateAccounts) TestSameWithSender() {
-	pk := key.MustNewBTCPrivatekey()
-	key, err := NewKey(pk.Publickey(), 100)
+	pk := key.NewBasePrivatekey()
+	key, err := NewBaseAccountKey(pk.Publickey(), 100)
 	t.NoError(err)
-	keys, err := NewKeys([]Key{key}, 100)
+	keys, err := NewBaseAccountKeys([]AccountKey{key}, 100)
 	t.NoError(err)
 
 	am := NewAmount(NewBig(11), CurrencyID("SHOWME"))
@@ -107,9 +107,9 @@ func (t *testCreateAccounts) TestSameWithSender() {
 	sender, _ := NewAddressFromKeys(keys)
 	fact := NewCreateAccountsFact(token, sender, items)
 
-	sig, err := operation.NewFactSignature(pk, fact, nil)
+	sig, err := base.NewFactSignature(pk, fact, nil)
 	t.NoError(err)
-	fs := []operation.FactSign{operation.NewBaseFactSign(pk.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(pk.Publickey(), sig)}
 
 	op, err := NewCreateAccounts(fact, fs, "")
 	t.NoError(err)
@@ -119,14 +119,14 @@ func (t *testCreateAccounts) TestSameWithSender() {
 }
 
 func (t *testCreateAccounts) TestOverSizeMemo() {
-	spk := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
+	spk := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
 
-	skey, err := NewKey(spk.Publickey(), 50)
+	skey, err := NewBaseAccountKey(spk.Publickey(), 50)
 	t.NoError(err)
-	rkey, err := NewKey(rpk.Publickey(), 50)
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 50)
 	t.NoError(err)
-	skeys, err := NewKeys([]Key{skey, rkey}, 100)
+	skeys, err := NewBaseAccountKeys([]AccountKey{skey, rkey}, 100)
 	t.NoError(err)
 
 	pks := []key.Privatekey{spk, rpk}
@@ -138,13 +138,13 @@ func (t *testCreateAccounts) TestOverSizeMemo() {
 	item := NewCreateAccountsItemSingleAmount(skeys, am)
 	fact := NewCreateAccountsFact(token, sender, []CreateAccountsItem{item})
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 
 	for _, pk := range pks {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	memo := strings.Repeat("a", MaxMemoSize) + "a"

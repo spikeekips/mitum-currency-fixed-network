@@ -5,22 +5,21 @@ import (
 
 	"github.com/pkg/errors"
 
+	currency "github.com/spikeekips/mitum-currency/currency"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
-
-	currency "github.com/spikeekips/mitum-currency/currency"
 )
 
 type TransferCommand struct {
 	*BaseCommand
 	OperationFlags
-	Sender   AddressFlag    `arg:"" name:"sender" help:"sender address" required:"true"`
-	Receiver AddressFlag    `arg:"" name:"receiver" help:"receiver address" required:"true"`
-	Currency CurrencyIDFlag `arg:"" name:"currency" help:"currency id" required:"true"`
-	Big      BigFlag        `arg:"" name:"big" help:"big to send" required:"true"`
-	Seal     FileLoad       `help:"seal" optional:""`
+	Sender   AddressFlag          `arg:"" name:"sender" help:"sender address" required:"true"`
+	Receiver AddressFlag          `arg:"" name:"receiver" help:"receiver address" required:"true"`
+	Seal     mitumcmds.FileLoad   `help:"seal" optional:""`
+	Amounts  []CurrencyAmountFlag `arg:"" name:"currency-amount" help:"amount (ex: \"<currency>,<amount>\")"`
 	sender   base.Address
 	receiver base.Address
 }
@@ -64,6 +63,10 @@ func (cmd *TransferCommand) parseFlags() error {
 		return err
 	}
 
+	if len(cmd.Amounts) < 1 {
+		return errors.Errorf("empty currency-amount, must be given at least one")
+	}
+
 	if sender, err := cmd.Sender.Encode(jenc); err != nil {
 		return errors.Wrapf(err, "invalid sender format, %q", cmd.Sender.String())
 	} else if receiver, err := cmd.Receiver.Encode(jenc); err != nil {
@@ -89,12 +92,18 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // 
 		}
 	}
 
-	am := currency.NewAmount(cmd.Big.Big, cmd.Currency.CID)
-	if err = am.IsValid(nil); err != nil {
-		return nil, err
+	ams := make([]currency.Amount, len(cmd.Amounts))
+	for i := range cmd.Amounts {
+		a := cmd.Amounts[i]
+		am := currency.NewAmount(a.Big, a.CID)
+		if err = am.IsValid(nil); err != nil {
+			return nil, err
+		}
+
+		ams[i] = am
 	}
 
-	item := currency.NewTransfersItemSingleAmount(cmd.receiver, am)
+	item := currency.NewTransfersItemMultiAmounts(cmd.receiver, ams)
 	if err = item.IsValid(nil); err != nil {
 		return nil, err
 	}
@@ -102,12 +111,12 @@ func (cmd *TransferCommand) createOperation() (operation.Operation, error) { // 
 
 	fact := currency.NewTransfersFact([]byte(cmd.Token), cmd.sender, items)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(cmd.Privatekey, fact, cmd.NetworkID.NetworkID())
 	if err != nil {
 		return nil, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig))
 
 	op, err := currency.NewTransfers(fact, fs, cmd.Memo)
 	if err != nil {

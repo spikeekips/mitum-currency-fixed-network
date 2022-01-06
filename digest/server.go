@@ -155,7 +155,10 @@ func (sv *HTTP2Server) start(ctx context.Context) error {
 
 		return err
 	case <-ctx.Done():
-		return sv.srv.Shutdown(context.Background())
+		nctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		return sv.srv.Shutdown(nctx) // nolint:contextcheck
 	default:
 		return nil
 	}
@@ -173,9 +176,9 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 		}
 		var d time.Duration
 		switch cs {
-		case http.StateNew, http.StateIdle:
+		case http.StateIdle:
 			d = sv.idleTimeout
-		case http.StateActive:
+		case http.StateNew, http.StateActive:
 			d = sv.activeTimeout
 		default:
 			return
@@ -187,9 +190,7 @@ func (sv *HTTP2Server) idleTimeoutHook() func(net.Conn, http.ConnState) {
 				Msg("closing idle conn after timeout")
 
 			go func() {
-				if err := c.Close(); err != nil {
-					sv.Log().Debug().Err(err).Msg("failed to close")
-				}
+				_ = c.Close()
 			}()
 		})
 	}

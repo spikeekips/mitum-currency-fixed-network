@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"github.com/pkg/errors"
-
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
@@ -13,7 +13,7 @@ type SignFactCommand struct {
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:"true"`
 	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:"true"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
-	Seal       FileLoad                `help:"seal" optional:""`
+	Seal       mitumcmds.FileLoad      `help:"seal" optional:""`
 }
 
 func NewSignFactCommand() SignFactCommand {
@@ -44,23 +44,23 @@ func (cmd *SignFactCommand) Run(version util.Version) error {
 	for i := range sl.Operations() {
 		op := sl.Operations()[i]
 
-		var fsu operation.FactSignUpdater
-		if u, ok := op.(operation.FactSignUpdater); !ok {
+		var fsu base.FactSignUpdater
+		if u, ok := op.(base.FactSignUpdater); !ok {
 			cmd.Log().Debug().
 				Interface("operation", op).
 				Str("operation_type", op.Hint().String()).
-				Msg("not operation.FactSignUpdater")
+				Msg("not base.FactSignUpdater")
 
 			nops[i] = op
 		} else {
 			fsu = u
 		}
 
-		sig, err := operation.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.NetworkID())
+		sig, err := base.NewFactSignature(cmd.Privatekey, op.Fact(), cmd.NetworkID.NetworkID())
 		if err != nil {
 			return err
 		}
-		f := operation.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
+		f := base.NewBaseFactSign(cmd.Privatekey.Publickey(), sig)
 
 		nop, err := fsu.AddFactSigns(f)
 		if err != nil {

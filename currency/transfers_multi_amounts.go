@@ -1,15 +1,17 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
 	TransfersItemMultiAmountsType   = hint.Type("mitum-currency-transfers-item-multi-amounts")
 	TransfersItemMultiAmountsHint   = hint.NewHint(TransfersItemMultiAmountsType, "v0.0.1")
-	TransfersItemMultiAmountsHinter = BaseTransfersItem{hint: TransfersItemMultiAmountsHint}
+	TransfersItemMultiAmountsHinter = TransfersItemMultiAmounts{
+		BaseTransfersItem: BaseTransfersItem{BaseHinter: hint.NewBaseHinter(TransfersItemMultiAmountsHint)},
+	}
 )
 
 var maxCurenciesTransfersItemMultiAmounts = 10
@@ -30,7 +32,7 @@ func (it TransfersItemMultiAmounts) IsValid([]byte) error {
 	}
 
 	if n := len(it.amounts); n > maxCurenciesCreateAccountsItemMultiAmounts {
-		return errors.Errorf("amounts over allowed; %d > %d", n, maxCurenciesTransfersItemMultiAmounts)
+		return isvalid.InvalidError.Errorf("amounts over allowed; %d > %d", n, maxCurenciesTransfersItemMultiAmounts)
 	}
 
 	return nil

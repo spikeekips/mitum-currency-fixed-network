@@ -1,13 +1,22 @@
 package currency
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+var currencyUpdaterProcessorPool = sync.Pool{
+	New: func() interface{} {
+		return new(CurrencyPolicyUpdaterProcessor)
+	},
+}
 
 func (CurrencyPolicyUpdater) Process(
 	func(string) (state.State, bool, error),
@@ -36,12 +45,15 @@ func NewCurrencyPolicyUpdaterProcessor(
 		if !ok {
 			return nil, errors.Errorf("not CurrencyPolicyUpdater, %T", op)
 		}
-		return &CurrencyPolicyUpdaterProcessor{
-			CurrencyPolicyUpdater: i,
-			cp:                    cp,
-			pubs:                  pubs,
-			threshold:             threshold,
-		}, nil
+
+		opp := currencyUpdaterProcessorPool.Get().(*CurrencyPolicyUpdaterProcessor)
+
+		opp.cp = cp
+		opp.CurrencyPolicyUpdater = i
+		opp.pubs = pubs
+		opp.threshold = threshold
+
+		return opp, nil
 	}
 }
 
@@ -50,7 +62,7 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	_ func(valuehash.Hash, ...state.State) error,
 ) (state.Processor, error) {
 	if len(opp.pubs) < 1 {
-		return nil, errors.Errorf("empty publickeys for operation signs")
+		return nil, operation.NewBaseReasonError("empty publickeys for operation signs")
 	} else if err := checkFactSignsByPubs(opp.pubs, opp.threshold, opp.Signs()); err != nil {
 		return nil, err
 	}
@@ -58,30 +70,18 @@ func (opp *CurrencyPolicyUpdaterProcessor) PreProcess(
 	fact := opp.Fact().(CurrencyPolicyUpdaterFact)
 
 	if opp.cp != nil {
-		if !opp.cp.Exists(fact.Currency()) {
-			return nil, errors.Errorf("unknown currency, %q found", fact.Currency())
+		i, found := opp.cp.State(fact.Currency())
+		if !found {
+			return nil, operation.NewBaseReasonError("unknown currency, %q found", fact.Currency())
 		}
+		opp.st = i
+		opp.de, _ = opp.cp.Get(fact.Currency())
 	}
 
 	if receiver := fact.Policy().Feeer().Receiver(); receiver != nil {
 		if err := checkExistsState(StateKeyAccount(receiver), getState); err != nil {
 			return nil, errors.Wrap(err, "feeer receiver account not found")
 		}
-	}
-
-	switch st, found, err := getState(StateKeyCurrencyDesign(fact.Currency())); {
-	case err != nil:
-		return nil, err
-	case !found:
-		return nil, errors.Errorf("unknown currency, %q found", fact.Currency())
-	default:
-		opp.st = st
-
-		de, err := StateCurrencyDesignValue(st)
-		if err != nil {
-			return nil, err
-		}
-		opp.de = de
 	}
 
 	return opp, nil
@@ -98,4 +98,15 @@ func (opp *CurrencyPolicyUpdaterProcessor) Process(
 		return err
 	}
 	return setState(fact.Hash(), i)
+}
+
+func (opp *CurrencyPolicyUpdaterProcessor) Close() error {
+	opp.cp = nil
+	opp.CurrencyPolicyUpdater = CurrencyPolicyUpdater{}
+	opp.pubs = nil
+	opp.threshold = base.Threshold{}
+
+	currencyUpdaterProcessorPool.Put(opp)
+
+	return nil
 }

@@ -22,12 +22,13 @@ type SendCommand struct {
 	*BaseCommand
 	URL        []*url.URL              `name:"node" help:"remote mitum url (default: ${node_url})" default:"${node_url}"` // nolint
 	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" `
-	Seal       FileLoad                `help:"seal" optional:""`
+	Seal       mitumcmds.FileLoad      `help:"seal" optional:""`
 	DryRun     bool                    `help:"dry-run, print operation" optional:"" default:"false"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"privatekey for sign"`
 	Timeout    time.Duration           `name:"timeout" help:"timeout; default: 5s"`
 	TLSInscure bool                    `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
+	From       string                  `name:"from" help:"from conninfo; default is empty"`
 }
 
 func NewSendCommand() SendCommand {
@@ -120,7 +121,7 @@ func (cmd *SendCommand) send(sl seal.Seal) error {
 		for i := range channels {
 			ch := channels[i]
 			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
-				if err := ch.SendSeal(ctx, sl); err != nil {
+				if err := ch.SendSeal(ctx, network.NewNilConnInfo(cmd.From), sl); err != nil {
 					cmd.Log().Error().Err(err).Stringer("conninfo", ch.ConnInfo()).Msg("failed to send to node")
 
 					return err

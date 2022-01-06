@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/spikeekips/mitum-currency/currency"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 )
@@ -104,8 +105,8 @@ func (cmd *CurrencyPolicyUpdaterCommand) parseFlags() error {
 func (cmd *CurrencyPolicyUpdaterCommand) createOperation() (currency.CurrencyPolicyUpdater, error) {
 	fact := currency.NewCurrencyPolicyUpdaterFact([]byte(cmd.Token), cmd.Currency.CID, cmd.po)
 
-	var fs []operation.FactSign
-	sig, err := operation.NewFactSignature(
+	var fs []base.FactSign
+	sig, err := base.NewFactSignature(
 		cmd.OperationFlags.Privatekey,
 		fact,
 		[]byte(cmd.OperationFlags.NetworkID),
@@ -113,7 +114,7 @@ func (cmd *CurrencyPolicyUpdaterCommand) createOperation() (currency.CurrencyPol
 	if err != nil {
 		return currency.CurrencyPolicyUpdater{}, err
 	}
-	fs = append(fs, operation.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
+	fs = append(fs, base.NewBaseFactSign(cmd.OperationFlags.Privatekey.Publickey(), sig))
 
 	return currency.NewCurrencyPolicyUpdater(fact, fs, cmd.OperationFlags.Memo)
 }

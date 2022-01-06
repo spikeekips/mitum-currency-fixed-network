@@ -1,8 +1,6 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -13,27 +11,31 @@ import (
 )
 
 var (
-	GenesisCurrenciesFactType = hint.Type("mitum-currency-genesis-currencies-operation-fact")
-	GenesisCurrenciesFactHint = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
-	GenesisCurrenciesType     = hint.Type("mitum-currency-genesis-currencies-operation")
-	GenesisCurrenciesHint     = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
+	GenesisCurrenciesFactType   = hint.Type("mitum-currency-genesis-currencies-operation-fact")
+	GenesisCurrenciesFactHint   = hint.NewHint(GenesisCurrenciesFactType, "v0.0.1")
+	GenesisCurrenciesFactHinter = GenesisCurrenciesFact{BaseHinter: hint.NewBaseHinter(GenesisCurrenciesFactHint)}
+	GenesisCurrenciesType       = hint.Type("mitum-currency-genesis-currencies-operation")
+	GenesisCurrenciesHint       = hint.NewHint(GenesisCurrenciesType, "v0.0.1")
+	GenesisCurrenciesHinter     = GenesisCurrencies{BaseOperation: operation.EmptyBaseOperation(GenesisCurrenciesHint)}
 )
 
 type GenesisCurrenciesFact struct {
+	hint.BaseHinter
 	h              valuehash.Hash
 	token          []byte
 	genesisNodeKey key.Publickey
-	keys           Keys
+	keys           AccountKeys
 	cs             []CurrencyDesign
 }
 
 func NewGenesisCurrenciesFact(
 	token []byte,
 	genesisNodeKey key.Publickey,
-	keys Keys,
+	keys AccountKeys,
 	cs []CurrencyDesign,
 ) GenesisCurrenciesFact {
 	fact := GenesisCurrenciesFact{
+		BaseHinter:     hint.NewBaseHinter(GenesisCurrenciesFactHint),
 		token:          token,
 		genesisNodeKey: genesisNodeKey,
 		keys:           keys,
@@ -43,10 +45,6 @@ func NewGenesisCurrenciesFact(
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (GenesisCurrenciesFact) Hint() hint.Hint {
-	return GenesisCurrenciesFactHint
 }
 
 func (fact GenesisCurrenciesFact) Hash() valuehash.Hash {
@@ -66,19 +64,17 @@ func (fact GenesisCurrenciesFact) Bytes() []byte {
 	return util.ConcatBytesSlice(bs...)
 }
 
-func (fact GenesisCurrenciesFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for GenesisCurrenciesFact")
-	} else if len(fact.cs) < 1 {
-		return errors.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
+func (fact GenesisCurrenciesFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
-		fact.genesisNodeKey,
-		fact.keys,
-	}, nil, false); err != nil {
-		return errors.Wrap(err, "invalid fact")
+	if len(fact.cs) < 1 {
+		return isvalid.InvalidError.Errorf("empty GenesisCurrency for GenesisCurrenciesFact")
+	}
+
+	if err := isvalid.Check(nil, false, fact.genesisNodeKey, fact.keys); err != nil {
+		return isvalid.InvalidError.Errorf("invalid fact: %w", err)
 	}
 
 	founds := map[CurrencyID]struct{}{}
@@ -87,14 +83,10 @@ func (fact GenesisCurrenciesFact) IsValid([]byte) error {
 		if err := c.IsValid(nil); err != nil {
 			return err
 		} else if _, found := founds[c.Currency()]; found {
-			return errors.Errorf("duplicated currency id found, %q", c.Currency())
+			return isvalid.InvalidError.Errorf("duplicated currency id found, %q", c.Currency())
 		} else {
 			founds[c.Currency()] = struct{}{}
 		}
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -112,7 +104,7 @@ func (fact GenesisCurrenciesFact) GenesisNodeKey() key.Publickey {
 	return fact.genesisNodeKey
 }
 
-func (fact GenesisCurrenciesFact) Keys() Keys {
+func (fact GenesisCurrenciesFact) Keys() AccountKeys {
 	return fact.keys
 }
 
@@ -130,17 +122,17 @@ type GenesisCurrencies struct {
 
 func NewGenesisCurrencies(
 	genesisNodeKey key.Privatekey,
-	keys Keys,
+	keys AccountKeys,
 	cs []CurrencyDesign,
 	networkID base.NetworkID,
 ) (GenesisCurrencies, error) {
 	fact := NewGenesisCurrenciesFact(networkID, genesisNodeKey.Publickey(), keys, cs)
 
-	sig, err := operation.NewFactSignature(genesisNodeKey, fact, networkID)
+	sig, err := base.NewFactSignature(genesisNodeKey, fact, networkID)
 	if err != nil {
 		return GenesisCurrencies{}, err
 	}
-	fs := []operation.FactSign{operation.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
+	fs := []base.FactSign{base.NewBaseFactSign(genesisNodeKey.Publickey(), sig)}
 
 	bo, err := operation.NewBaseOperationFromFact(GenesisCurrenciesHint, fact, fs)
 	if err != nil {
@@ -149,22 +141,18 @@ func NewGenesisCurrencies(
 	return GenesisCurrencies{BaseOperation: bo}, nil
 }
 
-func (GenesisCurrencies) Hint() hint.Hint {
-	return GenesisCurrenciesHint
-}
-
 func (op GenesisCurrencies) IsValid(networkID []byte) error {
 	if err := operation.IsValidOperation(op, networkID); err != nil {
 		return err
 	}
 
 	if len(op.Signs()) != 1 {
-		return errors.Errorf("genesis currencies should be signed only by genesis node key")
+		return isvalid.InvalidError.Errorf("genesis currencies should be signed only by genesis node key")
 	}
 
 	fact := op.Fact().(GenesisCurrenciesFact)
 	if !fact.genesisNodeKey.Equal(op.Signs()[0].Signer()) {
-		return errors.Errorf("not signed by genesis node key")
+		return isvalid.InvalidError.Errorf("not signed by genesis node key")
 	}
 
 	return nil

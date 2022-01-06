@@ -76,10 +76,6 @@ func (bs *BlockSession) Commit(ctx context.Context) error {
 		_ = bs.close()
 	}()
 
-	if err := bs.st.CleanByHeight(bs.block.Height()); err != nil {
-		return err
-	}
-
 	if err := bs.writeModels(ctx, defaultColNameOperation, bs.operationModels); err != nil {
 		return err
 	}

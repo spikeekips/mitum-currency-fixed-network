@@ -1,29 +1,24 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type BaseCreateAccountsItem struct {
-	hint    hint.Hint
-	keys    Keys
+	hint.BaseHinter
+	keys    AccountKeys
 	amounts []Amount
 }
 
-func NewBaseCreateAccountsItem(ht hint.Hint, keys Keys, amounts []Amount) BaseCreateAccountsItem {
+func NewBaseCreateAccountsItem(ht hint.Hint, keys AccountKeys, amounts []Amount) BaseCreateAccountsItem {
 	return BaseCreateAccountsItem{
-		hint:    ht,
-		keys:    keys,
-		amounts: amounts,
+		BaseHinter: hint.NewBaseHinter(ht),
+		keys:       keys,
+		amounts:    amounts,
 	}
-}
-
-func (it BaseCreateAccountsItem) Hint() hint.Hint {
-	return it.hint
 }
 
 func (it BaseCreateAccountsItem) Bytes() []byte {
@@ -38,33 +33,33 @@ func (it BaseCreateAccountsItem) Bytes() []byte {
 }
 
 func (it BaseCreateAccountsItem) IsValid([]byte) error {
-	if err := it.keys.IsValid(nil); err != nil {
-		return err
+	if n := len(it.amounts); n == 0 {
+		return isvalid.InvalidError.Errorf("empty amounts")
 	}
 
-	if n := len(it.amounts); n == 0 {
-		return errors.Errorf("empty amounts")
+	if err := isvalid.Check(nil, false, it.BaseHinter, it.keys); err != nil {
+		return err
 	}
 
 	founds := map[CurrencyID]struct{}{}
 	for i := range it.amounts {
 		am := it.amounts[i]
 		if _, found := founds[am.Currency()]; found {
-			return errors.Errorf("duplicated currency found, %q", am.Currency())
+			return isvalid.InvalidError.Errorf("duplicated currency found, %q", am.Currency())
 		}
 		founds[am.Currency()] = struct{}{}
 
 		if err := am.IsValid(nil); err != nil {
 			return err
 		} else if !am.Big().OverZero() {
-			return errors.Errorf("amount should be over zero")
+			return isvalid.InvalidError.Errorf("amount should be over zero")
 		}
 	}
 
 	return nil
 }
 
-func (it BaseCreateAccountsItem) Keys() Keys {
+func (it BaseCreateAccountsItem) Keys() AccountKeys {
 	return it.keys
 }
 

@@ -15,7 +15,7 @@ type GenesisCurrenciesFactJSONPacker struct {
 	H  valuehash.Hash   `json:"hash"`
 	TK []byte           `json:"token"`
 	GK key.Publickey    `json:"genesis_node_key"`
-	KS Keys             `json:"keys"`
+	KS AccountKeys      `json:"keys"`
 	CS []CurrencyDesign `json:"currencies"`
 }
 

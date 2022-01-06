@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -67,6 +68,14 @@ func NewDigester(st *Database, errChan chan error) *Digester {
 }
 
 func (di *Digester) start(ctx context.Context) error {
+	errch := func(err DigestError) {
+		if di.errChan == nil {
+			return
+		}
+
+		di.errChan <- err
+	}
+
 end:
 	for {
 		select {
@@ -76,11 +85,11 @@ end:
 			break end
 		case blk := <-di.blockChan:
 			err := util.Retry(0, time.Second*1, func(int) error {
-				if err := di.digest(blk); err != nil {
-					if di.errChan != nil {
-						go func() {
-							di.errChan <- NewDigestError(err, blk.Height())
-						}()
+				if err := di.digest(ctx, blk); err != nil {
+					go errch(NewDigestError(err, blk.Height()))
+
+					if errors.Is(err, context.Canceled) {
+						return util.StopRetryingError.Wrap(err)
 					}
 
 					return err
@@ -94,11 +103,7 @@ end:
 				di.Log().Info().Int64("block", blk.Height().Int64()).Msg("block digested")
 			}
 
-			if di.errChan != nil {
-				go func() {
-					di.errChan <- NewDigestError(err, blk.Height())
-				}()
-			}
+			go errch(NewDigestError(err, blk.Height()))
 		}
 	}
 
@@ -118,14 +123,18 @@ func (di *Digester) Digest(blocks []block.Block) {
 	}
 }
 
-func (di *Digester) digest(blk block.Block) error {
+func (di *Digester) digest(ctx context.Context, blk block.Block) error {
 	di.Lock()
 	defer di.Unlock()
 
-	return DigestBlock(di.database, blk)
+	if err := DigestBlock(ctx, di.database, blk); err != nil {
+		return err
+	}
+
+	return di.database.SetLastBlock(blk.Height())
 }
 
-func DigestBlock(st *Database, blk block.Block) error {
+func DigestBlock(ctx context.Context, st *Database, blk block.Block) error {
 	bs, err := NewBlockSession(st, blk)
 	if err != nil {
 		return err
@@ -136,9 +145,7 @@ func DigestBlock(st *Database, blk block.Block) error {
 
 	if err := bs.Prepare(); err != nil {
 		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
-		return err
-	} else {
-		return st.SetLastBlock(blk.Height())
 	}
+
+	return bs.Commit(ctx)
 }

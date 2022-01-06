@@ -1,7 +1,6 @@
 package currency
 
 import (
-	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
@@ -35,27 +34,13 @@ func (fact *CurrencyPolicyUpdaterFact) UnpackBSON(b []byte, enc *bsonenc.Encoder
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.CI, ufact.PO)
 }
 
-func (op CurrencyPolicyUpdater) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(
-		bsonenc.MergeBSONM(
-			op.BaseOperation.BSONM(),
-			bson.M{"memo": op.Memo},
-		))
-}
-
 func (op *CurrencyPolicyUpdater) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var ubo operation.BaseOperation
+	var ubo BaseOperation
 	if err := ubo.UnpackBSON(b, enc); err != nil {
 		return err
 	}
 
-	*op = CurrencyPolicyUpdater{BaseOperation: ubo}
-
-	var um MemoBSONUnpacker
-	if err := enc.Unmarshal(b, &um); err != nil {
-		return err
-	}
-	op.Memo = um.Memo
+	op.BaseOperation = ubo
 
 	return nil
 }

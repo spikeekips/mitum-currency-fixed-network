@@ -18,11 +18,11 @@ type testGenesisCurrencies struct {
 }
 
 func (t *testGenesisCurrencies) TestNew() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
-	rkey, err := NewKey(rpk.Publickey(), 100)
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
-	keys, _ := NewKeys([]Key{rkey}, 100)
+	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
 	networkID := util.UUID().Bytes()
 
 	cs := []CurrencyDesign{
@@ -48,11 +48,11 @@ func (t *testGenesisCurrencies) TestNew() {
 }
 
 func (t *testGenesisCurrencies) TestDuplicatedCurrencyID() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
-	rkey, err := NewKey(rpk.Publickey(), 100)
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
-	keys, _ := NewKeys([]Key{rkey}, 100)
+	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
 	networkID := util.UUID().Bytes()
 
 	cs := []CurrencyDesign{
@@ -68,11 +68,11 @@ func (t *testGenesisCurrencies) TestDuplicatedCurrencyID() {
 }
 
 func (t *testGenesisCurrencies) TestEmptyGenesisCurrencies() {
-	nodeKey := key.MustNewBTCPrivatekey()
-	rpk := key.MustNewBTCPrivatekey()
-	rkey, err := NewKey(rpk.Publickey(), 100)
+	nodeKey := key.NewBasePrivatekey()
+	rpk := key.NewBasePrivatekey()
+	rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 	t.NoError(err)
-	keys, _ := NewKeys([]Key{rkey}, 100)
+	keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
 	networkID := util.UUID().Bytes()
 
 	gc, err := NewGenesisCurrencies(nodeKey, keys, nil, networkID)
@@ -91,11 +91,11 @@ func testGenesisCurrenciesEncode(enc encoder.Encoder) suite.TestingSuite {
 
 	t.enc = enc
 	t.newObject = func() interface{} {
-		nodeKey := key.MustNewBTCPrivatekey()
-		rpk := key.MustNewBTCPrivatekey()
-		rkey, err := NewKey(rpk.Publickey(), 100)
+		nodeKey := key.NewBasePrivatekey()
+		rpk := key.NewBasePrivatekey()
+		rkey, err := NewBaseAccountKey(rpk.Publickey(), 100)
 		t.NoError(err)
-		keys, _ := NewKeys([]Key{rkey}, 100)
+		keys, _ := NewBaseAccountKeys([]AccountKey{rkey}, 100)
 		networkID := util.UUID().Bytes()
 
 		cs := []CurrencyDesign{

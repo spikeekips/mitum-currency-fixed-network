@@ -22,13 +22,13 @@ var (
 )
 
 type mainflags struct {
-	Version VersionCommand   `cmd:"" help:"version"`
-	Node    cmds.NodeCommand `cmd:"" help:"node"`
-	// TODO Blocks mitumcmds.BlocksCommand `cmd:"" help:"get block data from node"`
-	Key     cmds.KeyCommand     `cmd:"" help:"key"`
-	Seal    cmds.SealCommand    `cmd:"" help:"seal"`
-	Storage cmds.StorageCommand `cmd:"" help:"storage"`
-	Deploy  cmds.DeployCommand  `cmd:"" help:"deploy"`
+	Version    VersionCommand              `cmd:"" help:"version"`
+	Node       cmds.NodeCommand            `cmd:"" help:"node"`
+	Key        cmds.KeyCommand             `cmd:"" help:"key"`
+	Seal       cmds.SealCommand            `cmd:"" help:"seal"`
+	Storage    cmds.StorageCommand         `cmd:"" help:"storage"`
+	Deploy     cmds.DeployCommand          `cmd:"" help:"deploy"`
+	QuicClient mitumcmds.QuicClientCommand `cmd:"" help:"quic-client"`
 }
 
 func main() {
@@ -39,12 +39,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	storagecommand, err := cmds.NewStorageCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %+v\n", err) // revive:disable-line:unhandled-error
+
+		os.Exit(1)
+	}
+
 	flags := mainflags{
-		Node:    nodeCommand,
-		Key:     cmds.NewKeyCommand(),
-		Seal:    cmds.NewSealCommand(),
-		Storage: cmds.NewStorageCommand(),
-		Deploy:  cmds.NewDeployCommand(),
+		Node:       nodeCommand,
+		Key:        cmds.NewKeyCommand(),
+		Seal:       cmds.NewSealCommand(),
+		Storage:    storagecommand,
+		Deploy:     cmds.NewDeployCommand(),
+		QuicClient: mitumcmds.NewQuicClientCommand(),
 	}
 
 	kctx, err := mitumcmds.Context(os.Args[1:], &flags, options...)

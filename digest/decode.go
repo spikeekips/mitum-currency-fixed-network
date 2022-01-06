@@ -41,13 +41,17 @@ func LoadAccountValue(decoder func(interface{}) error, encs *encoder.Encoders) (
 		return AccountValue{}, err
 	}
 
-	if _, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs); err != nil {
+	_, hinter, err := mongodbstorage.LoadDataFromDoc(b, encs)
+	if err != nil {
 		return AccountValue{}, err
-	} else if rs, ok := hinter.(AccountValue); !ok {
-		return AccountValue{}, errors.Errorf("not AccountValue: %T", hinter)
-	} else {
-		return rs, nil
 	}
+
+	rs, ok := hinter.(AccountValue)
+	if !ok {
+		return AccountValue{}, errors.Errorf("not AccountValue: %T", hinter)
+	}
+
+	return rs, nil
 }
 
 func LoadBalance(decoder func(interface{}) error, encs *encoder.Encoders) (state.State, error) {

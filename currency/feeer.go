@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -19,12 +17,15 @@ const (
 )
 
 var (
-	NilFeeerType   = hint.Type("mitum-currency-nil-feeer")
-	NilFeeerHint   = hint.NewHint(NilFeeerType, "v0.0.1")
-	FixedFeeerType = hint.Type("mitum-currency-fixed-feeer")
-	FixedFeeerHint = hint.NewHint(FixedFeeerType, "v0.0.1")
-	RatioFeeerType = hint.Type("mitum-currency-ratio-feeer")
-	RatioFeeerHint = hint.NewHint(RatioFeeerType, "v0.0.1")
+	NilFeeerType     = hint.Type("mitum-currency-nil-feeer")
+	NilFeeerHint     = hint.NewHint(NilFeeerType, "v0.0.1")
+	NilFeeerHinter   = NilFeeer{BaseHinter: hint.NewBaseHinter(NilFeeerHint)}
+	FixedFeeerType   = hint.Type("mitum-currency-fixed-feeer")
+	FixedFeeerHint   = hint.NewHint(FixedFeeerType, "v0.0.1")
+	FixedFeeerHinter = FixedFeeer{BaseHinter: hint.NewBaseHinter(FixedFeeerHint)}
+	RatioFeeerType   = hint.Type("mitum-currency-ratio-feeer")
+	RatioFeeerHint   = hint.NewHint(RatioFeeerType, "v0.0.1")
+	RatioFeeerHinter = RatioFeeer{BaseHinter: hint.NewBaseHinter(RatioFeeerHint)}
 )
 
 var UnlimitedMaxFeeAmount = NewBig(-1)
@@ -39,18 +40,16 @@ type Feeer interface {
 	Fee(Big) (Big, error)
 }
 
-type NilFeeer struct{}
+type NilFeeer struct {
+	hint.BaseHinter
+}
 
 func NewNilFeeer() NilFeeer {
-	return NilFeeer{}
+	return NilFeeer{BaseHinter: hint.NewBaseHinter(NilFeeerHint)}
 }
 
 func (NilFeeer) Type() string {
 	return FeeerNil
-}
-
-func (NilFeeer) Hint() hint.Hint {
-	return NilFeeerHint
 }
 
 func (NilFeeer) Bytes() []byte {
@@ -69,25 +68,26 @@ func (NilFeeer) Fee(Big) (Big, error) {
 	return ZeroBig, nil
 }
 
-func (NilFeeer) IsValid([]byte) error {
-	return nil
+func (fa NilFeeer) IsValid([]byte) error {
+	return fa.BaseHinter.IsValid(nil)
 }
 
 type FixedFeeer struct {
+	hint.BaseHinter
 	receiver base.Address
 	amount   Big
 }
 
 func NewFixedFeeer(receiver base.Address, amount Big) FixedFeeer {
-	return FixedFeeer{receiver: receiver, amount: amount}
+	return FixedFeeer{
+		BaseHinter: hint.NewBaseHinter(FixedFeeerHint),
+		receiver:   receiver,
+		amount:     amount,
+	}
 }
 
 func (FixedFeeer) Type() string {
 	return FeeerFixed
-}
-
-func (FixedFeeer) Hint() hint.Hint {
-	return FixedFeeerHint
 }
 
 func (fa FixedFeeer) Bytes() []byte {
@@ -111,12 +111,16 @@ func (fa FixedFeeer) Fee(Big) (Big, error) {
 }
 
 func (fa FixedFeeer) IsValid([]byte) error {
-	if err := fa.receiver.IsValid(nil); err != nil {
-		return errors.Wrap(err, "invalid receiver for fixed feeer")
+	if err := fa.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
+	if err := isvalid.Check(nil, false, fa.receiver); err != nil {
+		return isvalid.InvalidError.Errorf("invalid receiver for fixed feeer: %w", err)
 	}
 
 	if !fa.amount.OverNil() {
-		return errors.Errorf("fixed feeer amount under zero")
+		return isvalid.InvalidError.Errorf("fixed feeer amount under zero")
 	}
 
 	return nil
@@ -127,6 +131,7 @@ func (fa FixedFeeer) isZero() bool {
 }
 
 type RatioFeeer struct {
+	hint.BaseHinter
 	receiver base.Address
 	ratio    float64 // 0 >=, or <= 1.0
 	min      Big
@@ -135,19 +140,16 @@ type RatioFeeer struct {
 
 func NewRatioFeeer(receiver base.Address, ratio float64, min, max Big) RatioFeeer {
 	return RatioFeeer{
-		receiver: receiver,
-		ratio:    ratio,
-		min:      min,
-		max:      max,
+		BaseHinter: hint.NewBaseHinter(RatioFeeerHint),
+		receiver:   receiver,
+		ratio:      ratio,
+		min:        min,
+		max:        max,
 	}
 }
 
 func (RatioFeeer) Type() string {
 	return FeeerRatio
-}
-
-func (RatioFeeer) Hint() hint.Hint {
-	return RatioFeeerHint
 }
 
 func (fa RatioFeeer) Bytes() []byte {
@@ -185,21 +187,25 @@ func (fa RatioFeeer) Fee(a Big) (Big, error) {
 }
 
 func (fa RatioFeeer) IsValid([]byte) error {
-	if err := fa.receiver.IsValid(nil); err != nil {
-		return errors.Wrap(err, "invalid receiver for ratio feeer")
+	if err := fa.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
+	if err := isvalid.Check(nil, false, fa.receiver); err != nil {
+		return isvalid.InvalidError.Errorf("invalid receiver for ratio feeer: %w", err)
 	}
 
 	if fa.ratio < 0 || fa.ratio > 1 {
-		return errors.Errorf("invalid ratio, %v; it should be 0 >=, <= 1", fa.ratio)
+		return isvalid.InvalidError.Errorf("invalid ratio, %v; it should be 0 >=, <= 1", fa.ratio)
 	}
 
 	if !fa.min.OverNil() {
-		return errors.Errorf("ratio feeer min amount under zero")
+		return isvalid.InvalidError.Errorf("ratio feeer min amount under zero")
 	} else if !fa.max.Equal(UnlimitedMaxFeeAmount) {
 		if !fa.max.OverNil() {
-			return errors.Errorf("ratio feeer max amount under zero")
+			return isvalid.InvalidError.Errorf("ratio feeer max amount under zero")
 		} else if fa.min.Compare(fa.max) > 0 {
-			return errors.Errorf("ratio feeer min should over max")
+			return isvalid.InvalidError.Errorf("ratio feeer min should over max")
 		}
 	}
 

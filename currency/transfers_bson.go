@@ -4,7 +4,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -36,27 +35,13 @@ func (fact *TransfersFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return fact.unpack(enc, ufact.H, ufact.TK, ufact.SD, ufact.IT)
 }
 
-func (op Transfers) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(
-		bsonenc.MergeBSONM(
-			op.BaseOperation.BSONM(),
-			bson.M{"memo": op.Memo},
-		))
-}
-
 func (op *Transfers) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var ubo operation.BaseOperation
+	var ubo BaseOperation
 	if err := ubo.UnpackBSON(b, enc); err != nil {
 		return err
 	}
 
-	*op = Transfers{BaseOperation: ubo}
-
-	var um MemoBSONUnpacker
-	if err := enc.Unmarshal(b, &um); err != nil {
-		return err
-	}
-	op.Memo = um.Memo
+	op.BaseOperation = ubo
 
 	return nil
 }

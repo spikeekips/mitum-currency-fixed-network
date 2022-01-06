@@ -14,7 +14,7 @@ type KeyJSONPacker struct {
 	K key.Publickey `json:"key"`
 }
 
-func (ky Key) MarshalJSON() ([]byte, error) {
+func (ky BaseAccountKey) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(KeyJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(ky.Hint()),
 		W:          ky.w,
@@ -27,7 +27,7 @@ type KeyJSONUnpacker struct {
 	K key.PublickeyDecoder `json:"key"`
 }
 
-func (ky *Key) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (ky *BaseAccountKey) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uk KeyJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &uk); err != nil {
 		return err
@@ -39,11 +39,11 @@ func (ky *Key) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 type KeysJSONPacker struct {
 	jsonenc.HintedHead
 	H  valuehash.Hash `json:"hash"`
-	KS []Key          `json:"keys"`
+	KS []AccountKey   `json:"keys"`
 	TH uint           `json:"threshold"`
 }
 
-func (ks Keys) MarshalJSON() ([]byte, error) {
+func (ks BaseAccountKeys) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(KeysJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(ks.Hint()),
 		H:          ks.h,
@@ -58,7 +58,7 @@ type KeysJSONUnpacker struct {
 	TH uint            `json:"threshold"`
 }
 
-func (ks *Keys) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (ks *BaseAccountKeys) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uks KeysJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &uks); err != nil {
 		return err

@@ -22,10 +22,13 @@ func (op GenesisCurrencies) Process(
 		return err
 	}
 
+	cs := make([]CurrencyDesign, len(fact.cs))
 	gas := map[CurrencyID]state.State{}
 	sts := map[CurrencyID]state.State{}
 	for i := range fact.cs {
 		c := fact.cs[i]
+		c.genesisAccount = newAddress
+		cs[i] = c
 
 		st, err := notExistsState(StateKeyCurrencyDesign(c.Currency()), "currency", getState)
 		if err != nil {
@@ -41,7 +44,7 @@ func (op GenesisCurrencies) Process(
 	}
 
 	var states []state.State
-	if ac, err := NewAccountFromKeys(fact.keys); err != nil {
+	if ac, err := NewAccount(newAddress, fact.keys); err != nil {
 		return err
 	} else if st, err := SetStateAccountValue(ns, ac); err != nil {
 		return operation.NewBaseReasonErrorFromError(err)
@@ -49,8 +52,8 @@ func (op GenesisCurrencies) Process(
 		states = append(states, st)
 	}
 
-	for i := range fact.cs {
-		c := fact.cs[i]
+	for i := range cs {
+		c := cs[i]
 		am := NewAmount(c.Big(), c.Currency())
 		if gst, err := SetStateBalanceValue(gas[c.Currency()], am); err != nil {
 			return err
@@ -59,6 +62,13 @@ func (op GenesisCurrencies) Process(
 		} else {
 			states = append(states, gst, dst)
 		}
+
+		sts, err := createZeroAccount(c.Currency(), getState)
+		if err != nil {
+			return err
+		}
+
+		states = append(states, sts...)
 	}
 
 	return setState(fact.Hash(), states...)

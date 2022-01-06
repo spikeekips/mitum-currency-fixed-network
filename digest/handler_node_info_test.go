@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package digest
@@ -14,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
@@ -24,10 +26,10 @@ type testHandlerNodeInfo struct {
 }
 
 func (t *testHandlerNodeInfo) newNode(name string) (base.Node, network.ConnInfo) {
-	addr, err := base.NewStringAddress(name)
-	t.NoError(err)
+	addr := base.NewStringAddress(name)
+	t.NoError(addr.IsValid(nil))
 
-	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
+	no := node.NewBaseV0(addr, key.NewBasePrivatekey().Publickey())
 	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
 	connInfo := network.NewHTTPConnInfo(u, true)
 
@@ -51,6 +53,8 @@ func (t *testHandlerNodeInfo) TestBasic() {
 	}
 
 	policy := map[string]interface{}{"showme": 1}
+	ci, err := network.NewHTTPConnInfoFromString("https://local", true)
+	t.NoError(err)
 
 	ni := network.NewNodeInfoV0(
 		local,
@@ -58,10 +62,10 @@ func (t *testHandlerNodeInfo) TestBasic() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"quic://local",
 		policy,
 		nodes,
 		nil,
+		ci,
 	)
 
 	handlers := t.handlers(st, DummyCache{})
@@ -80,8 +84,8 @@ func (t *testHandlerNodeInfo) TestBasic() {
 
 	hal := t.loadHal(b)
 
-	uni, err := network.DecodeNodeInfo(hal.RawInterface(), t.JSONEnc)
-	t.NoError(err)
+	var uni NodeInfo
+	t.NoError(encoder.Decode(hal.RawInterface(), t.JSONEnc, &uni))
 
 	t.compareNodeInfo(ni, uni)
 }
@@ -91,7 +95,7 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 	t.True(a.Publickey().Equal(b.Publickey()))
 	t.Equal(a.NetworkID(), b.NetworkID())
 	t.Equal(a.Version(), b.Version())
-	t.Equal(a.URL(), b.URL())
+	t.True(a.ConnInfo().Equal(b.ConnInfo()))
 
 	t.Equal(len(a.Policy()), len(b.Policy()))
 	{
@@ -109,8 +113,7 @@ func (t *testHandlerNodeInfo) compareNodeInfo(a, b network.NodeInfo) {
 
 		t.True(an.Address.Equal(bn.Address))
 		t.True(an.Publickey.Equal(bn.Publickey))
-		t.Equal(an.URL, bn.URL)
-		t.Equal(an.Insecure, bn.Insecure)
+		t.True(an.ConnInfo().Equal(bn.ConnInfo()))
 	}
 }
 

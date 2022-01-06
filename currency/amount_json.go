@@ -2,6 +2,7 @@ package currency
 
 import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type AmountJSONPacker struct {
@@ -19,16 +20,18 @@ func (am Amount) MarshalJSON() ([]byte, error) {
 }
 
 type AmountJSONUnpacker struct {
-	BG Big    `json:"amount"`
-	CR string `json:"currency"`
+	HT hint.Hint `json:"_hint"`
+	BG Big       `json:"amount"`
+	CR string    `json:"currency"`
 }
 
-func (am *Amount) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (am *Amount) UnmarshalJSON(b []byte) error {
 	var uam AmountJSONUnpacker
-	if err := enc.Unmarshal(b, &uam); err != nil {
+	if err := jsonenc.Unmarshal(b, &uam); err != nil {
 		return err
 	}
 
+	am.BaseHinter = hint.NewBaseHinter(uam.HT)
 	am.big = uam.BG
 	am.cid = CurrencyID(uam.CR)
 

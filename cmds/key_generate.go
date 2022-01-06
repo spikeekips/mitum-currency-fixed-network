@@ -3,13 +3,12 @@ package cmds
 import (
 	"github.com/pkg/errors"
 
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 )
 
 type GenerateKeyCommand struct {
 	*BaseCommand
-	Type   string `name:"type" help:"key type {btc ether stellar} (default: btc)" optional:"" default:"btc"`
+	Seed   string `name:"seed" help:"seed (default: random string)" optional:""`
 	JSON   bool   `name:"json" help:"json output format (default: false)" optional:"" default:"false"`
 	Pretty bool   `name:"pretty" help:"pretty format"`
 }
@@ -25,30 +24,27 @@ func (cmd *GenerateKeyCommand) Run(version util.Version) error {
 		return errors.Wrap(err, "failed to initialize command")
 	}
 
-	var priv key.Privatekey
-	if len(cmd.Type) < 1 {
-		cmd.Type = btc
-	} else if !IsValidKeyType(cmd.Type) {
-		return errors.Errorf("unknown key type, %q", cmd.Type)
-	} else if i := GenerateKey(cmd.Type); i == nil {
-		return errors.Errorf("failed to generate key, %q", cmd.Type)
-	} else {
-		priv = i
+	priv, err := GenerateKey(cmd.Seed)
+	switch {
+	case err != nil:
+		return err
+	case priv == nil:
+		return errors.Errorf("failed to generate key")
 	}
 
 	if cmd.JSON {
 		PrettyPrint(cmd.Out, cmd.Pretty, map[string]interface{}{
 			"privatekey": map[string]interface{}{
-				"hint": priv.Hint(),
+				"hint": priv.Hint().Type(),
 				"key":  priv.String(),
 			},
 			"publickey": map[string]interface{}{
-				"hint": priv.Publickey().Hint(),
+				"hint": priv.Publickey().Hint().Type(),
 				"key":  priv.Publickey().String(),
 			},
 		})
 	} else {
-		cmd.print("      hint: %s", priv.Hint())
+		cmd.print("      hint: %s", priv.Hint().Type())
 		cmd.print("privatekey: %s", priv.String())
 		cmd.print(" publickey: %s", priv.Publickey().String())
 	}

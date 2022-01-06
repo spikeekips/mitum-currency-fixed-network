@@ -164,6 +164,10 @@ func HTTP2WriteHalBytes(enc encoder.Encoder, w http.ResponseWriter, b []byte, st
 }
 
 func HTTP2WriteCache(w http.ResponseWriter, key string, expire time.Duration) {
+	if expire < 1 {
+		return
+	}
+
 	if cw, ok := w.(*CacheResponseWriter); ok {
 		_ = cw.SetKey(key).SetExpire(expire)
 	}

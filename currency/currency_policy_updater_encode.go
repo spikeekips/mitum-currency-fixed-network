@@ -14,14 +14,7 @@ func (fact *CurrencyPolicyUpdaterFact) unpack(
 ) error {
 	fact.h = h
 	fact.token = token
-
 	fact.cid = CurrencyID(scid)
 
-	i, err := DecodeCurrencyPolicy(bpo, enc)
-	if err != nil {
-		return err
-	}
-	fact.policy = i
-
-	return nil
+	return encoder.Decode(bpo, enc, &fact.policy)
 }

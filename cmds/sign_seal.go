@@ -2,7 +2,6 @@ package cmds
 
 import (
 	"github.com/pkg/errors"
-
 	mitumcmds "github.com/spikeekips/mitum/launch/cmds"
 	"github.com/spikeekips/mitum/util"
 )
@@ -12,7 +11,7 @@ type SignSealCommand struct {
 	Privatekey PrivatekeyFlag          `arg:"" name:"privatekey" help:"sender's privatekey" required:"true"`
 	NetworkID  mitumcmds.NetworkIDFlag `name:"network-id" help:"network-id" required:"true"`
 	Pretty     bool                    `name:"pretty" help:"pretty format"`
-	Seal       FileLoad                `help:"seal" optional:""`
+	Seal       mitumcmds.FileLoad      `help:"seal" optional:""`
 }
 
 func NewSignSealCommand() SignSealCommand {
@@ -33,17 +32,13 @@ func (cmd *SignSealCommand) Run(version util.Version) error {
 
 	cmd.Log().Debug().Stringer("seal", sl.Hash()).Msg("seal loaded")
 
-	if sl.Signer().Equal(cmd.Privatekey.Publickey()) {
-		cmd.Log().Debug().Msg("already signed")
-	} else {
-		s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
-		if err != nil {
-			return err
-		}
-		cmd.Log().Debug().Msg("seal signed")
-
-		sl = s
+	s, err := SignSeal(sl, cmd.Privatekey, cmd.NetworkID.NetworkID())
+	if err != nil {
+		return err
 	}
+	cmd.Log().Debug().Msg("seal signed")
+
+	sl = s
 
 	PrettyPrint(cmd.Out, cmd.Pretty, sl)
 

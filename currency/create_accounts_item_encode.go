@@ -5,15 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
-func (it *BaseCreateAccountsItem) unpack(enc encoder.Encoder, ht hint.Hint, bks []byte, bam []byte) error {
-	it.hint = ht
-
+func (it *BaseCreateAccountsItem) unpack(enc encoder.Encoder, bks []byte, bam []byte) error {
 	if hinter, err := enc.Decode(bks); err != nil {
 		return err
-	} else if k, ok := hinter.(Keys); !ok {
+	} else if k, ok := hinter.(AccountKeys); !ok {
 		return errors.Errorf("not Keys: %T", hinter)
 	} else {
 		it.keys = k

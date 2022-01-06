@@ -1,10 +1,7 @@
 package currency
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -12,10 +9,12 @@ import (
 )
 
 var (
-	CreateAccountsFactType = hint.Type("mitum-currency-create-accounts-operation-fact")
-	CreateAccountsFactHint = hint.NewHint(CreateAccountsFactType, "v0.0.1")
-	CreateAccountsType     = hint.Type("mitum-currency-create-accounts-operation")
-	CreateAccountsHint     = hint.NewHint(CreateAccountsType, "v0.0.1")
+	CreateAccountsFactType   = hint.Type("mitum-currency-create-accounts-operation-fact")
+	CreateAccountsFactHint   = hint.NewHint(CreateAccountsFactType, "v0.0.1")
+	CreateAccountsFactHinter = CreateAccountsFact{BaseHinter: hint.NewBaseHinter(CreateAccountsFactHint)}
+	CreateAccountsType       = hint.Type("mitum-currency-create-accounts-operation")
+	CreateAccountsHint       = hint.NewHint(CreateAccountsType, "v0.0.1")
+	CreateAccountsHinter     = CreateAccounts{BaseOperation: operationHinter(CreateAccountsHint)}
 )
 
 var MaxCreateAccountsItems uint = 10
@@ -29,12 +28,13 @@ type CreateAccountsItem interface {
 	isvalid.IsValider
 	AmountsItem
 	Bytes() []byte
-	Keys() Keys
+	Keys() AccountKeys
 	Address() (base.Address, error)
 	Rebuild() CreateAccountsItem
 }
 
 type CreateAccountsFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
 	token  []byte
 	sender base.Address
@@ -43,17 +43,14 @@ type CreateAccountsFact struct {
 
 func NewCreateAccountsFact(token []byte, sender base.Address, items []CreateAccountsItem) CreateAccountsFact {
 	fact := CreateAccountsFact{
-		token:  token,
-		sender: sender,
-		items:  items,
+		BaseHinter: hint.NewBaseHinter(CreateAccountsFactHint),
+		token:      token,
+		sender:     sender,
+		items:      items,
 	}
 	fact.h = fact.GenerateHash()
 
 	return fact
-}
-
-func (CreateAccountsFact) Hint() hint.Hint {
-	return CreateAccountsFactHint
 }
 
 func (fact CreateAccountsFact) Hash() valuehash.Hash {
@@ -77,46 +74,45 @@ func (fact CreateAccountsFact) Bytes() []byte {
 	)
 }
 
-func (fact CreateAccountsFact) IsValid([]byte) error {
-	if len(fact.token) < 1 {
-		return errors.Errorf("empty token for CreateAccountsFact")
-	} else if n := len(fact.items); n < 1 {
-		return errors.Errorf("empty items")
-	} else if n > int(MaxCreateAccountsItems) {
-		return errors.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
+func (fact CreateAccountsFact) IsValid(b []byte) error {
+	if err := fact.BaseHinter.IsValid(nil); err != nil {
+		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.h,
-		fact.sender,
-	}, nil, false); err != nil {
+	if err := IsValidOperationFact(fact, b); err != nil {
+		return err
+	}
+
+	if n := len(fact.items); n < 1 {
+		return isvalid.InvalidError.Errorf("empty items")
+	} else if n > int(MaxCreateAccountsItems) {
+		return isvalid.InvalidError.Errorf("items, %d over max, %d", n, MaxCreateAccountsItems)
+	}
+
+	if err := isvalid.Check(nil, false, fact.sender); err != nil {
 		return err
 	}
 
 	foundKeys := map[string]struct{}{}
 	for i := range fact.items {
-		if err := fact.items[i].IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, fact.items[i]); err != nil {
 			return err
 		}
 
 		it := fact.items[i]
 		k := it.Keys().Hash().String()
 		if _, found := foundKeys[k]; found {
-			return errors.Errorf("duplicated acocunt Keys found, %s", k)
+			return isvalid.InvalidError.Errorf("duplicated acocunt Keys found, %s", k)
 		}
 
 		switch a, err := it.Address(); {
 		case err != nil:
 			return err
 		case fact.sender.Equal(a):
-			return errors.Errorf("target address is same with sender, %q", fact.sender)
+			return isvalid.InvalidError.Errorf("target address is same with sender, %q", fact.sender)
 		default:
 			foundKeys[k] = struct{}{}
 		}
-	}
-
-	if !fact.h.Equal(fact.GenerateHash()) {
-		return isvalid.InvalidError.Errorf("wrong Fact hash")
 	}
 
 	return nil
@@ -175,55 +171,14 @@ func (fact CreateAccountsFact) Rebuild() CreateAccountsFact {
 }
 
 type CreateAccounts struct {
-	operation.BaseOperation
-	Memo string
+	BaseOperation
 }
 
-func NewCreateAccounts(fact CreateAccountsFact, fs []operation.FactSign, memo string) (CreateAccounts, error) {
-	bo, err := operation.NewBaseOperationFromFact(CreateAccountsHint, fact, fs)
+func NewCreateAccounts(fact CreateAccountsFact, fs []base.FactSign, memo string) (CreateAccounts, error) {
+	bo, err := NewBaseOperationFromFact(CreateAccountsHint, fact, fs, memo)
 	if err != nil {
 		return CreateAccounts{}, err
 	}
-	op := CreateAccounts{BaseOperation: bo, Memo: memo}
 
-	op.BaseOperation = bo.SetHash(op.GenerateHash())
-
-	return op, nil
-}
-
-func (CreateAccounts) Hint() hint.Hint {
-	return CreateAccountsHint
-}
-
-func (op CreateAccounts) IsValid(networkID []byte) error {
-	if err := IsValidMemo(op.Memo); err != nil {
-		return err
-	}
-
-	return operation.IsValidOperation(op, networkID)
-}
-
-func (op CreateAccounts) GenerateHash() valuehash.Hash {
-	bs := make([][]byte, len(op.Signs())+1)
-	for i := range op.Signs() {
-		bs[i] = op.Signs()[i].Bytes()
-	}
-
-	bs[len(bs)-1] = []byte(op.Memo)
-
-	e := util.ConcatBytesSlice(op.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
-
-	return valuehash.NewSHA256(e)
-}
-
-func (op CreateAccounts) AddFactSigns(fs ...operation.FactSign) (operation.FactSignUpdater, error) {
-	o, err := op.BaseOperation.AddFactSigns(fs...)
-	if err != nil {
-		return nil, err
-	}
-	op.BaseOperation = o.(operation.BaseOperation)
-
-	op.BaseOperation = op.SetHash(op.GenerateHash())
-
-	return op, nil
+	return CreateAccounts{BaseOperation: bo}, nil
 }

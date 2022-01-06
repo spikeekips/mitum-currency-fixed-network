@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -35,6 +36,7 @@ func testCurrencyPolicyEncode(enc encoder.Encoder) suite.TestingSuite {
 	t.enc = enc
 	t.newObject = func() interface{} {
 		po := NewCurrencyPolicy(ZeroBig, NewFixedFeeer(MustAddress(util.UUID().String()), NewBig(33)))
+		po.BaseHinter = hint.NewBaseHinter(hint.NewHint(CurrencyPolicyType, "v0.0.9"))
 
 		return po
 	}
@@ -43,6 +45,7 @@ func testCurrencyPolicyEncode(enc encoder.Encoder) suite.TestingSuite {
 		ca := a.(CurrencyPolicy)
 		cb := b.(CurrencyPolicy)
 
+		t.True(ca.Hint().Equal(cb.Hint()))
 		t.Equal(ca, cb)
 	}
 

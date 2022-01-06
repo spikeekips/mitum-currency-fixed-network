@@ -6,106 +6,120 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	KeyType  = hint.Type("mitum-currency-key")
-	KeyHint  = hint.NewHint(KeyType, "v0.0.1")
-	KeysType = hint.Type("mitum-currency-keys")
-	KeysHint = hint.NewHint(KeysType, "v0.0.1")
+	AccountKeyType    = hint.Type("mitum-currency-key")
+	AccountKeyHint    = hint.NewHint(AccountKeyType, "v0.0.1")
+	AccountKeyHinter  = BaseAccountKey{BaseHinter: hint.NewBaseHinter(AccountKeyHint)}
+	AccountKeysType   = hint.Type("mitum-currency-keys")
+	AccountKeysHint   = hint.NewHint(AccountKeysType, "v0.0.1")
+	AccountKeysHinter = BaseAccountKeys{BaseHinter: hint.NewBaseHinter(AccountKeysHint)}
 )
 
-var (
-	MaxKeyInKeys int
-	maxKeyInKeys uint = 10
-)
+var MaxAccountKeyInKeys = 10
 
-func init() {
-	MaxKeyInKeys = int(maxKeyInKeys)
+type AccountKey interface {
+	hint.Hinter
+	isvalid.IsValider
+	util.Byter
+	Key() key.Publickey
+	Weight() uint
+	Equal(AccountKey) bool
 }
 
-type Key struct {
+type AccountKeys interface {
+	hint.Hinter
+	isvalid.IsValider
+	util.Byter
+	valuehash.Hasher
+	Threshold() uint
+	Keys() []AccountKey
+	Key(key.Publickey) (AccountKey, bool)
+	Equal(AccountKeys) bool
+}
+
+type BaseAccountKey struct {
+	hint.BaseHinter
 	k key.Publickey
 	w uint
 }
 
-func NewKey(k key.Publickey, w uint) (Key, error) {
-	ky := Key{k: k, w: w}
+func NewBaseAccountKey(k key.Publickey, w uint) (BaseAccountKey, error) {
+	ky := BaseAccountKey{BaseHinter: hint.NewBaseHinter(AccountKeyHint), k: k, w: w}
 
 	return ky, ky.IsValid(nil)
 }
 
-func (ky Key) IsValid([]byte) error {
+func (ky BaseAccountKey) IsValid([]byte) error {
 	if ky.w < 1 || ky.w > 100 {
-		return errors.Errorf("invalid key weight, 1 <= weight <= 100")
+		return isvalid.InvalidError.Errorf("invalid key weight, 1 <= weight <= 100")
 	}
 
-	return ky.k.IsValid(nil)
+	return isvalid.Check(nil, false, ky.k)
 }
 
-func (ky Key) Weight() uint {
+func (ky BaseAccountKey) Weight() uint {
 	return ky.w
 }
 
-func (ky Key) Key() key.Publickey {
+func (ky BaseAccountKey) Key() key.Publickey {
 	return ky.k
 }
 
-func (Key) Hint() hint.Hint {
-	return KeyHint
+func (ky BaseAccountKey) Bytes() []byte {
+	return util.ConcatBytesSlice(ky.k.Bytes(), util.UintToBytes(ky.w))
 }
 
-func (ky Key) Bytes() []byte {
-	return util.ConcatBytesSlice([]byte(ky.k.String()), util.UintToBytes(ky.w))
-}
-
-func (ky Key) Equal(b Key) bool {
-	if ky.w != b.w {
+func (ky BaseAccountKey) Equal(b AccountKey) bool {
+	if ky.w != b.Weight() {
 		return false
 	}
 
-	if !ky.k.Equal(b.k) {
+	if !ky.k.Equal(b.Key()) {
 		return false
 	}
 
 	return true
 }
 
-type Keys struct {
+type BaseAccountKeys struct {
+	hint.BaseHinter
 	h         valuehash.Hash
-	keys      []Key
+	keys      []AccountKey
 	threshold uint
 }
 
-func NewKeys(keys []Key, threshold uint) (Keys, error) {
-	ks := Keys{keys: keys, threshold: threshold}
+func EmptyBaseAccountKeys() BaseAccountKeys {
+	return BaseAccountKeys{BaseHinter: hint.NewBaseHinter(AccountKeysHint)}
+}
+
+func NewBaseAccountKeys(keys []AccountKey, threshold uint) (BaseAccountKeys, error) {
+	ks := BaseAccountKeys{BaseHinter: hint.NewBaseHinter(AccountKeysHint), keys: keys, threshold: threshold}
 	h, err := ks.GenerateHash()
 	if err != nil {
-		return Keys{}, err
+		return BaseAccountKeys{}, err
 	}
 	ks.h = h
 
 	return ks, ks.IsValid(nil)
 }
 
-func (Keys) Hint() hint.Hint {
-	return KeysHint
-}
-
-func (ks Keys) Hash() valuehash.Hash {
+func (ks BaseAccountKeys) Hash() valuehash.Hash {
 	return ks.h
 }
 
-func (ks Keys) GenerateHash() (valuehash.Hash, error) {
+func (ks BaseAccountKeys) GenerateHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(ks.Bytes()), nil
 }
 
-func (ks Keys) Bytes() []byte {
+func (ks BaseAccountKeys) Bytes() []byte {
 	bs := make([][]byte, len(ks.keys)+1)
 
 	// NOTE sorted by Key.Key()
@@ -121,31 +135,33 @@ func (ks Keys) Bytes() []byte {
 	return util.ConcatBytesSlice(bs...)
 }
 
-func (ks Keys) IsValid([]byte) error {
+func (ks BaseAccountKeys) IsValid([]byte) error {
 	if ks.threshold < 1 || ks.threshold > 100 {
-		return errors.Errorf("invalid threshold, %d, should be 1 <= threshold <= 100", ks.threshold)
+		return isvalid.InvalidError.Errorf("invalid threshold, %d, should be 1 <= threshold <= 100", ks.threshold)
 	}
 
-	if err := ks.h.IsValid(nil); err != nil {
+	if err := isvalid.Check(nil, false, ks.h); err != nil {
 		return err
 	}
 
 	if n := len(ks.keys); n < 1 {
-		return errors.Errorf("empty keys")
-	} else if n > MaxKeyInKeys {
-		return errors.Errorf("keys over %d, %d", MaxKeyInKeys, n)
+		return isvalid.InvalidError.Errorf("empty keys")
+	} else if n > MaxAccountKeyInKeys {
+		return isvalid.InvalidError.Errorf("keys over %d, %d", MaxAccountKeyInKeys, n)
 	}
 
 	m := map[string]struct{}{}
 	for i := range ks.keys {
 		k := ks.keys[i]
-		if err := k.IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, k); err != nil {
 			return err
-		} else if _, found := m[k.Key().String()]; found {
-			return errors.Errorf("duplicated keys found")
-		} else {
-			m[k.Key().String()] = struct{}{}
 		}
+
+		if _, found := m[k.Key().String()]; found {
+			return isvalid.InvalidError.Errorf("duplicated keys found")
+		}
+
+		m[k.Key().String()] = struct{}{}
 	}
 
 	var totalWeight uint
@@ -154,27 +170,27 @@ func (ks Keys) IsValid([]byte) error {
 	}
 
 	if totalWeight < ks.threshold {
-		return errors.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
+		return isvalid.InvalidError.Errorf("sum of weight under threshold, %d < %d", totalWeight, ks.threshold)
 	}
 
 	if h, err := ks.GenerateHash(); err != nil {
 		return err
 	} else if !ks.h.Equal(h) {
-		return errors.Errorf("hash not matched")
+		return isvalid.InvalidError.Errorf("hash not matched")
 	}
 
 	return nil
 }
 
-func (ks Keys) Threshold() uint {
+func (ks BaseAccountKeys) Threshold() uint {
 	return ks.threshold
 }
 
-func (ks Keys) Keys() []Key {
+func (ks BaseAccountKeys) Keys() []AccountKey {
 	return ks.keys
 }
 
-func (ks Keys) Key(k key.Publickey) (Key, bool) {
+func (ks BaseAccountKeys) Key(k key.Publickey) (AccountKey, bool) {
 	for i := range ks.keys {
 		ky := ks.keys[i]
 		if ky.Key().Equal(k) {
@@ -182,27 +198,29 @@ func (ks Keys) Key(k key.Publickey) (Key, bool) {
 		}
 	}
 
-	return Key{}, false
+	return BaseAccountKey{}, false
 }
 
-func (ks Keys) Equal(b Keys) bool {
-	if ks.threshold != b.threshold {
+func (ks BaseAccountKeys) Equal(b AccountKeys) bool {
+	if ks.threshold != b.Threshold() {
 		return false
 	}
 
-	if len(ks.keys) != len(b.keys) {
+	if len(ks.keys) != len(b.Keys()) {
 		return false
 	}
 
 	sort.Slice(ks.keys, func(i, j int) bool {
 		return bytes.Compare(ks.keys[i].Key().Bytes(), ks.keys[j].Key().Bytes()) < 0
 	})
-	sort.Slice(b.keys, func(i, j int) bool {
-		return bytes.Compare(b.keys[i].Key().Bytes(), b.keys[j].Key().Bytes()) < 0
+
+	bkeys := b.Keys()
+	sort.Slice(bkeys, func(i, j int) bool {
+		return bytes.Compare(bkeys[i].Key().Bytes(), bkeys[j].Key().Bytes()) < 0
 	})
 
 	for i := range ks.keys {
-		if !ks.keys[i].Equal(b.keys[i]) {
+		if !ks.keys[i].Equal(bkeys[i]) {
 			return false
 		}
 	}
@@ -210,7 +228,7 @@ func (ks Keys) Equal(b Keys) bool {
 	return true
 }
 
-func checkThreshold(fs []operation.FactSign, keys Keys) error {
+func checkThreshold(fs []base.FactSign, keys AccountKeys) error {
 	var sum uint
 	for i := range fs {
 		ky, found := keys.Key(fs[i].Signer())

@@ -25,12 +25,12 @@ func (t *testCurrencyRegisterOperations) newOperation(keys []key.Privatekey, ite
 	token := util.UUID().Bytes()
 	fact := NewCurrencyRegisterFact(token, item)
 
-	var fs []operation.FactSign
+	var fs []base.FactSign
 	for _, pk := range keys {
-		sig, err := operation.NewFactSignature(pk, fact, nil)
+		sig, err := base.NewFactSignature(pk, fact, nil)
 		t.NoError(err)
 
-		fs = append(fs, operation.NewBaseFactSign(pk.Publickey(), sig))
+		fs = append(fs, base.NewBaseFactSign(pk.Publickey(), sig))
 	}
 
 	tf, err := NewCurrencyRegister(fact, fs, "")
@@ -44,7 +44,7 @@ func (t *testCurrencyRegisterOperations) newOperation(keys []key.Privatekey, ite
 func (t *testCurrencyRegisterOperations) processor(n int) ([]key.Privatekey, *OperationProcessor) {
 	privs := make([]key.Privatekey, n)
 	for i := 0; i < n; i++ {
-		privs[i] = key.MustNewBTCPrivatekey()
+		privs[i] = key.NewBasePrivatekey()
 	}
 
 	pubs := make([]key.Publickey, len(privs))
@@ -54,8 +54,9 @@ func (t *testCurrencyRegisterOperations) processor(n int) ([]key.Privatekey, *Op
 	threshold, err := base.NewThreshold(uint(len(privs)), 100)
 	t.NoError(err)
 
-	opr := NewOperationProcessor(nil)
-	_, err = opr.SetProcessor(CurrencyRegister{}, NewCurrencyRegisterProcessor(nil, pubs, threshold))
+	cp := NewCurrencyPool()
+	opr := NewOperationProcessor(cp)
+	_, err = opr.SetProcessor(CurrencyRegisterHinter, NewCurrencyRegisterProcessor(nil, pubs, threshold))
 	t.NoError(err)
 
 	return privs, opr
@@ -112,6 +113,8 @@ func (t *testCurrencyRegisterOperations) TestSameCurrencyID() {
 	t.NoError(opr.Process(op0))
 
 	err := opr.Process(op1)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "duplicated currency id")
 }
 
@@ -129,7 +132,7 @@ func (t *testCurrencyRegisterOperations) TestEmptyPubs() {
 	pool, _ := t.statepool(sts)
 
 	copr := NewOperationProcessor(nil)
-	_, err := copr.SetProcessor(CurrencyRegister{}, func(op state.Processor) (state.Processor, error) {
+	_, err := copr.SetProcessor(CurrencyRegisterHinter, func(op state.Processor) (state.Processor, error) {
 		if i, ok := op.(CurrencyRegister); !ok {
 			return nil, errors.Errorf("not CurrencyRegister, %T", op)
 		} else {
@@ -143,6 +146,8 @@ func (t *testCurrencyRegisterOperations) TestEmptyPubs() {
 	opr := copr.New(pool)
 
 	err = opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "empty publickeys")
 }
 
@@ -164,6 +169,8 @@ func (t *testCurrencyRegisterOperations) TestNotEnoughSigns() {
 	opr := copr.New(pool)
 
 	err := opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
 	t.Contains(err.Error(), "not enough suffrage signs")
 }
 
@@ -204,6 +211,97 @@ func (t *testCurrencyRegisterOperations) TestNew() {
 	ugb, err := StateCurrencyDesignValue(gbst)
 	t.NoError(err)
 	t.compareCurrencyDesign(ugb, item)
+}
+
+func (t *testCurrencyRegisterOperations) TestZeroAccount() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+
+	cid := CurrencyID("FINDME")
+	item := t.currencyDesign(NewBig(33), cid, ga.Address)
+	op := t.newOperation(privs, item)
+
+	sts = append(sts, s...)
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	t.NoError(opr.Process(op))
+
+	zeroaddress := ZeroAddress(cid)
+
+	var gast, gbst, zast, zbst state.State
+	for _, st := range pool.Updates() {
+		switch st.Key() {
+		case StateKeyBalance(ga.Address, cid):
+			gast = st.GetState()
+		case StateKeyCurrencyDesign(cid):
+			gbst = st.GetState()
+		case StateKeyAccount(zeroaddress):
+			zast = st.GetState()
+		case StateKeyBalance(zeroaddress, cid):
+			zbst = st.GetState()
+		}
+	}
+
+	uga, err := StateBalanceValue(gast)
+	t.NoError(err)
+	t.True(uga.Big().Equal(item.Big()))
+	t.Equal(uga.Currency(), item.Currency())
+
+	ugb, err := StateCurrencyDesignValue(gbst)
+	t.NoError(err)
+	t.compareCurrencyDesign(ugb, item)
+
+	t.NotNil(zast)
+
+	zac, err := LoadStateAccountValue(zast)
+	t.NoError(err)
+	t.True(zeroaddress.Equal(zac.Address()))
+	t.Nil(zac.Keys())
+
+	uzb, err := StateBalanceValue(zbst)
+	t.NoError(err)
+	t.True(uzb.Big().IsZero())
+	t.Equal(uzb.Currency(), item.Currency())
+}
+
+func (t *testCurrencyRegisterOperations) TestKnownCurrency() {
+	var sts []state.State
+
+	privs, copr := t.processor(3)
+
+	ga, s := t.newAccount(true, []Amount{NewAmount(NewBig(10), t.cid)})
+	sts = append(sts, s...)
+
+	de := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+
+	{
+		st, err := state.NewStateV0(StateKeyCurrencyDesign(de.Currency()), nil, base.Height(33))
+		t.NoError(err)
+
+		nst, err := SetStateCurrencyDesignValue(st, de)
+		t.NoError(err)
+		sts = append(sts, nst)
+
+		t.NoError(copr.cp.Set(nst))
+	}
+
+	pool, _ := t.statepool(sts)
+
+	opr := copr.New(pool)
+
+	item := t.currencyDesign(NewBig(33), t.cid, ga.Address)
+	op := t.newOperation(privs, item)
+
+	err := opr.Process(op)
+	var oper operation.ReasonError
+	t.True(errors.As(err, &oper))
+	t.Contains(err.Error(), "currency already registered")
 }
 
 func TestCurrencyRegisterOperations(t *testing.T) {

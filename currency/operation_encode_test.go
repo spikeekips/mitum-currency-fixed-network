@@ -3,6 +3,7 @@ package currency
 import (
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -24,36 +25,39 @@ func (t *baseTestEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	t.encs.AddEncoder(t.enc)
 
-	t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	t.encs.TestAddHinter(Address(""))
-	t.encs.TestAddHinter(operation.BaseFactSign{})
-	t.encs.TestAddHinter(Key{})
-	t.encs.TestAddHinter(Keys{})
-	t.encs.TestAddHinter(TransfersFact{})
-	t.encs.TestAddHinter(Transfers{})
-	t.encs.TestAddHinter(CreateAccountsFact{})
-	t.encs.TestAddHinter(CreateAccounts{})
-	t.encs.TestAddHinter(KeyUpdaterFact{})
-	t.encs.TestAddHinter(KeyUpdater{})
-	t.encs.TestAddHinter(FeeOperationFact{})
-	t.encs.TestAddHinter(FeeOperation{})
-	t.encs.TestAddHinter(Account{})
-	t.encs.TestAddHinter(GenesisCurrenciesFact{})
-	t.encs.TestAddHinter(GenesisCurrencies{})
-	t.encs.TestAddHinter(Amount{})
+	t.encs.TestAddHinter(key.BasePublickey{})
+	t.encs.TestAddHinter(base.StringAddressHinter)
+	t.encs.TestAddHinter(AddressHinter)
+	t.encs.TestAddHinter(base.BaseFactSignHinter)
+	t.encs.TestAddHinter(AccountKeyHinter)
+	t.encs.TestAddHinter(AccountKeysHinter)
+	t.encs.TestAddHinter(TransfersFactHinter)
+	t.encs.TestAddHinter(TransfersHinter)
+	t.encs.TestAddHinter(CreateAccountsFactHinter)
+	t.encs.TestAddHinter(CreateAccountsHinter)
+	t.encs.TestAddHinter(KeyUpdaterFactHinter)
+	t.encs.TestAddHinter(KeyUpdaterHinter)
+	t.encs.TestAddHinter(FeeOperationFactHinter)
+	t.encs.TestAddHinter(FeeOperationHinter)
+	t.encs.TestAddHinter(AccountHinter)
+	t.encs.TestAddHinter(GenesisCurrenciesFactHinter)
+	t.encs.TestAddHinter(GenesisCurrenciesHinter)
+	t.encs.TestAddHinter(AmountHinter)
 	t.encs.TestAddHinter(CreateAccountsItemMultiAmountsHinter)
 	t.encs.TestAddHinter(CreateAccountsItemSingleAmountHinter)
 	t.encs.TestAddHinter(TransfersItemMultiAmountsHinter)
 	t.encs.TestAddHinter(TransfersItemSingleAmountHinter)
-	t.encs.TestAddHinter(CurrencyRegisterFact{})
-	t.encs.TestAddHinter(CurrencyRegister{})
-	t.encs.TestAddHinter(CurrencyDesign{})
-	t.encs.TestAddHinter(NilFeeer{})
-	t.encs.TestAddHinter(FixedFeeer{})
-	t.encs.TestAddHinter(RatioFeeer{})
-	t.encs.TestAddHinter(CurrencyPolicyUpdaterFact{})
-	t.encs.TestAddHinter(CurrencyPolicyUpdater{})
-	t.encs.TestAddHinter(CurrencyPolicy{})
+	t.encs.TestAddHinter(CurrencyRegisterFactHinter)
+	t.encs.TestAddHinter(CurrencyRegisterHinter)
+	t.encs.TestAddHinter(CurrencyDesignHinter)
+	t.encs.TestAddHinter(NilFeeerHinter)
+	t.encs.TestAddHinter(FixedFeeerHinter)
+	t.encs.TestAddHinter(RatioFeeerHinter)
+	t.encs.TestAddHinter(CurrencyPolicyUpdaterFactHinter)
+	t.encs.TestAddHinter(CurrencyPolicyUpdaterHinter)
+	t.encs.TestAddHinter(CurrencyPolicyHinter)
+	t.encs.TestAddHinter(SuffrageInflationFactHinter)
+	t.encs.TestAddHinter(SuffrageInflationHinter)
 }
 
 func (t *baseTestEncode) TestEncode() {
@@ -83,9 +87,11 @@ func (t *baseTestEncode) TestEncode() {
 }
 
 func (t *baseTestEncode) compareCurrencyDesign(a, b CurrencyDesign) {
+	t.True(a.Hint().Equal(b.Hint()))
 	t.True(a.Amount.Equal(b.Amount))
 	t.True(a.GenesisAccount().Equal(a.GenesisAccount()))
 	t.Equal(a.Policy(), b.Policy())
+	t.True(a.Aggregate().Equal(b.Aggregate()))
 }
 
 type baseTestOperationEncode struct {
